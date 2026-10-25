@@ -67,9 +67,11 @@ test('planning en colonne (une ligne par jour)', () => {
   assert.deepStrictEqual(res.agents[0].entries[3], { date: { y: 2026, m: 10, d: 4 }, code: 'N' });
 });
 
-test('événements : repos inclus, absences X exclues par défaut, codes inconnus signalés', () => {
+test('événements : tous les codes inclus par défaut, codes décochés ignorés, codes inconnus signalés', () => {
   const entries = ['M', 'R', 'CA', 'X', 'FORM'].map((code, i) => ({ date: { y: 2026, m: 10, d: i + 1 }, code }));
-  const { events, unknown, skipped } = C.buildEvents(entries, C.DEFAULT_CODES);
+  const codes = C.DEFAULT_CODES.map(c => Object.assign({}, c, c.code === 'X' ? { include: false } : {}));
+  assert.ok(C.DEFAULT_CODES.every(c => c.include));
+  const { events, unknown, skipped } = C.buildEvents(entries, codes);
   assert.deepStrictEqual(events.map(e => e.code), ['M', 'R', 'CA']);
   assert.deepStrictEqual(unknown, { FORM: 1 });
   assert.strictEqual(skipped, 1);

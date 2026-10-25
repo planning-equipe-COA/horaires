@@ -3,6 +3,7 @@
   const C = window.PlanningCore;
   const STORAGE_CODES_KEY = 'mh_codes';
   const STORAGE_NAME_KEY = 'mh_name';
+  const STORAGE_CODES_VERSION_KEY = 'mh_codes_v';
   const $ = id => document.getElementById(id);
 
   function esc(s) {
@@ -20,6 +21,12 @@
     try {
       const saved = JSON.parse(load(STORAGE_CODES_KEY));
       if (Array.isArray(saved) && saved.length) {
+        // réglages d'avant « tout apparaît par défaut » : on recoche tout une fois
+        if (load(STORAGE_CODES_VERSION_KEY) !== '2') {
+          saved.forEach(c => { c.include = true; });
+          store(STORAGE_CODES_VERSION_KEY, '2');
+          store(STORAGE_CODES_KEY, JSON.stringify(saved));
+        }
         // codes ajoutés aux valeurs par défaut depuis la dernière sauvegarde
         const have = new Set(saved.map(c => C.normCode(c.code)));
         return saved.concat(cloneDefaults().filter(c => !have.has(C.normCode(c.code))));
