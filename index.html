@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b5cab">
+<title>Mes Horaires</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>Mes Horaires</h1>
+    <p class="sub">Du planning Excel à ton agenda Apple ou Google.</p>
+  </header>
+
+  <section class="card">
+    <h2><span class="step">1</span> Le planning</h2>
+    <label id="drop" class="drop" for="file">
+      <strong>Choisir le fichier Excel</strong>
+      <span>ou le glisser ici (.xls, .xlsx)</span>
+      <span id="fileName" class="file-name"></span>
+    </label>
+    <input id="file" type="file" accept=".xls,.xlsx,.xlsm,.csv" hidden>
+    <p class="hint">Le fichier est lu sur ton appareil, rien n'est envoyé sur Internet.</p>
+    <div id="sheetRow" class="row" hidden>
+      <label for="sheet">Feuille</label>
+      <select id="sheet"></select>
+    </div>
+    <div id="monthRow" class="row" hidden>
+      <label for="month">Mois du planning</label>
+      <input id="month" type="month">
+      <p class="hint warn">Le mois ou l'année n'apparaît pas dans le fichier : vérifie-le ici.</p>
+    </div>
+    <p id="error" class="error" hidden></p>
+  </section>
+
+  <section id="agentCard" class="card" hidden>
+    <h2><span class="step">2</span> Qui es-tu ?</h2>
+    <select id="agent"></select>
+  </section>
+
+  <section id="previewCard" class="card" hidden>
+    <h2><span class="step">3</span> Vérifier et exporter</h2>
+    <p id="summary" class="summary"></p>
+    <div id="unknown" class="unknown" hidden></div>
+    <button id="download" class="primary">Télécharger pour mon agenda (.ics)</button>
+    <details class="help">
+      <summary>Comment l'ajouter à mon agenda ?</summary>
+      <p><strong>iPhone / Mac :</strong> ouvre le fichier téléchargé, choisis le calendrier puis « Ajouter tout ».</p>
+      <p><strong>Google Agenda :</strong> sur ordinateur, Paramètres → Importer et exporter → choisis le fichier et l'agenda.</p>
+      <p><strong>Android :</strong> ouvre le fichier depuis les téléchargements ; l'agenda Samsung l'importe directement. L'appli Google Agenda ne sait pas importer de fichier : passe par calendar.google.com sur ordinateur (voir ci-dessus), les événements apparaîtront ensuite sur le téléphone.</p>
+      <p>Si le planning change, refais l'export et réimporte-le : les jours déjà présents sont mis à jour, pas dupliqués.</p>
+    </details>
+    <div class="table-wrap"><table id="preview"></table></div>
+  </section>
+
+  <section class="card">
+    <details id="codesDetails">
+      <summary><h2>Codes et horaires</h2></summary>
+      <p class="hint">Coche les codes à mettre dans l'agenda. Réglages mémorisés sur cet appareil.</p>
+      <div class="table-wrap"><table id="codes"></table></div>
+      <div class="actions">
+        <button id="addCode">Ajouter un code</button>
+        <button id="resetCodes">Réinitialiser</button>
+      </div>
+    </details>
+  </section>
+</main>
+<script src="xlsx.full.min.js"></script>
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

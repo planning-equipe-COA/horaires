@@ -1,0 +1,80 @@
+:root {
+  --bg: #f3f5f8; --card: #fff; --text: #17202b; --muted: #627084; --line: #dde3ea;
+  --accent: #0b5cab; --accent-text: #fff; --warn: #a15c00; --warn-bg: #fff4dc; --error: #b3261e;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #10151b; --card: #1a222c; --text: #e8edf3; --muted: #94a3b5; --line: #2c3846;
+    --accent: #5aa7f5; --accent-text: #08121d; --warn: #f2c063; --warn-bg: #3a2e12; --error: #ff8a80;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+main {
+  max-width: 640px; margin: 0 auto;
+  padding: 20px 16px calc(32px + env(safe-area-inset-bottom));
+}
+header { margin-bottom: 16px; }
+h1 { margin: 0; font-size: 1.6rem; }
+h2 { margin: 0 0 12px; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; }
+.sub { margin: 2px 0 0; color: var(--muted); }
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  padding: 16px; margin-bottom: 14px;
+}
+.step {
+  display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--accent); color: var(--accent-text); font-size: .85rem;
+}
+.drop {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center;
+  padding: 22px 12px; border: 2px dashed var(--line); border-radius: 12px; cursor: pointer;
+  color: var(--muted);
+}
+.drop strong { color: var(--accent); }
+.drop.over { border-color: var(--accent); }
+.file-name { color: var(--text); font-weight: 600; overflow-wrap: anywhere; }
+.hint { margin: 8px 0 0; font-size: .85rem; color: var(--muted); }
+.hint.warn { color: var(--warn); }
+.error { margin: 10px 0 0; color: var(--error); font-weight: 600; }
+.row { margin-top: 12px; }
+.row label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
+select, input[type="month"], input[type="text"], input[type="time"] {
+  font: inherit; color: var(--text); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; max-width: 100%;
+}
+#agent, #sheet { width: 100%; }
+button {
+  font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 10px; padding: 9px 14px; cursor: pointer;
+}
+button.primary {
+  width: 100%; background: var(--accent); color: var(--accent-text); border-color: var(--accent);
+  font-weight: 600; padding: 13px 14px;
+}
+button:disabled { opacity: .45; cursor: default; }
+.summary { margin: 0 0 12px; }
+.unknown {
+  background: var(--warn-bg); color: var(--warn); border-radius: 10px; padding: 10px 12px;
+  margin-bottom: 12px; font-size: .9rem;
+}
+.unknown button { padding: 3px 9px; margin: 4px 4px 0 0; font-size: .85rem; }
+.help { margin: 12px 0; font-size: .9rem; color: var(--muted); }
+.help summary { cursor: pointer; color: var(--accent); }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th, td { text-align: left; padding: 7px 8px 7px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { color: var(--muted); font-weight: 500; font-size: .8rem; }
+#preview tr.month td { font-weight: 600; padding-top: 14px; text-transform: capitalize; }
+#preview td.muted { color: var(--muted); }
+#codes input[type="text"] { padding: 6px 8px; }
+#codes input.code { width: 4.2em; }
+#codes input.label { width: 9em; }
+#codes input[type="time"] { padding: 5px 6px; }
+#codes button { padding: 4px 9px; }
+#codesDetails > summary { cursor: pointer; list-style-position: inside; }
+#codesDetails > summary h2 { display: inline-flex; margin: 0; }
+.actions { display: flex; gap: 8px; margin-top: 12px; }
