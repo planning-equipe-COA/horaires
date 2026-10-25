@@ -157,6 +157,7 @@
 
   function codesChanged(rerender) {
     store(STORAGE_CODES_KEY, JSON.stringify(state.codes));
+    store(STORAGE_CODES_VERSION_KEY, '2');
     if (rerender) renderCodes();
     refresh();
   }
