@@ -4,6 +4,8 @@
   const STORAGE_CODES_KEY = 'mh_codes';
   const STORAGE_NAME_KEY = 'mh_name';
   const STORAGE_CODES_VERSION_KEY = 'mh_codes_v';
+  const STORAGE_HOURS_KEY = 'mh_hours';
+  const CODES_VERSION = 3;
   const $ = id => document.getElementById(id);
 
   function esc(s) {
@@ -21,10 +23,18 @@
     try {
       const saved = JSON.parse(load(STORAGE_CODES_KEY));
       if (Array.isArray(saved) && saved.length) {
-        // réglages d'avant « tout apparaît par défaut » : on recoche tout une fois
-        if (load(STORAGE_CODES_VERSION_KEY) !== '2') {
-          saved.forEach(c => { c.include = true; });
-          store(STORAGE_CODES_VERSION_KEY, '2');
+        const version = +load(STORAGE_CODES_VERSION_KEY) || 0;
+        // v2 : tout apparaît par défaut → on recoche tout une fois
+        if (version < 2) saved.forEach(c => { c.include = true; });
+        // v3 : libellés courts RF / RC
+        if (version < 3) {
+          saved.forEach(c => {
+            if (c.code === 'RF' && c.label === 'Repos forcé') c.label = 'RF';
+            if (c.code === 'RC' && c.label === 'Repos compensé') c.label = 'RC';
+          });
+        }
+        if (version < CODES_VERSION) {
+          store(STORAGE_CODES_VERSION_KEY, String(CODES_VERSION));
           store(STORAGE_CODES_KEY, JSON.stringify(saved));
         }
         // codes ajoutés aux valeurs par défaut depuis la dernière sauvegarde
@@ -35,7 +45,8 @@
     return cloneDefaults();
   }
 
-  const state = { workbook: null, fileName: '', result: null, codes: loadCodes(), events: [] };
+  const state = { workbook: null, fileName: '', result: null, codes: loadCodes(), events: [],
+    withHours: load(STORAGE_HOURS_KEY) === '1' };
 
   // ── Fichier ───────────────────────────────────────────────────────────────
   function showError(msg) {
@@ -107,7 +118,7 @@
 
   function renderPreview() {
     const agent = state.result.agents.find(a => a.name === $('agent').value) || state.result.agents[0];
-    const { events, unknown } = C.buildEvents(agent.entries, state.codes);
+    const { events, unknown } = C.buildEvents(agent.entries, state.codes, { withHours: state.withHours });
     state.events = events;
     $('previewCard').hidden = false;
 
@@ -133,7 +144,7 @@
       const date = new Date(Date.UTC(e.date.y, e.date.m - 1, e.date.d));
       const month = monthFmt.format(date);
       if (month !== lastMonth) { html += `<tr class="month"><td colspan="3">${esc(month)}</td></tr>`; lastMonth = month; }
-      const hours = e.def.allDay ? 'journée' : `${e.def.start} – ${e.def.end}`;
+      const hours = e.timed ? `${e.def.start} – ${e.def.end}` : '';
       html += `<tr><td>${esc(dayFmt.format(date))}</td><td>${esc(e.def.label || e.code)}</td>` +
         `<td class="muted">${esc(hours)}</td></tr>`;
     }
@@ -157,7 +168,7 @@
 
   function codesChanged(rerender) {
     store(STORAGE_CODES_KEY, JSON.stringify(state.codes));
-    store(STORAGE_CODES_VERSION_KEY, '2');
+    store(STORAGE_CODES_VERSION_KEY, String(CODES_VERSION));
     if (rerender) renderCodes();
     refresh();
   }
@@ -191,6 +202,12 @@
   $('month').addEventListener('change', refresh);
   $('agent').addEventListener('change', () => { store(STORAGE_NAME_KEY, $('agent').value); renderPreview(); });
   $('download').addEventListener('click', download);
+  $('withHours').checked = state.withHours;
+  $('withHours').addEventListener('change', e => {
+    state.withHours = e.target.checked;
+    store(STORAGE_HOURS_KEY, state.withHours ? '1' : '0');
+    if (state.result) renderPreview();
+  });
 
   $('unknown').addEventListener('click', e => {
     const code = e.target.dataset.add;

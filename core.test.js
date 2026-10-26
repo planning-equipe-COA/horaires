@@ -83,7 +83,7 @@ test('ics : la nuit finit le lendemain, y compris en fin de mois', () => {
     { date: { y: 2026, m: 10, d: 5 }, code: 'M' },
     { date: { y: 2026, m: 12, d: 31 }, code: 'CA' },
   ];
-  const { events } = C.buildEvents(entries, C.DEFAULT_CODES);
+  const { events } = C.buildEvents(entries, C.DEFAULT_CODES, { withHours: true });
   const ics = C.buildICS(events, { name: 'Dupont Élise', now: new Date(Date.UTC(2026, 9, 13, 18, 0, 0)) });
   assert.ok(ics.includes('DTSTART;TZID=Europe/Paris:20261031T220000\r\nDTEND;TZID=Europe/Paris:20261101T060000'));
   assert.ok(ics.includes('DTSTART;TZID=Europe/Paris:20261005T060000\r\nDTEND;TZID=Europe/Paris:20261005T140000'));
@@ -91,6 +91,15 @@ test('ics : la nuit finit le lendemain, y compris en fin de mois', () => {
   assert.ok(ics.includes('UID:20261031-dupont-elise@mes-horaires'));
   assert.ok(ics.includes('DTSTAMP:20261013T180000Z'));
   assert.strictEqual((ics.match(/BEGIN:VEVENT/g) || []).length, 3);
+});
+
+test('ics par défaut : journées entières sans horaires', () => {
+  const entries = [{ date: { y: 2026, m: 10, d: 31 }, code: 'N' }, { date: { y: 2026, m: 11, d: 1 }, code: 'RF' }];
+  const { events } = C.buildEvents(entries, C.DEFAULT_CODES);
+  const ics = C.buildICS(events, { name: 'X' });
+  assert.ok(ics.includes('DTSTART;VALUE=DATE:20261031\r\nDTEND;VALUE=DATE:20261101'));
+  assert.ok(ics.includes('SUMMARY:Nuit') && ics.includes('SUMMARY:RF'));
+  assert.ok(!ics.includes('TZID=Europe/Paris:2026'));
 });
 
 test('aller-retour par un vrai fichier .xls', { skip: !fs.existsSync(path.join(__dirname, 'xlsx.full.min.js')) }, () => {

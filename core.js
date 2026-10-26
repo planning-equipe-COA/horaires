@@ -13,8 +13,8 @@
     { code: 'J', label: 'Journée', allDay: false, start: '07:30', end: '16:30', include: true },
     { code: 'R', label: 'Repos', allDay: true, start: '', end: '', include: true },
     { code: 'Tn', label: 'Tombée de nuit', allDay: true, start: '', end: '', include: true },
-    { code: 'RF', label: 'Repos forcé', allDay: true, start: '', end: '', include: true },
-    { code: 'RC', label: 'Repos compensé', allDay: true, start: '', end: '', include: true },
+    { code: 'RF', label: 'RF', allDay: true, start: '', end: '', include: true },
+    { code: 'RC', label: 'RC', allDay: true, start: '', end: '', include: true },
     { code: 'RCN', label: 'Repos', allDay: true, start: '', end: '', include: true },
     { code: 'RECUP', label: 'Récupération', allDay: true, start: '', end: '', include: true },
     { code: 'CA', label: 'Congé', allDay: true, start: '', end: '', include: true },
@@ -259,8 +259,10 @@
     return t.getUTCMonth() === d.m - 1 && t.getUTCDate() === d.d;
   }
 
-  // Sépare les cases d'un agent en événements à exporter, cases ignorées et codes inconnus
-  function buildEvents(entries, codes) {
+  // Sépare les cases d'un agent en événements à exporter, cases ignorées et codes inconnus.
+  // Sans withHours, tout est exporté en journée entière (« Matin », « Nuit »… sans créneau horaire).
+  function buildEvents(entries, codes, options) {
+    const withHours = !!(options && options.withHours);
     const map = new Map(codes.map(c => [normCode(c.code), c]));
     const events = [], unknown = {};
     let skipped = 0;
@@ -268,10 +270,11 @@
       const def = map.get(e.code);
       if (!def) { unknown[e.code] = (unknown[e.code] || 0) + 1; continue; }
       if (!def.include || !isValidDate(e.date)) { skipped++; continue; }
-      if (!def.allDay && !(/^\d{2}:\d{2}$/.test(def.start) && /^\d{2}:\d{2}$/.test(def.end))) {
+      const timed = withHours && !def.allDay;
+      if (timed && !(/^\d{2}:\d{2}$/.test(def.start) && /^\d{2}:\d{2}$/.test(def.end))) {
         skipped++; continue;
       }
-      events.push({ date: e.date, code: def.code, def });
+      events.push({ date: e.date, code: def.code, def, timed });
     }
     return { events, unknown, skipped };
   }
@@ -303,7 +306,7 @@
     for (const ev of events) {
       const d = ev.date, def = ev.def;
       lines.push('BEGIN:VEVENT', 'UID:' + dateKey(d) + '-' + id + '@mes-horaires', 'DTSTAMP:' + stamp);
-      if (def.allDay) {
+      if (!ev.timed) {
         lines.push('DTSTART;VALUE=DATE:' + dateKey(d), 'DTEND;VALUE=DATE:' + dateKey(nextDay(d)),
           'TRANSP:TRANSPARENT');
       } else {

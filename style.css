@@ -78,3 +78,5 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 #codesDetails > summary { cursor: pointer; list-style-position: inside; }
 #codesDetails > summary h2 { display: inline-flex; margin: 0; }
 .actions { display: flex; gap: 8px; margin-top: 12px; }
+.check { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: .92rem; }
+.check input { width: 18px; height: 18px; }
