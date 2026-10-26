@@ -66,6 +66,7 @@ button:disabled { opacity: .45; cursor: default; }
 .help summary { cursor: pointer; color: var(--accent); }
 .help ol { margin: 4px 0 12px; padding-left: 1.4em; }
 .help li { margin: 2px 0; }
+.help a { color: var(--accent); }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: .92rem; }
 th, td { text-align: left; padding: 7px 8px 7px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
