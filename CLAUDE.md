@@ -8,7 +8,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 ## Fichiers
 - `core.js` — logique pure, module UMD : lecture de la grille (`parseMatrix`, `sheetToMatrix`),
   codes par défaut (`DEFAULT_CODES`), événements (`buildEvents`), export (`buildICS`).
-- `app.js` — interface (IIFE), réglages dans localStorage (`mh_codes`, `mh_codes_v`, `mh_name`, `mh_hours`).
+- `app.js` — interface (IIFE), réglages dans localStorage (`mh_codes`, `mh_codes_v`, `mh_name`).
 - `index.html`, `style.css` — UI mobile d'abord, mode sombre.
 - `xlsx.full.min.js` — SheetJS 0.20.3 embarqué (pas de CDN).
 - `core.test.js` — tests : `node --test core.test.js` (à lancer avant chaque push).
@@ -24,8 +24,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   JS Journée de solidarité (libellé « JS », toujours sans horaires),
   R Repos, Tn Tombée de nuit, RF, RC, RCN, ATT Repos, RECUP Récupération, CA/C Congé, EM Enfant malade,
   X « Absence » (sens exact à préciser par l'utilisateur).
-- Par défaut **tous les codes** vont dans l'agenda, en **journée entière sans horaires**
-  (tout le monde connaît les horaires) ; la case « Ajouter les horaires » crée des créneaux.
+- **Tous les codes** vont dans l'agenda, en **journée entière sans horaires** (tout le monde
+  connaît les horaires). L'option « Ajouter les horaires » a été retirée à la demande de
+  l'utilisateur : l'interface n'expose plus ni horaires ni réglage début/fin. Les horaires restent
+  dans `DEFAULT_CODES` (core.js, option `withHours` de `buildEvents`) mais l'appli ne s'en sert pas.
 - Si un changement des valeurs par défaut doit toucher les réglages déjà enregistrés sur les
   téléphones, incrémenter `CODES_VERSION` dans app.js et ajouter la migration dans `loadCodes`.
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.

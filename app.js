@@ -4,7 +4,6 @@
   const STORAGE_CODES_KEY = 'mh_codes';
   const STORAGE_NAME_KEY = 'mh_name';
   const STORAGE_CODES_VERSION_KEY = 'mh_codes_v';
-  const STORAGE_HOURS_KEY = 'mh_hours';
   const CODES_VERSION = 4;
   const $ = id => document.getElementById(id);
 
@@ -51,8 +50,7 @@
     return cloneDefaults();
   }
 
-  const state = { workbook: null, fileName: '', result: null, codes: loadCodes(), events: [],
-    withHours: load(STORAGE_HOURS_KEY) === '1' };
+  const state = { workbook: null, fileName: '', result: null, codes: loadCodes(), events: [] };
 
   // ── Fichier ───────────────────────────────────────────────────────────────
   function showError(msg) {
@@ -124,7 +122,7 @@
 
   function renderPreview() {
     const agent = state.result.agents.find(a => a.name === $('agent').value) || state.result.agents[0];
-    const { events, unknown } = C.buildEvents(agent.entries, state.codes, { withHours: state.withHours });
+    const { events, unknown } = C.buildEvents(agent.entries, state.codes);
     state.events = events;
     $('previewCard').hidden = false;
 
@@ -149,24 +147,19 @@
     for (const e of events) {
       const date = new Date(Date.UTC(e.date.y, e.date.m - 1, e.date.d));
       const month = monthFmt.format(date);
-      if (month !== lastMonth) { html += `<tr class="month"><td colspan="3">${esc(month)}</td></tr>`; lastMonth = month; }
-      const hours = e.timed ? `${e.def.start} – ${e.def.end}` : '';
-      html += `<tr><td>${esc(dayFmt.format(date))}</td><td>${esc(e.def.label || e.code)}</td>` +
-        `<td class="muted">${esc(hours)}</td></tr>`;
+      if (month !== lastMonth) { html += `<tr class="month"><td colspan="2">${esc(month)}</td></tr>`; lastMonth = month; }
+      html += `<tr><td>${esc(dayFmt.format(date))}</td><td>${esc(e.def.label || e.code)}</td></tr>`;
     }
     $('preview').innerHTML = html;
   }
 
   function renderCodes() {
-    let html = '<tr><th>Agenda</th><th>Code</th><th>Libellé</th><th>Journée</th><th>Début</th><th>Fin</th><th></th></tr>';
+    let html = '<tr><th>Agenda</th><th>Code</th><th>Libellé</th><th></th></tr>';
     state.codes.forEach((c, i) => {
       html += `<tr data-i="${i}">` +
         `<td><input type="checkbox" data-f="include" ${c.include ? 'checked' : ''}></td>` +
         `<td><input type="text" class="code" data-f="code" value="${esc(c.code)}"></td>` +
         `<td><input type="text" class="label" data-f="label" value="${esc(c.label)}"></td>` +
-        `<td><input type="checkbox" data-f="allDay" ${c.allDay ? 'checked' : ''}></td>` +
-        `<td><input type="time" data-f="start" value="${esc(c.start)}" ${c.allDay ? 'disabled' : ''}></td>` +
-        `<td><input type="time" data-f="end" value="${esc(c.end)}" ${c.allDay ? 'disabled' : ''}></td>` +
         `<td><button data-del title="Supprimer">✕</button></td></tr>`;
     });
     $('codes').innerHTML = html;
@@ -208,12 +201,6 @@
   $('month').addEventListener('change', refresh);
   $('agent').addEventListener('change', () => { store(STORAGE_NAME_KEY, $('agent').value); renderPreview(); });
   $('download').addEventListener('click', download);
-  $('withHours').checked = state.withHours;
-  $('withHours').addEventListener('change', e => {
-    state.withHours = e.target.checked;
-    store(STORAGE_HOURS_KEY, state.withHours ? '1' : '0');
-    if (state.result) renderPreview();
-  });
 
   $('unknown').addEventListener('click', e => {
     const code = e.target.dataset.add;
@@ -229,7 +216,7 @@
     if (!tr || !field) return;
     const c = state.codes[+tr.dataset.i];
     c[field] = e.target.type === 'checkbox' ? e.target.checked : e.target.value.trim();
-    codesChanged(field === 'allDay');
+    codesChanged(false);
   });
   $('codes').addEventListener('click', e => {
     if (!('del' in e.target.dataset)) return;
@@ -237,7 +224,7 @@
     codesChanged(true);
   });
   $('addCode').addEventListener('click', () => {
-    state.codes.push({ code: '', label: '', allDay: false, start: '08:00', end: '16:00', include: true });
+    state.codes.push({ code: '', label: '', allDay: true, start: '', end: '', include: true });
     codesChanged(true);
   });
   $('resetCodes').addEventListener('click', () => {
