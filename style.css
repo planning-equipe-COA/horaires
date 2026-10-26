@@ -64,6 +64,8 @@ button:disabled { opacity: .45; cursor: default; }
 .unknown button { padding: 3px 9px; margin: 4px 4px 0 0; font-size: .85rem; }
 .help { margin: 12px 0; font-size: .9rem; color: var(--muted); }
 .help summary { cursor: pointer; color: var(--accent); }
+.help ol { margin: 4px 0 12px; padding-left: 1.4em; }
+.help li { margin: 2px 0; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: .92rem; }
 th, td { text-align: left; padding: 7px 8px 7px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
