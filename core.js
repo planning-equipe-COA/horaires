@@ -21,7 +21,7 @@
     { code: 'C', label: 'Congé', allDay: true, start: '', end: '', include: true },
     { code: 'EM', label: 'Enfant malade', allDay: true, start: '', end: '', include: true },
     { code: 'X', label: 'Absence', allDay: true, start: '', end: '', include: true },
-    { code: 'ATT', label: 'Absence', allDay: true, start: '', end: '', include: true },
+    { code: 'ATT', label: 'Repos', allDay: true, start: '', end: '', include: true },
   ];
 
   const MONTHS = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout',

@@ -21,8 +21,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   mois dans un titre « OCTOBRE 2026 » ou le nom de la feuille, colonnes code/remarque à droite.
   Les homonymes dans deux blocs aux mêmes dates deviennent « NOM (2) ».
 - Codes : M Matin 6h-14h, S Soir 14h-22h, N Nuit 22h-6h (finit le lendemain), J Journée 7h30-16h30,
-  R Repos, Tn Tombée de nuit, RF, RC, RCN Repos, RECUP Récupération, CA/C Congé, EM Enfant malade,
-  X et ATT « Absence » (sens exact à préciser par l'utilisateur).
+  R Repos, Tn Tombée de nuit, RF, RC, RCN, ATT Repos, RECUP Récupération, CA/C Congé, EM Enfant malade,
+  X « Absence » (sens exact à préciser par l'utilisateur).
 - Par défaut **tous les codes** vont dans l'agenda, en **journée entière sans horaires**
   (tout le monde connaît les horaires) ; la case « Ajouter les horaires » crée des créneaux.
 - Si un changement des valeurs par défaut doit toucher les réglages déjà enregistrés sur les

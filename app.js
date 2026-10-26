@@ -5,7 +5,7 @@
   const STORAGE_NAME_KEY = 'mh_name';
   const STORAGE_CODES_VERSION_KEY = 'mh_codes_v';
   const STORAGE_HOURS_KEY = 'mh_hours';
-  const CODES_VERSION = 3;
+  const CODES_VERSION = 4;
   const $ = id => document.getElementById(id);
 
   function esc(s) {
@@ -31,6 +31,12 @@
           saved.forEach(c => {
             if (c.code === 'RF' && c.label === 'Repos forcé') c.label = 'RF';
             if (c.code === 'RC' && c.label === 'Repos compensé') c.label = 'RC';
+          });
+        }
+        // v4 : ATT = repos
+        if (version < 4) {
+          saved.forEach(c => {
+            if (C.normCode(c.code) === C.normCode('ATT') && c.label === 'Absence') c.label = 'Repos';
           });
         }
         if (version < CODES_VERSION) {
