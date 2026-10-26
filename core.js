@@ -11,6 +11,7 @@
     { code: 'S', label: 'Soir', allDay: false, start: '14:00', end: '22:00', include: true },
     { code: 'N', label: 'Nuit', allDay: false, start: '22:00', end: '06:00', include: true },
     { code: 'J', label: 'Journée', allDay: false, start: '07:30', end: '16:30', include: true },
+    { code: 'JS', label: 'JS', allDay: true, start: '', end: '', include: true },
     { code: 'R', label: 'Repos', allDay: true, start: '', end: '', include: true },
     { code: 'Tn', label: 'Tombée de nuit', allDay: true, start: '', end: '', include: true },
     { code: 'RF', label: 'RF', allDay: true, start: '', end: '', include: true },

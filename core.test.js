@@ -116,3 +116,13 @@ test('aller-retour par un vrai fichier .xls', { skip: !fs.existsSync(path.join(_
   assert.strictEqual(res.agents[0].name, 'DUPONT');
   assert.deepStrictEqual(res.agents[0].entries[2], { date: { y: 2026, m: 10, d: 3 }, code: 'N' });
 });
+
+test('JS (journée de solidarité) : journée entière, même avec les horaires', () => {
+  const entries = [{ date: { y: 2026, m: 11, d: 2 }, code: 'JS' }, { date: { y: 2026, m: 11, d: 3 }, code: 'J' }];
+  const { events, unknown } = C.buildEvents(entries, C.DEFAULT_CODES, { withHours: true });
+  assert.deepStrictEqual(unknown, {});
+  assert.strictEqual(events[0].code, 'JS');
+  assert.strictEqual(events[0].def.label, 'JS');
+  assert.strictEqual(events[0].timed, false);
+  assert.strictEqual(events[1].timed, true);
+});
