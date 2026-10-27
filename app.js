@@ -202,6 +202,22 @@
   $('agent').addEventListener('change', () => { store(STORAGE_NAME_KEY, $('agent').value); renderPreview(); });
   $('download').addEventListener('click', download);
 
+  const SHARE_URL = 'https://planning-equipe-coa.github.io/horaires/';
+  $('shareLink').addEventListener('click', async () => {
+    const btn = $('shareLink');
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Mes Horaires', url: SHARE_URL }); } catch (e) { /* partage annulé */ }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(SHARE_URL);
+      btn.textContent = 'Lien copié ✓';
+    } catch (e) {
+      btn.textContent = SHARE_URL;
+    }
+    setTimeout(() => { btn.textContent = 'Envoyer le lien'; }, 2500);
+  });
+
   $('unknown').addEventListener('click', e => {
     const code = e.target.dataset.add;
     if (!code) return;

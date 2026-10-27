@@ -83,3 +83,10 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .actions { display: flex; gap: 8px; margin-top: 12px; }
 .check { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: .92rem; }
 .check input { width: 18px; height: 18px; }
+#shareDetails > summary { cursor: pointer; list-style-position: inside; }
+#shareDetails > summary h2 { display: inline-flex; margin: 0; }
+/* le QR reste noir sur blanc, même en mode sombre, pour être lisible par les appareils photo */
+.qr { background: #fff; padding: 14px; border-radius: 12px; width: min(240px, 100%); margin: 12px auto 8px; }
+.qr svg { display: block; width: 100%; height: auto; fill: #000; }
+.share-link { text-align: center; font-weight: 600; margin: 0 0 12px; overflow-wrap: anywhere; }
+#shareLink { display: block; margin: 0 auto; }
