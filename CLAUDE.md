@@ -10,6 +10,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   codes par défaut (`DEFAULT_CODES`), événements (`buildEvents`), export (`buildICS`).
 - `app.js` — interface (IIFE), réglages dans localStorage (`mh_codes`, `mh_codes_v`, `mh_name`).
 - `index.html`, `style.css` — UI mobile d'abord, mode sombre.
+- `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` — ajout à l'écran d'accueil
+  (pas de service worker, volontairement : évite d'afficher une ancienne version en cache).
 - `xlsx.full.min.js` — SheetJS 0.20.3 embarqué (pas de CDN).
 - `core.test.js` — tests : `node --test core.test.js` (à lancer avant chaque push).
 - `exemple-planning.xls` — planning fictif pour essayer.
@@ -34,4 +36,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   plus la propriété COLOR. Réglable par code dans « Codes ».
 - Si un changement des valeurs par défaut doit toucher les réglages déjà enregistrés sur les
   téléphones, incrémenter `CODES_VERSION` dans app.js et ajouter la migration dans `loadCodes`.
+- Case « Seulement à partir d'aujourd'hui » (cochée par défaut, `mh_from_today`) : n'exporte pas les jours passés.
+- Idées validées mais en option, pas encore faites : rappel la veille (VALARM), comparer deux agents
+  côte à côte (échanges de poste).
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.

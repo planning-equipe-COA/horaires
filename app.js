@@ -4,6 +4,7 @@
   const STORAGE_CODES_KEY = 'mh_codes';
   const STORAGE_NAME_KEY = 'mh_name';
   const STORAGE_CODES_VERSION_KEY = 'mh_codes_v';
+  const STORAGE_FROM_TODAY_KEY = 'mh_from_today';
   const CODES_VERSION = 5;
   const $ = id => document.getElementById(id);
 
@@ -127,7 +128,13 @@
 
   function renderPreview() {
     const agent = state.result.agents.find(a => a.name === $('agent').value) || state.result.agents[0];
-    const { events, unknown } = C.buildEvents(agent.entries, state.codes);
+    const built = C.buildEvents(agent.entries, state.codes);
+    const unknown = built.unknown;
+    const now = new Date();
+    const today = C.dateKey({ y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate() });
+    const fromToday = $('fromToday').checked;
+    const events = fromToday ? built.events.filter(e => C.dateKey(e.date) >= today) : built.events;
+    const pastOnly = fromToday && built.events.length > 0 && events.length === 0;
     state.events = events;
     $('previewCard').hidden = false;
 
@@ -136,7 +143,9 @@
     const detail = Object.keys(counts).map(k => `${counts[k]} ${esc(k)}`).join(', ');
     $('summary').innerHTML = events.length
       ? `<strong>${events.length} événement${events.length > 1 ? 's' : ''}</strong> pour ${esc(agent.name)} : ${detail}.`
-      : 'Aucun événement à exporter avec les codes cochés.';
+      : pastOnly
+        ? 'Tous les jours de ce planning sont passés. Décoche « Seulement à partir d\'aujourd\'hui » pour tout exporter.'
+        : 'Aucun événement à exporter avec les codes cochés.';
     $('download').disabled = !events.length;
 
     const unknownCodes = Object.keys(unknown);
@@ -209,6 +218,11 @@
   $('month').addEventListener('change', refresh);
   $('agent').addEventListener('change', () => { store(STORAGE_NAME_KEY, $('agent').value); renderPreview(); });
   $('download').addEventListener('click', download);
+  $('fromToday').checked = load(STORAGE_FROM_TODAY_KEY) !== '0';
+  $('fromToday').addEventListener('change', e => {
+    store(STORAGE_FROM_TODAY_KEY, e.target.checked ? '1' : '0');
+    if (state.result) renderPreview();
+  });
 
   const SHARE_URL = 'https://planning-equipe-coa.github.io/horaires/';
   $('shareLink').addEventListener('click', async () => {
