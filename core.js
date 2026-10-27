@@ -7,23 +7,41 @@
   'use strict';
 
   const DEFAULT_CODES = [
-    { code: 'M', label: 'Matin', allDay: false, start: '06:00', end: '14:00', include: true },
-    { code: 'S', label: 'Soir', allDay: false, start: '14:00', end: '22:00', include: true },
-    { code: 'N', label: 'Nuit', allDay: false, start: '22:00', end: '06:00', include: true },
-    { code: 'J', label: 'Journée', allDay: false, start: '07:30', end: '16:30', include: true },
-    { code: 'JS', label: 'JS', allDay: true, start: '', end: '', include: true },
-    { code: 'R', label: 'Repos', allDay: true, start: '', end: '', include: true },
-    { code: 'Tn', label: 'Tombée de nuit', allDay: true, start: '', end: '', include: true },
-    { code: 'RF', label: 'RF', allDay: true, start: '', end: '', include: true },
-    { code: 'RC', label: 'RC', allDay: true, start: '', end: '', include: true },
-    { code: 'RCN', label: 'Repos', allDay: true, start: '', end: '', include: true },
-    { code: 'RECUP', label: 'Récupération', allDay: true, start: '', end: '', include: true },
-    { code: 'CA', label: 'Congé', allDay: true, start: '', end: '', include: true },
-    { code: 'C', label: 'Congé', allDay: true, start: '', end: '', include: true },
-    { code: 'EM', label: 'Enfant malade', allDay: true, start: '', end: '', include: true },
-    { code: 'X', label: 'Absence', allDay: true, start: '', end: '', include: true },
-    { code: 'ATT', label: 'Repos', allDay: true, start: '', end: '', include: true },
+    { code: 'M', label: 'Matin', allDay: false, start: '06:00', end: '14:00', include: true, color: 'marron' },
+    { code: 'S', label: 'Soir', allDay: false, start: '14:00', end: '22:00', include: true, color: 'jaune' },
+    { code: 'N', label: 'Nuit', allDay: false, start: '22:00', end: '06:00', include: true, color: 'bleu' },
+    { code: 'J', label: 'Journée', allDay: false, start: '07:30', end: '16:30', include: true, color: '' },
+    { code: 'JS', label: 'JS', allDay: true, start: '', end: '', include: true, color: '' },
+    { code: 'R', label: 'Repos', allDay: true, start: '', end: '', include: true, color: 'blanc' },
+    { code: 'Tn', label: 'Tombée de nuit', allDay: true, start: '', end: '', include: true, color: 'blanc' },
+    { code: 'RF', label: 'RF', allDay: true, start: '', end: '', include: true, color: 'blanc' },
+    { code: 'RC', label: 'RC', allDay: true, start: '', end: '', include: true, color: 'blanc' },
+    { code: 'RCN', label: 'Repos', allDay: true, start: '', end: '', include: true, color: 'blanc' },
+    { code: 'RECUP', label: 'Récupération', allDay: true, start: '', end: '', include: true, color: 'blanc' },
+    { code: 'CA', label: 'Congé', allDay: true, start: '', end: '', include: true, color: 'vert' },
+    { code: 'C', label: 'Congé', allDay: true, start: '', end: '', include: true, color: 'vert' },
+    { code: 'EM', label: 'Enfant malade', allDay: true, start: '', end: '', include: true, color: '' },
+    { code: 'X', label: 'Absence', allDay: true, start: '', end: '', include: true, color: '' },
+    { code: 'ATT', label: 'Repos', allDay: true, start: '', end: '', include: true, color: 'blanc' },
   ];
+
+  // Les agendas Apple et Google ignorent la couleur d'un événement importé : la couleur est
+  // donc portée par une pastille emoji en tête du titre (+ COLOR pour les agendas qui la lisent).
+  const COLORS = {
+    marron: { emoji: '🟤', css: 'saddlebrown' },
+    jaune: { emoji: '🟡', css: 'gold' },
+    bleu: { emoji: '🔵', css: 'royalblue' },
+    blanc: { emoji: '⚪', css: 'white' },
+    vert: { emoji: '🟢', css: 'green' },
+    orange: { emoji: '🟠', css: 'orange' },
+    rouge: { emoji: '🔴', css: 'red' },
+    violet: { emoji: '🟣', css: 'purple' },
+  };
+
+  function eventTitle(def) {
+    const col = COLORS[def.color];
+    return (col ? col.emoji + ' ' : '') + (def.label || def.code);
+  }
 
   const MONTHS = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout',
     'septembre', 'octobre', 'novembre', 'decembre'];
@@ -316,11 +334,13 @@
         lines.push('DTSTART;TZID=Europe/Paris:' + dateKey(d) + 'T' + start + '00',
           'DTEND;TZID=Europe/Paris:' + dateKey(endDate) + 'T' + end + '00');
       }
-      lines.push('SUMMARY:' + icsEscape(def.label || def.code), 'END:VEVENT');
+      lines.push('SUMMARY:' + icsEscape(eventTitle(def)));
+      if (COLORS[def.color]) lines.push('COLOR:' + COLORS[def.color].css);
+      lines.push('END:VEVENT');
     }
     lines.push('END:VCALENDAR');
     return lines.join('\r\n') + '\r\n';
   }
 
-  return { DEFAULT_CODES, parseMatrix, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
+  return { DEFAULT_CODES, COLORS, eventTitle, parseMatrix, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
 });

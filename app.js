@@ -4,7 +4,7 @@
   const STORAGE_CODES_KEY = 'mh_codes';
   const STORAGE_NAME_KEY = 'mh_name';
   const STORAGE_CODES_VERSION_KEY = 'mh_codes_v';
-  const CODES_VERSION = 4;
+  const CODES_VERSION = 5;
   const $ = id => document.getElementById(id);
 
   function esc(s) {
@@ -37,6 +37,11 @@
           saved.forEach(c => {
             if (C.normCode(c.code) === C.normCode('ATT') && c.label === 'Absence') c.label = 'Repos';
           });
+        }
+        // v5 : couleurs par défaut (marron matin, jaune soir, bleu nuit, blanc repos, vert congés)
+        if (version < 5) {
+          const defaults = new Map(C.DEFAULT_CODES.map(d => [C.normCode(d.code), d.color]));
+          saved.forEach(c => { if (c.color === undefined) c.color = defaults.get(C.normCode(c.code)) || ''; });
         }
         if (version < CODES_VERSION) {
           store(STORAGE_CODES_VERSION_KEY, String(CODES_VERSION));
@@ -127,7 +132,7 @@
     $('previewCard').hidden = false;
 
     const counts = {};
-    events.forEach(e => { counts[e.def.label || e.code] = (counts[e.def.label || e.code] || 0) + 1; });
+    events.forEach(e => { const t = C.eventTitle(e.def); counts[t] = (counts[t] || 0) + 1; });
     const detail = Object.keys(counts).map(k => `${counts[k]} ${esc(k)}`).join(', ');
     $('summary').innerHTML = events.length
       ? `<strong>${events.length} événement${events.length > 1 ? 's' : ''}</strong> pour ${esc(agent.name)} : ${detail}.`
@@ -148,18 +153,21 @@
       const date = new Date(Date.UTC(e.date.y, e.date.m - 1, e.date.d));
       const month = monthFmt.format(date);
       if (month !== lastMonth) { html += `<tr class="month"><td colspan="2">${esc(month)}</td></tr>`; lastMonth = month; }
-      html += `<tr><td>${esc(dayFmt.format(date))}</td><td>${esc(e.def.label || e.code)}</td></tr>`;
+      html += `<tr><td>${esc(dayFmt.format(date))}</td><td>${esc(C.eventTitle(e.def))}</td></tr>`;
     }
     $('preview').innerHTML = html;
   }
 
   function renderCodes() {
-    let html = '<tr><th>Agenda</th><th>Code</th><th>Libellé</th><th></th></tr>';
+    const colorOptions = sel => '<option value="">Aucune</option>' + Object.keys(C.COLORS).map(k =>
+      `<option value="${k}" ${sel === k ? 'selected' : ''}>${C.COLORS[k].emoji} ${k}</option>`).join('');
+    let html = '<tr><th>Agenda</th><th>Code</th><th>Libellé</th><th>Couleur</th><th></th></tr>';
     state.codes.forEach((c, i) => {
       html += `<tr data-i="${i}">` +
         `<td><input type="checkbox" data-f="include" ${c.include ? 'checked' : ''}></td>` +
         `<td><input type="text" class="code" data-f="code" value="${esc(c.code)}"></td>` +
         `<td><input type="text" class="label" data-f="label" value="${esc(c.label)}"></td>` +
+        `<td><select data-f="color">${colorOptions(c.color)}</select></td>` +
         `<td><button data-del title="Supprimer">✕</button></td></tr>`;
     });
     $('codes').innerHTML = html;
@@ -221,7 +229,7 @@
   $('unknown').addEventListener('click', e => {
     const code = e.target.dataset.add;
     if (!code) return;
-    state.codes.push({ code, label: code, allDay: true, start: '', end: '', include: true });
+    state.codes.push({ code, label: code, allDay: true, start: '', end: '', include: true, color: '' });
     $('codesDetails').open = true;
     codesChanged(true);
   });
@@ -240,7 +248,7 @@
     codesChanged(true);
   });
   $('addCode').addEventListener('click', () => {
-    state.codes.push({ code: '', label: '', allDay: true, start: '', end: '', include: true });
+    state.codes.push({ code: '', label: '', allDay: true, start: '', end: '', include: true, color: '' });
     codesChanged(true);
   });
   $('resetCodes').addEventListener('click', () => {

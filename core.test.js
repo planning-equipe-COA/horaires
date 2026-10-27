@@ -98,8 +98,17 @@ test('ics par défaut : journées entières sans horaires', () => {
   const { events } = C.buildEvents(entries, C.DEFAULT_CODES);
   const ics = C.buildICS(events, { name: 'X' });
   assert.ok(ics.includes('DTSTART;VALUE=DATE:20261031\r\nDTEND;VALUE=DATE:20261101'));
-  assert.ok(ics.includes('SUMMARY:Nuit') && ics.includes('SUMMARY:RF'));
+  assert.ok(ics.includes('SUMMARY:🔵 Nuit') && ics.includes('SUMMARY:⚪ RF'));
   assert.ok(!ics.includes('TZID=Europe/Paris:2026'));
+});
+
+test('couleurs : pastille dans le titre et propriété COLOR', () => {
+  const entries = ['M', 'S', 'N', 'R', 'CA', 'X'].map((code, i) => ({ date: { y: 2026, m: 10, d: i + 1 }, code }));
+  const { events } = C.buildEvents(entries, C.DEFAULT_CODES);
+  const ics = C.buildICS(events, { name: 'X' });
+  for (const t of ['🟤 Matin', '🟡 Soir', '🔵 Nuit', '⚪ Repos', '🟢 Congé']) assert.ok(ics.includes('SUMMARY:' + t), t);
+  assert.ok(ics.includes('SUMMARY:Absence\r\nEND:VEVENT'));
+  assert.ok(ics.includes('COLOR:saddlebrown'));
 });
 
 test('aller-retour par un vrai fichier .xls', { skip: !fs.existsSync(path.join(__dirname, 'xlsx.full.min.js')) }, () => {

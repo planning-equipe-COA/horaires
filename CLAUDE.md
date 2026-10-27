@@ -28,6 +28,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   connaît les horaires). L'option « Ajouter les horaires » a été retirée à la demande de
   l'utilisateur : l'interface n'expose plus ni horaires ni réglage début/fin. Les horaires restent
   dans `DEFAULT_CODES` (core.js, option `withHours` de `buildEvents`) mais l'appli ne s'en sert pas.
+- Couleurs (`color` de chaque code, `COLORS` dans core.js) : marron Matin, jaune Soir, bleu Nuit,
+  blanc pour tous les repos, vert pour les congés (CA, C). Apple et Google ignorent la couleur d'un
+  événement importé : elle est donc rendue par une pastille emoji en tête du titre (« 🟤 Matin »),
+  plus la propriété COLOR. Réglable par code dans « Codes ».
 - Si un changement des valeurs par défaut doit toucher les réglages déjà enregistrés sur les
   téléphones, incrémenter `CODES_VERSION` dans app.js et ajouter la migration dans `loadCodes`.
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.
