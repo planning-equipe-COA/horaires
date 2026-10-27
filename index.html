@@ -48,6 +48,7 @@
 
   <section id="previewCard" class="card" hidden>
     <h2><span class="step">3</span> Vérifier et exporter</h2>
+    <div id="changes" class="changes" hidden></div>
     <p id="summary" class="summary"></p>
     <div id="unknown" class="unknown" hidden></div>
     <label class="check"><input type="checkbox" id="fromToday"> Seulement à partir d'aujourd'hui</label>
@@ -71,6 +72,7 @@
       </ol>
       <p>Si Google Agenda refuse le fichier, mets l'appli à jour depuis le Play Store. En dernier recours : <a href="https://calendar.google.com/calendar/r/settings/export" target="_blank" rel="noopener">page d'import de Google Agenda</a> dans Chrome (menu ⋮ → « Version pour ordinateur » si besoin).</p>
       <p>Si le planning change, refais l'export et réimporte-le : les jours déjà présents sont mis à jour, pas dupliqués.</p>
+      <p>L'appli retient ton dernier export sur ce téléphone (rien n'est envoyé) : au tableau suivant, elle te signale les jours qui ont changé.</p>
     </details>
     <div class="table-wrap"><table id="preview"></table></div>
   </section>

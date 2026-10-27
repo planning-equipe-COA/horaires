@@ -111,6 +111,28 @@ test('couleurs : pastille dans le titre et propriété COLOR', () => {
   assert.ok(ics.includes('COLOR:saddlebrown'));
 });
 
+test('changements depuis le dernier export', () => {
+  const day = (d, code, m = 11) => ({ date: { y: 2026, m, d }, code });
+  const prev = C.snapshotOf([day(1, 'M'), day(2, 'S'), day(3, 'N'), day(4, 'R')]);
+  // le 2 change, le 3 est vidé, le 5 (hors période précédente) n'est pas un changement
+  const res = C.diffSnapshot(prev, [day(1, 'M'), day(2, 'R'), day(4, 'R'), day(5, 'M')]);
+  assert.strictEqual(res.overlap, true);
+  assert.deepStrictEqual(res.changes, [
+    { key: '20261102', before: 'S', after: 'R' },
+    { key: '20261103', before: 'N', after: '' },
+  ]);
+  // planning du mois suivant uniquement : aucune période commune
+  assert.deepStrictEqual(C.diffSnapshot(prev, [day(1, 'M', 12)]), { changes: [], overlap: false });
+  assert.deepStrictEqual(C.diffSnapshot({}, [day(1, 'M')]), { changes: [], overlap: false });
+});
+
+test('instantané : le nouveau planning remplace sa période, les vieux jours sont oubliés', () => {
+  const day = (d, code, m = 11) => ({ date: { y: 2026, m, d }, code });
+  const prev = C.snapshotOf([day(30, 'M', 9), day(1, 'M'), day(2, 'S'), day(3, 'N')]);
+  const merged = C.mergeSnapshot(prev, [day(2, 'R'), day(4, 'S')], '20261001');
+  assert.deepStrictEqual(merged, { '20261101': 'M', '20261102': 'R', '20261104': 'S' });
+});
+
 test('aller-retour par un vrai fichier .xls', { skip: !fs.existsSync(path.join(__dirname, 'xlsx.full.min.js')) }, () => {
   const XLSX = require('./xlsx.full.min.js');
   const aoa = [['Agent'], ['DUPONT', 'M', 'S', 'N', 'Tn', 'R', 'CA']];

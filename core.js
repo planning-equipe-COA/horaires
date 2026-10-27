@@ -298,6 +298,51 @@
     return { events, unknown, skipped };
   }
 
+  // Instantané du planning d'un agent, gardé sur le téléphone : { 'AAAAMMJJ': 'CODE' }
+  function snapshotOf(entries) {
+    const days = {};
+    for (const e of entries) days[dateKey(e.date)] = e.code;
+    return days;
+  }
+
+  function keyRange(days) {
+    const keys = Object.keys(days).sort();
+    return keys.length ? [keys[0], keys[keys.length - 1]] : null;
+  }
+
+  // Jours qui ont changé entre l'instantané précédent et le nouveau planning. Seule la période
+  // couverte par les deux compte : un nouveau mois n'est pas un « changement ».
+  // Une case vidée ou nouvellement remplie apparaît avec '' d'un côté.
+  function diffSnapshot(prev, entries) {
+    const now = snapshotOf(entries);
+    const a = keyRange(prev || {}), b = keyRange(now);
+    if (!a || !b) return { changes: [], overlap: false };
+    const first = a[0] > b[0] ? a[0] : b[0], last = a[1] < b[1] ? a[1] : b[1];
+    if (first > last) return { changes: [], overlap: false };
+    const keys = new Set(Object.keys(prev).concat(Object.keys(now)));
+    const changes = [];
+    for (const k of keys) {
+      if (k < first || k > last) continue;
+      const before = prev[k] || '', after = now[k] || '';
+      if (before !== after) changes.push({ key: k, before, after });
+    }
+    changes.sort((x, y) => x.key.localeCompare(y.key));
+    return { changes, overlap: true };
+  }
+
+  // Met à jour l'instantané avec le planning exporté ; oublie les jours antérieurs à minKey
+  function mergeSnapshot(prev, entries, minKey) {
+    const now = snapshotOf(entries);
+    const range = keyRange(now);
+    const out = {};
+    for (const k of Object.keys(prev || {})) {
+      if (range && k >= range[0] && k <= range[1]) continue; // remplacé par le nouveau planning
+      if (!minKey || k >= minKey) out[k] = prev[k];
+    }
+    for (const k of Object.keys(now)) if (!minKey || k >= minKey) out[k] = now[k];
+    return out;
+  }
+
   function icsEscape(s) {
     return String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
   }
@@ -342,5 +387,5 @@
     return lines.join('\r\n') + '\r\n';
   }
 
-  return { DEFAULT_CODES, COLORS, eventTitle, parseMatrix, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
+  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, parseMatrix, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
 });

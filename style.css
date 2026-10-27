@@ -90,3 +90,12 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .qr svg { display: block; width: 100%; height: auto; fill: #000; }
 .share-link { text-align: center; font-weight: 600; margin: 0 0 12px; overflow-wrap: anywhere; }
 #shareLink { display: block; margin: 0 auto; }
+.changes {
+  background: var(--warn-bg); color: var(--text); border-left: 4px solid var(--warn);
+  border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; font-size: .92rem;
+}
+.changes ul { margin: 6px 0; padding-left: 18px; }
+.changes.none { background: transparent; border-left-color: var(--line); color: var(--muted); padding: 6px 12px; }
+#preview tr.changed td { font-weight: 600; }
+#preview tr.changed td:first-child { box-shadow: inset 3px 0 0 var(--warn); padding-left: 8px; }
+.was { font-weight: 400; color: var(--muted); font-size: .85em; margin-left: 4px; }

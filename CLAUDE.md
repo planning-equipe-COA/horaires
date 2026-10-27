@@ -37,6 +37,9 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - Si un changement des valeurs par défaut doit toucher les réglages déjà enregistrés sur les
   téléphones, incrémenter `CODES_VERSION` dans app.js et ajouter la migration dans `loadCodes`.
 - Case « Seulement à partir d'aujourd'hui » (cochée par défaut, `mh_from_today`) : n'exporte pas les jours passés.
+- Jours modifiés : à chaque téléchargement, le planning de l'agent est gardé dans localStorage
+  (`mh_snap`, 120 jours) ; au tableau suivant, `diffSnapshot` liste les jours changés sur la période
+  commune (encadré « 🔔 » + lignes marquées « avant : … » dans l'aperçu).
 - Idées validées mais en option, pas encore faites : rappel la veille (VALARM), comparer deux agents
   côte à côte (échanges de poste).
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.

@@ -5,6 +5,8 @@
   const STORAGE_NAME_KEY = 'mh_name';
   const STORAGE_CODES_VERSION_KEY = 'mh_codes_v';
   const STORAGE_FROM_TODAY_KEY = 'mh_from_today';
+  const STORAGE_SNAPSHOTS_KEY = 'mh_snap';
+  const SNAPSHOT_KEEP_DAYS = 120;
   const CODES_VERSION = 5;
   const $ = id => document.getElementById(id);
 
@@ -57,6 +59,17 @@
   }
 
   const state = { workbook: null, fileName: '', result: null, codes: loadCodes(), events: [] };
+
+  // Dernier planning exporté par agent, gardé sur le téléphone uniquement : { nom: { at, days } }
+  function loadSnapshots() {
+    try { return JSON.parse(load(STORAGE_SNAPSHOTS_KEY)) || {}; } catch (e) { return {}; }
+  }
+  function keyToDate(k) { return { y: +k.slice(0, 4), m: +k.slice(4, 6), d: +k.slice(6, 8) }; }
+  function codeTitle(code) {
+    if (!code) return 'vide';
+    const def = state.codes.find(c => C.normCode(c.code) === code);
+    return def ? C.eventTitle(def) : code;
+  }
 
   // ── Fichier ───────────────────────────────────────────────────────────────
   function showError(msg) {
@@ -138,6 +151,23 @@
     state.events = events;
     $('previewCard').hidden = false;
 
+    const dayFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', timeZone: 'UTC' });
+    const longFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+    const utc = d => new Date(Date.UTC(d.y, d.m - 1, d.d));
+    const snap = loadSnapshots()[agent.name];
+    const diff = snap ? C.diffSnapshot(snap.days, agent.entries) : { changes: [], overlap: false };
+    const changes = diff.changes.filter(ch => !fromToday || ch.key >= today);
+    const changed = new Map(changes.map(ch => [ch.key, ch]));
+    const since = snap ? new Date(snap.at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : '';
+    $('changes').hidden = !diff.overlap;
+    $('changes').className = changes.length ? 'changes' : 'changes none';
+    $('changes').innerHTML = !diff.overlap ? '' : changes.length
+      ? `<strong>🔔 ${changes.length} jour${changes.length > 1 ? 's ont' : ' a'} changé depuis ton export du ${esc(since)} :</strong><ul>` +
+        changes.map(ch => `<li>${esc(longFmt.format(utc(keyToDate(ch.key))))} : ` +
+          `${esc(codeTitle(ch.before))} → <strong>${esc(codeTitle(ch.after))}</strong></li>`).join('') +
+        '</ul>Refais l\'export pour mettre ton agenda à jour.'
+      : `✓ Aucun changement depuis ton export du ${esc(since)}.`;
+
     const counts = {};
     events.forEach(e => { const t = C.eventTitle(e.def); counts[t] = (counts[t] || 0) + 1; });
     const detail = Object.keys(counts).map(k => `${counts[k]} ${esc(k)}`).join(', ');
@@ -155,14 +185,15 @@
         `<button data-add="${esc(code)}">+ ${esc(code.slice(0, 20))} (${unknown[code]})</button>`).join('')
       : '';
 
-    const dayFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', timeZone: 'UTC' });
     const monthFmt = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
     let html = '', lastMonth = '';
     for (const e of events) {
       const date = new Date(Date.UTC(e.date.y, e.date.m - 1, e.date.d));
       const month = monthFmt.format(date);
       if (month !== lastMonth) { html += `<tr class="month"><td colspan="2">${esc(month)}</td></tr>`; lastMonth = month; }
-      html += `<tr><td>${esc(dayFmt.format(date))}</td><td>${esc(C.eventTitle(e.def))}</td></tr>`;
+      const ch = changed.get(C.dateKey(e.date));
+      html += `<tr${ch ? ' class="changed"' : ''}><td>${esc(dayFmt.format(date))}</td><td>${esc(C.eventTitle(e.def))}` +
+        (ch ? ` <span class="was">avant : ${esc(codeTitle(ch.before))}</span>` : '') + '</td></tr>';
     }
     $('preview').innerHTML = html;
   }
@@ -194,6 +225,15 @@
     if (!state.events.length) return;
     const name = $('agent').value;
     const ics = C.buildICS(state.events, { name });
+    // retient ce planning pour signaler les changements au prochain tableau
+    const agent = state.result.agents.find(a => a.name === name);
+    if (agent) {
+      const snaps = loadSnapshots();
+      const min = new Date(Date.now() - SNAPSHOT_KEEP_DAYS * 864e5);
+      const minKey = C.dateKey({ y: min.getFullYear(), m: min.getMonth() + 1, d: min.getDate() });
+      snaps[name] = { at: new Date().toISOString(), days: C.mergeSnapshot(snaps[name] && snaps[name].days, agent.entries, minKey) };
+      store(STORAGE_SNAPSHOTS_KEY, JSON.stringify(snaps));
+    }
     const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }));
     const a = document.createElement('a');
     a.href = url;
