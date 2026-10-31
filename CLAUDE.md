@@ -68,6 +68,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   Recalculé depuis `state.planBefore` à chaque réglage du fichier (feuille, mois, codes).
   Tous les codes s'affichent dans le calendrier, même décochés (la case ne vaut que pour l'export).
   À l'ouverture : mois en cours s'il a des jours, sinon le prochain mois rempli.
+  Sans planning sur le téléphone, le calendrier s'affiche quand même, vide (`EMPTY_PLAN` via
+  `planView()`) : grille, liste, notes et résumé à zéro ; menu des agents masqué.
   Résumé du mois sous le calendrier (`monthSummary`, `dayKind`) : jours travaillés = codes à
   horaires (M, S, N, J) + JS ; repos = pastille blanche (R, Tn, RF, RC, RCN, RECUP, RECU, ATT) ;
   congés = pastille verte (CA, C) ; autres = le reste (EM, X, codes inconnus comme FORM).

@@ -485,18 +485,26 @@
 
   // ── Calendrier ────────────────────────────────────────────────────────────
   const WEEKDAYS = ['lu', 'ma', 'me', 'je', 've', 'sa', 'di'];
+  // Sans planning sur le téléphone, le calendrier s'affiche quand même, vide (même organisation)
+  const EMPTY_PLAN = { agents: {}, changes: {}, changesSeen: true, at: 'vide' };
+  function planView() { return state.plan || EMPTY_PLAN; }
   function renderCalendar() {
-    const plan = state.plan;
-    const names = plan ? Object.keys(plan.agents).sort((a, b) => a.localeCompare(b, 'fr')) : [];
-    $('calCard').hidden = !names.length;
-    $('importTitle').textContent = names.length ? 'Nouveau planning' : 'Le planning';
-    if (!names.length) return;
+    const plan = planView();
+    const names = Object.keys(plan.agents).sort((a, b) => a.localeCompare(b, 'fr'));
+    const empty = !names.length;
+    $('calCard').hidden = false;
+    $('importTitle').textContent = empty ? 'Le planning' : 'Nouveau planning';
     const me = load(STORAGE_NAME_KEY);
-    if (!names.includes(state.cal.agent)) state.cal.agent = names.includes(me) ? me : names[0];
-    const name = state.cal.agent;
+    if (!empty && !names.includes(state.cal.agent)) state.cal.agent = names.includes(me) ? me : names[0];
+    const name = empty ? '' : state.cal.agent;
+    $('calAgent').hidden = empty;
     $('calAgent').innerHTML = names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
-    $('calAgent').value = name;
-    $('calPartial').hidden = !!plan.at; // repris de l'ancien suivi des exports, pas encore d'import
+    if (!empty) $('calAgent').value = name;
+    $('calPartial').hidden = empty || !!plan.at; // repris de l'ancien suivi des exports, pas encore d'import
+    $('calEmpty').textContent = empty
+      ? (teamCode() ? 'Pas encore de planning sur ce téléphone : il arrivera dès qu\'un collègue l\'aura envoyé à l\'équipe, ou importe le tableau de service ci-dessous.'
+        : 'Pas encore de planning sur ce téléphone : importe le tableau de service ci-dessous pour remplir le calendrier.')
+      : 'Pas de planning pour ce mois : importe le tableau de service ci-dessous.';
 
     const { y, m } = state.cal;
     $('calTitle').textContent = new Date(Date.UTC(y, m - 1, 1))
@@ -556,14 +564,13 @@
     $('sumMonth').setAttribute('aria-selected', String(!year));
     $('sumYear').setAttribute('aria-selected', String(year));
     $('sumYear').textContent = 'Année ' + state.cal.y;
-    $('calTally').hidden = !any;
+    $('calTally').classList.toggle('empty', !any); // même résumé, à zéro, tant qu'il n'y a pas de planning
     const keys = Object.keys(days || {}).filter(k => k.slice(0, 4) === String(state.cal.y)).sort();
     $('sumNote').hidden = !year || !any;
     if (year && keys.length) {
       const fmt = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', timeZone: 'UTC' });
       $('sumNote').textContent = `D'après les plannings gardés sur ce téléphone, du ${fmt(keys[0])} au ${fmt(keys[keys.length - 1])}.`;
     }
-    if (!any) { $('calTally').innerHTML = ''; return; }
     const s = C.monthSummary(days, state.codes, state.cal.y, year ? null : state.cal.m);
     const groups = [['travail', 'Jours travaillés'], ['repos', 'Repos'], ['conge', 'Congés'], ['autre', 'Autres']];
     let html = groups.filter(([k]) => s[k].total || k === 'travail' || k === 'repos').map(([k, title]) =>
@@ -588,7 +595,7 @@
     return state.plan && state.plan.agents[me] ? me : state.cal.agent;
   }
   function renderNextDays() {
-    const plan = state.plan, me = meName();
+    const plan = planView(), me = meName();
     const days = (plan && plan.agents[me]) || {};
     const t = todayDate(), tomorrow = utc(t); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
     const items = [['Aujourd\'hui', t], ['Demain', { y: tomorrow.getUTCFullYear(), m: tomorrow.getUTCMonth() + 1, d: tomorrow.getUTCDate() }]];
@@ -622,7 +629,7 @@
 
   // ── Détail d'un jour : férié, changement, équipe du jour, échanges, note perso ──
   function dayDetailHTML(k, withHead) {
-    const plan = state.plan, name = state.cal.agent, d = keyToDate(k);
+    const plan = planView(), name = state.cal.agent, d = keyToDate(k);
     const code = (plan.agents[name] || {})[k];
     let html = '';
     if (withHead) {
@@ -654,7 +661,7 @@
 
   // Vue liste : les jours du mois de haut en bas ; toucher un jour déplie les collègues du même service
   function renderList(days, changes, todayKey) {
-    const { y, m } = state.cal, plan = state.plan;
+    const { y, m } = state.cal, plan = planView();
     let html = '';
     for (const d of C.monthGrid(y, m).flat()) {
       if (!d) continue;
@@ -682,9 +689,8 @@
   function renderDay() {
     const k = state.cal.selected, box = $('calDay');
     if (state.cal.view === 'list') { box.hidden = true; return; }
-    const plan = state.plan;
     const d = k && keyToDate(k);
-    if (!plan || !d || d.y !== state.cal.y || d.m !== state.cal.m) { box.hidden = true; return; }
+    if (!d || d.y !== state.cal.y || d.m !== state.cal.m) { box.hidden = true; return; }
     const html = dayDetailHTML(k, true);
     box.innerHTML = html;
     box.hidden = false;
@@ -875,7 +881,7 @@
   ['sumMonth', 'sumYear'].forEach(id => $(id).addEventListener('click', e => {
     state.cal.sum = e.currentTarget.dataset.scope;
     store(STORAGE_SUM_KEY, state.cal.sum);
-    renderSummary((state.plan.agents[state.cal.agent]) || {});
+    renderSummary(planView().agents[state.cal.agent] || {});
   }));
   $('calList').addEventListener('click', e => {
     const row = e.target.closest('.cal-row[data-key]');
@@ -893,6 +899,7 @@
   });
   $('calChanges').addEventListener('click', e => {
     if (e.target.id !== 'calChangesOk') return;
+    if (!state.plan) return;
     state.plan.changesSeen = true;
     savePlan();
     renderCalendar();
