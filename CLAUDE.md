@@ -12,8 +12,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - `app.js` — interface (IIFE), réglages dans localStorage (`mh_codes`, `mh_codes_v`, `mh_name`,
   `mh_plan`). `mh_name` = dernier agent consulté (l'appli rouvre dessus).
 - `index.html`, `style.css` — UI mobile d'abord, mode sombre.
-- `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` — ajout à l'écran d'accueil
-  (pas de service worker, volontairement : évite d'afficher une ancienne version en cache).
+- `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` — ajout à l'écran d'accueil.
+- `sw.js` — hors connexion, **réseau d'abord** (`cache: 'no-cache'`, délai 4 s) : en ligne on sert
+  toujours la dernière version, la copie n'est utilisée que sans réseau. Tout nouveau fichier de l'appli
+  (ou changement du `?v=` des icônes) doit être ajouté à `FILES` ; changer `CACHE` purge l'ancienne copie.
 - `xlsx.full.min.js` — SheetJS 0.20.3 embarqué (pas de CDN).
 - `core.test.js` — tests : `node --test core.test.js` (à lancer avant chaque push).
 - `exemple-planning.xls` — planning fictif pour essayer.

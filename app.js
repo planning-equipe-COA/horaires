@@ -502,6 +502,13 @@
     codesChanged(true);
   });
 
+  // hors connexion : l'appli s'ouvre même sans réseau (voir sw.js)
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => { /* pas de hors connexion, l'appli marche quand même */ });
+    });
+  }
+
   renderCodes();
   if (state.plan && !load(STORAGE_PLAN_KEY)) savePlan(); // reprise de l'ancien suivi des exports
   openOnUsefulMonth();
