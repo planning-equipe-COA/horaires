@@ -1,6 +1,6 @@
 {
-  "name": "Mes Horaires",
-  "short_name": "Horaires",
+  "name": "Planning COA",
+  "short_name": "Planning COA",
   "description": "Du planning Excel à ton agenda Apple ou Google.",
   "lang": "fr",
   "start_url": "./",

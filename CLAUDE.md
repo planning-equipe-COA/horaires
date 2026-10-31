@@ -1,4 +1,7 @@
-# Mes Horaires
+# Planning COA (ex « Mes Horaires »)
+
+Nom affiché : « Planning COA » (titre, écran d'accueil, manifest). Le préfixe interne `mh_` et le
+PRODID `.ics` « Mes Horaires » restent inchangés (réglages et agendas existants).
 
 Appli web statique (installable sur l'écran d'accueil) : un agent dépose le tableau de service
 Excel de l'équipe ; le planning est gardé sur le téléphone et affiché dans le **calendrier de

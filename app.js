@@ -919,7 +919,7 @@
   $('shareLink').addEventListener('click', async () => {
     const btn = $('shareLink');
     if (navigator.share) {
-      try { await navigator.share({ title: 'Mes Horaires', url: SHARE_URL }); } catch (e) { /* partage annulé */ }
+      try { await navigator.share({ title: 'Planning COA', url: SHARE_URL }); } catch (e) { /* partage annulé */ }
       return;
     }
     try {
