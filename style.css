@@ -171,3 +171,16 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .cal-row.changed .cal-row-code { font-weight: 600; }
 .cal-row.changed::after { content: ''; position: absolute; top: 50%; right: 10px; width: 7px; height: 7px; margin-top: -3px; border-radius: 50%; background: var(--warn); }
 .cal-row-mates { grid-column: 2; font-size: .85rem; color: var(--muted); overflow-wrap: anywhere; }
+
+/* ── Planning d'équipe ──────────────────────────────────────────────────── */
+#teamDetails > summary { cursor: pointer; list-style-position: inside; }
+#teamDetails > summary h2 { display: inline-flex; margin: 0; }
+#teamCode, #teamToken { width: 100%; }
+.team-status { margin: -4px 0 12px; font-size: .85rem; color: var(--muted); }
+.team-msg { margin: 10px 0 0; font-size: .92rem; font-weight: 600; }
+.team-msg.ok, .publish .ok { color: var(--ok); }
+.team-msg.err, .publish .err { color: var(--error); }
+.publish { margin-top: 12px; }
+.publish-confirm { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); }
+.publish-confirm p { margin: 0 0 4px; font-size: .92rem; }
+.publish-confirm .actions button { flex: 1; }

@@ -180,24 +180,41 @@
   }
 
   // Range le tableau lu dans le planning du téléphone (recalculé à chaque réglage du fichier)
-  function savePlanFromImport(res) {
-    const before = state.planBefore || null;
+  function minKeep() {
     const min = new Date(Date.now() - PLAN_KEEP_DAYS * 864e5);
-    const minKey = C.dateKey({ y: min.getFullYear(), m: min.getMonth() + 1, d: min.getDate() });
-    const plan = C.mergePlan(before, res.agents, minKey);
+    return C.dateKey({ y: min.getFullYear(), m: min.getMonth() + 1, d: min.getDate() });
+  }
+  // Planning (forme stockée) → agents/entries (forme lue dans un tableau)
+  function planToAgents(agents) {
+    return Object.keys(agents || {}).map(name => ({ name,
+      entries: Object.keys(agents[name]).sort().map(k => ({ date: keyToDate(k), code: agents[name][k] })) }));
+  }
+
+  // Range des agents (tableau importé ou planning d'équipe reçu) dans le planning du téléphone
+  function applyAgents(before, agents, meta) {
+    const plan = C.mergePlan(before, agents, minKeep());
     plan.changes = {};
-    for (const ag of res.agents) {
+    let count = 0;
+    for (const ag of agents) {
       const prev = before && before.agents[ag.name];
       if (!prev) continue;
       const diff = C.diffSnapshot(prev, ag.entries);
-      if (diff.changes.length) plan.changes[ag.name] = diff.changes;
+      if (diff.changes.length) { plan.changes[ag.name] = diff.changes; count += diff.changes.length; }
     }
     plan.changesSince = before && before.at || null;
     plan.changesSeen = false;
-    plan.at = new Date().toISOString();
-    plan.file = state.fileName;
+    plan.teamAt = before && before.teamAt || null;
+    plan.teamBy = before && before.teamBy || null;
+    Object.assign(plan, meta);
     state.plan = plan;
     savePlan();
+    return count;
+  }
+
+  function savePlanFromImport(res) {
+    applyAgents(state.planBefore || null, res.agents, { at: new Date().toISOString(), file: state.fileName });
+    state.importAgents = res.agents;
+    resetPublish();
 
     // calendrier : on montre le mois en cours s'il est dans le tableau, sinon son premier mois
     const keys = res.agents.flatMap(a => a.entries.map(e => C.dateKey(e.date))).sort();
@@ -212,7 +229,199 @@
     $('saved').hidden = !keys.length;
     $('saved').textContent = keys.length
       ? `✓ Planning enregistré sur ce téléphone, du ${fmt(keys[0])} au ${fmt(keys[keys.length - 1])}.` : '';
+    $('publishBox').hidden = !keys.length || !teamCode();
     renderCalendar();
+  }
+
+  // ── Planning d'équipe (voir team.js) ──────────────────────────────────────
+  const STORAGE_TEAM_KEY = 'mh_team_code';
+  const T = window.TeamSync;
+  function teamCode() { return load(STORAGE_TEAM_KEY) || ''; }
+  const longDate = iso => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+  const timeOf = iso => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const ERRORS = {
+    code: 'Code d\'équipe incorrect.',
+    cle: 'La clé de publication est refusée par GitHub (expirée ou retirée). Renouvelle-la dans « Planning d\'équipe ».',
+    depot: 'Le dépôt « donnees » est introuvable pour cette clé.',
+    reseau: 'Pas de connexion à GitHub pour l\'instant. Réessaie plus tard.',
+    format: 'Le fichier de l\'équipe est illisible.',
+  };
+  const errText = e => ERRORS[e && e.message] || ERRORS.reseau;
+
+  function teamMsg(text, kind) {
+    $('teamMsg').hidden = !text;
+    $('teamMsg').textContent = text || '';
+    $('teamMsg').className = 'team-msg ' + (kind || '');
+  }
+
+  function renderTeam() {
+    const joined = !!teamCode();
+    $('teamOut').hidden = joined;
+    $('teamIn').hidden = !joined;
+    if (joined) {
+      const p = state.plan;
+      $('teamInfo').innerHTML = p && p.teamAt
+        ? `✓ Tu es dans l'équipe. Dernier planning reçu : publié le ${esc(longDate(p.teamAt))} à ${esc(timeOf(p.teamAt))}` +
+          (p.teamBy ? ` par ${esc(p.teamBy)}` : '') + '.'
+        : '✓ Tu es dans l\'équipe. Aucun planning publié pour l\'instant.';
+    }
+    const p = state.plan;
+    $('teamStatus').hidden = !(joined && p && p.teamAt);
+    if (!$('teamStatus').hidden) {
+      $('teamStatus').textContent = `👥 Planning d'équipe du ${longDate(p.teamAt)}` + (p.teamBy ? `, publié par ${p.teamBy}` : '');
+    }
+    $('importHint').textContent = joined
+      ? 'Le fichier Excel reste sur ton appareil. Seuls les noms et les codes sont publiés, chiffrés avec le code d\'équipe, et seulement si tu touches « Publier pour l\'équipe ».'
+      : 'Le fichier est lu sur ton appareil et le planning reste sur ce téléphone : rien n\'est envoyé sur Internet.';
+  }
+
+  let syncing = false, lastSync = 0;
+  async function syncTeam(manual) {
+    const code = teamCode();
+    if (!code || syncing || state.workbook) return; // pas pendant un import en cours
+    syncing = true; lastSync = Date.now();
+    if (manual) teamMsg('Vérification…');
+    try {
+      const remote = await T.fetchPlan();
+      if (!remote) { if (manual) teamMsg('Aucun planning publié pour l\'instant.'); return; }
+      if (state.plan && state.plan.teamAt === remote.at) { if (manual) teamMsg('✓ Ton planning est à jour.', 'ok'); return; }
+      const data = await T.decrypt(remote.text, code);
+      const n = applyAgents(state.plan, planToAgents(data.agents),
+        { at: remote.at, file: 'équipe', teamAt: remote.at, teamBy: data.by || null });
+      openOnUsefulMonth();
+      renderCalendar();
+      teamMsg(`✓ Nouveau planning reçu${data.by ? ' (publié par ' + data.by + ')' : ''}` +
+        (n ? ` : ${n} jour${n > 1 ? 's changent' : ' change'}.` : '.'), 'ok');
+    } catch (e) {
+      if (manual || e.message === 'code') teamMsg(e.message === 'code'
+        ? 'Le code d\'équipe a changé : saisis le nouveau code.' : errText(e), 'err');
+      if (e.message === 'code') { store(STORAGE_TEAM_KEY, ''); }
+    } finally {
+      syncing = false;
+      renderTeam();
+    }
+  }
+
+  let pendingCode = '';
+  async function joinTeam() {
+    const code = T.normCode($('teamCode').value);
+    if (code.split('-').length < 3 || code.length < 12) {
+      teamMsg('Le code d\'équipe doit faire au moins 3 mots (ex. tarmac-cerise-boussole-neige).', 'err');
+      return;
+    }
+    $('teamJoin').disabled = true;
+    teamMsg('Vérification du code…');
+    try {
+      const res = await T.checkCode(code);
+      if (res.status === 'absent') {
+        pendingCode = code;
+        $('teamSetup').hidden = false;
+        teamMsg('L\'équipe n\'est pas encore configurée. Si c\'est toi qui la crées, colle la clé GitHub ci-dessus ; sinon, vérifie le code.');
+        return;
+      }
+      store(STORAGE_TEAM_KEY, code);
+      $('teamCode').value = '';
+      teamMsg('✓ Code accepté.', 'ok');
+      renderTeam();
+      await syncTeam(true);
+    } catch (e) {
+      teamMsg(errText(e), 'err');
+    } finally {
+      $('teamJoin').disabled = false;
+    }
+  }
+
+  async function setupTeam() {
+    const code = pendingCode || teamCode();
+    const token = $('teamToken').value.trim();
+    if (!code || !token) return;
+    $('teamSetupOk').disabled = true;
+    teamMsg('Enregistrement de la clé…');
+    try {
+      await T.setupKey(code, token, load(STORAGE_NAME_KEY) || '');
+      store(STORAGE_TEAM_KEY, code);
+      pendingCode = '';
+      $('teamToken').value = '';
+      $('teamSetup').hidden = true;
+      teamMsg('✓ Équipe configurée. Importe le tableau puis touche « Publier pour l\'équipe ».', 'ok');
+      renderTeam();
+      if (state.importAgents) $('publishBox').hidden = false;
+    } catch (e) {
+      teamMsg(errText(e), 'err');
+    } finally {
+      $('teamSetupOk').disabled = false;
+    }
+  }
+
+  // Publication en deux temps : aperçu (cases qui changent pour l'équipe), puis confirmation
+  function resetPublish() {
+    $('publish').hidden = false;
+    $('publish').disabled = false;
+    $('publishConfirm').hidden = true;
+    $('publishMsg').hidden = true;
+  }
+  function publishMsg(text, kind) {
+    $('publishMsg').hidden = !text;
+    $('publishMsg').textContent = text || '';
+    $('publishMsg').className = 'hint ' + (kind || '');
+  }
+  function countChanges(before, after) {
+    let n = 0;
+    const a = (before && before.agents) || {}, b = after.agents;
+    for (const name of new Set(Object.keys(a).concat(Object.keys(b)))) {
+      const x = a[name] || {}, y = b[name] || {};
+      for (const k of new Set(Object.keys(x).concat(Object.keys(y)))) if (x[k] !== y[k]) n++;
+    }
+    return n;
+  }
+  async function previewPublish() {
+    if (!state.importAgents) return;
+    $('publish').disabled = true;
+    publishMsg('Lecture du planning de l\'équipe…');
+    try {
+      const remote = await T.fetchPlan();
+      const current = remote ? await T.decrypt(remote.text, teamCode()) : null;
+      const merged = C.mergePlan(current, state.importAgents, minKeep());
+      const n = countChanges(current, merged);
+      const keys = state.importAgents.flatMap(a => a.entries.map(e => C.dateKey(e.date))).sort();
+      const fmt = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+      $('publishPreview').innerHTML = !current
+        ? `Premier planning de l'équipe : <strong>${state.importAgents.length} agents</strong>, du ${esc(fmt(keys[0]))} au ${esc(fmt(keys[keys.length - 1]))}.`
+        : n
+          ? `Ton fichier remplace la période du ${esc(fmt(keys[0]))} au ${esc(fmt(keys[keys.length - 1]))} pour toute l'équipe : ` +
+            `<strong>${n} case${n > 1 ? 's changent' : ' change'}</strong> par rapport au planning publié le ${esc(longDate(remote.at))}` +
+            (current.by ? ` par ${esc(current.by)}` : '') + '.'
+          : 'Ce fichier est identique au planning déjà publié : rien à publier.';
+      $('publishOk').hidden = !!current && !n;
+      $('publish').hidden = true;
+      $('publishConfirm').hidden = false;
+      publishMsg('');
+    } catch (e) {
+      $('publish').disabled = false;
+      publishMsg(errText(e), 'err');
+    }
+  }
+  async function confirmPublish() {
+    const code = teamCode();
+    const by = $('agent').value || load(STORAGE_NAME_KEY) || '';
+    $('publishOk').disabled = true;
+    publishMsg('Publication…');
+    try {
+      const key = await T.checkCode(code);
+      if (key.status !== 'ok') throw new Error('cle');
+      const res = await T.publishPlan(code, key.token, by,
+        current => ({ plan: { agents: C.mergePlan(current, state.importAgents, minKeep()).agents } }));
+      state.plan.teamAt = res.at;
+      state.plan.teamBy = by;
+      savePlan();
+      $('publishConfirm').hidden = true;
+      publishMsg('✓ Publié ! Tes collègues le recevront à la prochaine ouverture de l\'appli.', 'ok');
+      renderTeam();
+    } catch (e) {
+      publishMsg(errText(e), 'err');
+    } finally {
+      $('publishOk').disabled = false;
+    }
   }
 
   // ── Calendrier ────────────────────────────────────────────────────────────
@@ -577,8 +786,33 @@
     });
   }
 
+  $('teamJoin').addEventListener('click', joinTeam);
+  $('teamCode').addEventListener('keydown', e => { if (e.key === 'Enter') joinTeam(); });
+  $('teamSetupOk').addEventListener('click', setupTeam);
+  $('teamSyncNow').addEventListener('click', () => syncTeam(true));
+  $('teamLeave').addEventListener('click', () => {
+    store(STORAGE_TEAM_KEY, '');
+    $('publishBox').hidden = true;
+    teamMsg('Tu as quitté l\'équipe : ton calendrier reste sur ce téléphone, il ne se met plus à jour tout seul.');
+    renderTeam();
+  });
+  $('teamRenew').addEventListener('click', e => {
+    e.preventDefault();
+    $('teamSetup').hidden = false;
+    $('teamToken').focus();
+  });
+  $('publish').addEventListener('click', previewPublish);
+  $('publishOk').addEventListener('click', confirmPublish);
+  $('publishCancel').addEventListener('click', resetPublish);
+  // au retour sur l'appli (elle reste souvent ouverte en arrière-plan), on revérifie
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && Date.now() - lastSync > 60000) syncTeam(false);
+  });
+
   renderCodes();
   if (state.plan && !load(STORAGE_PLAN_KEY)) savePlan(); // reprise de l'ancien suivi des exports
   openOnUsefulMonth();
   renderCalendar();
+  renderTeam();
+  syncTeam(false);
 })();
