@@ -47,6 +47,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   Recalculé depuis `state.planBefore` à chaque réglage du fichier (feuille, mois, codes).
   Tous les codes s'affichent dans le calendrier, même décochés (la case ne vaut que pour l'export).
   À l'ouverture : mois en cours s'il a des jours, sinon le prochain mois rempli.
+  Deux vues (`mh_view`) : « Mois » (grille) et « Liste » (jours de haut en bas, toucher un jour
+  déplie les collègues du même service). Glisser à gauche/droite change de mois dans les deux.
 - Jours modifiés : à chaque import, `diffSnapshot` compare chaque agent à son planning précédent ;
   bandeau « 🔔 » + point orange sur les cases jusqu'à « J'ai vu » (`changesSeen`), repris dans
   l'export. L'ancien suivi par export (`mh_snap`) n'est plus écrit ; il sert une fois de point de

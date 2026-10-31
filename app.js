@@ -7,6 +7,7 @@
   const STORAGE_FROM_TODAY_KEY = 'mh_from_today';
   const STORAGE_SNAPSHOTS_KEY = 'mh_snap'; // ancien suivi des exports, repris une fois dans mh_plan
   const STORAGE_PLAN_KEY = 'mh_plan';
+  const STORAGE_VIEW_KEY = 'mh_view';
   const PLAN_KEEP_DAYS = 400;
   const CODES_VERSION = 5;
   const $ = id => document.getElementById(id);
@@ -95,7 +96,8 @@
   const today = todayDate();
   const state = { workbook: null, fileName: '', result: null, codes: loadCodes(), events: [],
     plan: loadPlan(), planBefore: undefined,
-    cal: { y: today.y, m: today.m, agent: load(STORAGE_NAME_KEY) || '', selected: C.dateKey(today) } };
+    cal: { y: today.y, m: today.m, agent: load(STORAGE_NAME_KEY) || '', selected: C.dateKey(today),
+      view: load(STORAGE_VIEW_KEY) === 'list' ? 'list' : 'month' } };
 
   // ── Fichier ───────────────────────────────────────────────────────────────
   function showError(msg) {
@@ -243,6 +245,12 @@
       }
     }
     $('calGrid').innerHTML = html;
+    const listView = state.cal.view === 'list';
+    $('calGrid').hidden = listView;
+    $('calList').hidden = !listView;
+    $('viewMonth').setAttribute('aria-selected', String(!listView));
+    $('viewList').setAttribute('aria-selected', String(listView));
+    if (listView) renderList(days, changes, todayKey);
     $('calEmpty').hidden = inMonth > 0;
     $('calTally').innerHTML = Object.keys(counts).map(l => `<span>${counts[l]} ${esc(l)}</span>`).join('');
 
@@ -260,8 +268,40 @@
     renderDay();
   }
 
+  // Vue liste : les jours du mois de haut en bas ; toucher un jour déplie les collègues du même service
+  function renderList(days, changes, todayKey) {
+    const { y, m } = state.cal, plan = state.plan, name = state.cal.agent;
+    let html = '';
+    for (const d of C.monthGrid(y, m).flat()) {
+      if (!d) continue;
+      const k = C.dateKey(d), code = days[k];
+      const wd = utc(d).getUTCDay(); // 0 = dimanche
+      const cls = ['cal-row'];
+      if (wd === 1) cls.push('monday');
+      if (wd === 0 || wd === 6) cls.push('weekend');
+      if (k === todayKey) cls.push('today');
+      if (k === state.cal.selected) cls.push('selected');
+      const ch = !plan.changesSeen && changes.get(k);
+      if (ch) cls.push('changed');
+      const dayName = utc(d).toLocaleDateString('fr-FR', { weekday: 'short', timeZone: 'UTC' }).replace('.', '');
+      html += `<button class="${cls.join(' ')}" data-key="${k}">` +
+        `<span class="cal-row-date"><span class="wd">${esc(dayName)}</span><span class="n">${d.d}</span></span>` +
+        `<span class="cal-row-code">${code ? chip(code) + ' ' + esc(codeLabel(code)) : '<span class="muted">—</span>'}` +
+        (ch ? ` <span class="was">avant : ${esc(codeTitle(ch.before))}</span>` : '') + '</span>';
+      if (k === state.cal.selected && code) {
+        const others = C.sameShift(plan, k, code, name);
+        html += `<span class="cal-row-mates">${others.length
+          ? `Aussi ${esc(codeLabel(code))} : ${others.map(esc).join(', ')}`
+          : `Personne d'autre en ${esc(codeLabel(code))}`}</span>`;
+      }
+      html += '</button>';
+    }
+    $('calList').innerHTML = html;
+  }
+
   function renderDay() {
     const k = state.cal.selected, box = $('calDay');
+    if (state.cal.view === 'list') { box.hidden = true; return; }
     const plan = state.plan, name = state.cal.agent;
     const d = k && keyToDate(k);
     if (!plan || !d || d.y !== state.cal.y || d.m !== state.cal.m) { box.hidden = true; return; }
@@ -427,6 +467,22 @@
     }
     renderCalendar();
   });
+  ['viewMonth', 'viewList'].forEach(id => $(id).addEventListener('click', e => {
+    state.cal.view = e.currentTarget.dataset.view;
+    store(STORAGE_VIEW_KEY, state.cal.view);
+    renderCalendar();
+    if (state.cal.view === 'list') scrollToSelected();
+  }));
+  function scrollToSelected() {
+    const row = $('calList').querySelector('.cal-row.selected') || $('calList').querySelector('.cal-row.today');
+    if (row) row.scrollIntoView({ block: 'center' });
+  }
+  $('calList').addEventListener('click', e => {
+    const row = e.target.closest('.cal-row[data-key]');
+    if (!row) return;
+    state.cal.selected = state.cal.selected === row.dataset.key ? '' : row.dataset.key;
+    renderCalendar();
+  });
   $('calGrid').addEventListener('click', e => {
     const cell = e.target.closest('.cal-cell[data-key]');
     if (!cell) return;
@@ -443,13 +499,15 @@
   });
   // glisser à gauche / à droite pour changer de mois
   let touchX = null, touchY = null;
-  $('calGrid').addEventListener('touchstart', e => { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; }, { passive: true });
-  $('calGrid').addEventListener('touchend', e => {
-    if (touchX == null) return;
-    const dx = e.changedTouches[0].clientX - touchX, dy = e.changedTouches[0].clientY - touchY;
-    touchX = null;
-    if (Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) moveMonth(dx < 0 ? 1 : -1);
-  }, { passive: true });
+  ['calGrid', 'calList'].forEach(id => {
+    $(id).addEventListener('touchstart', e => { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; }, { passive: true });
+    $(id).addEventListener('touchend', e => {
+      if (touchX == null) return;
+      const dx = e.changedTouches[0].clientX - touchX, dy = e.changedTouches[0].clientY - touchY;
+      touchX = null;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) moveMonth(dx < 0 ? 1 : -1);
+    }, { passive: true });
+  });
   $('download').addEventListener('click', download);
   $('fromToday').checked = load(STORAGE_FROM_TODAY_KEY) !== '0';
   $('fromToday').addEventListener('change', e => {

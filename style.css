@@ -9,6 +9,7 @@
   }
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   margin: 0; background: var(--bg); color: var(--text);
   font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -147,3 +148,26 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .cal-tally:empty { display: none; }
 #calChanges button { margin-top: 4px; padding: 5px 12px; font-size: .88rem; }
 .cal-cell .chip.long { font-size: .6rem; padding: 0 2px; letter-spacing: -.02em; }
+
+/* ── Vue liste ──────────────────────────────────────────────────────────── */
+.seg { display: flex; padding: 3px; gap: 3px; margin-bottom: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 11px; }
+.seg button { flex: 1; border: 0; background: transparent; padding: 7px 10px; border-radius: 8px; color: var(--muted); font-weight: 600; }
+.seg button[aria-selected="true"] { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .15); }
+.cal-list { display: flex; flex-direction: column; touch-action: pan-y; }
+.cal-row {
+  position: relative; display: grid; grid-template-columns: 3.2em 1fr; align-items: center; gap: 4px 10px;
+  width: 100%; text-align: left; padding: 8px 8px; border: 0; border-bottom: 1px solid var(--line);
+  border-radius: 0; background: transparent;
+}
+.cal-row.monday { border-top: 2px solid var(--line); }
+.cal-row.weekend { background: color-mix(in srgb, var(--bg) 70%, transparent); }
+.cal-row-date { display: flex; align-items: baseline; gap: 5px; }
+.cal-row-date .wd { font-size: .78rem; color: var(--muted); width: 1.7em; }
+.cal-row-date .n { font-weight: 600; min-width: 1.5em; text-align: center; border-radius: 999px; }
+.cal-row.today .n { background: var(--accent); color: var(--accent-text); padding: 0 4px; }
+.cal-row.selected { background: var(--bg); box-shadow: inset 3px 0 0 var(--accent); }
+.cal-row-code { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cal-row-code .chip { font-size: .78rem; }
+.cal-row.changed .cal-row-code { font-weight: 600; }
+.cal-row.changed::after { content: ''; position: absolute; top: 50%; right: 10px; width: 7px; height: 7px; margin-top: -3px; border-radius: 50%; background: var(--warn); }
+.cal-row-mates { grid-column: 2; font-size: .85rem; color: var(--muted); overflow-wrap: anywhere; }

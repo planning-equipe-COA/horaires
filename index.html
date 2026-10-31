@@ -30,10 +30,15 @@
       <select id="calAgent" aria-label="Planning de"></select>
       <button id="calToday">Aujourd'hui</button>
     </div>
+    <div class="seg" role="tablist" aria-label="Affichage">
+      <button id="viewMonth" role="tab" data-view="month">Mois</button>
+      <button id="viewList" role="tab" data-view="list">Liste</button>
+    </div>
     <div id="calChanges" class="changes" hidden></div>
     <p id="calPartial" class="changes" hidden>Ce calendrier vient de ton dernier export, qui ne gardait qu'un agent.
       <strong>Importe le tableau de service ci-dessous</strong> pour avoir toute l'équipe.</p>
     <div id="calGrid" class="cal-grid" role="grid"></div>
+    <div id="calList" class="cal-list" hidden></div>
     <p id="calEmpty" class="hint" hidden>Pas de planning pour ce mois : importe le tableau de service ci-dessous.</p>
     <div id="calDay" class="cal-day" hidden></div>
     <p id="calTally" class="cal-tally"></p>
