@@ -68,12 +68,12 @@ test('planning en colonne (une ligne par jour)', () => {
 });
 
 test('événements : tous les codes inclus par défaut, codes décochés ignorés, codes inconnus signalés', () => {
-  const entries = ['M', 'R', 'CA', 'X', 'FORM'].map((code, i) => ({ date: { y: 2026, m: 10, d: i + 1 }, code }));
+  const entries = ['M', 'R', 'CA', 'X', 'ZZZ'].map((code, i) => ({ date: { y: 2026, m: 10, d: i + 1 }, code }));
   const codes = C.DEFAULT_CODES.map(c => Object.assign({}, c, c.code === 'X' ? { include: false } : {}));
   assert.ok(C.DEFAULT_CODES.every(c => c.include));
   const { events, unknown, skipped } = C.buildEvents(entries, codes);
   assert.deepStrictEqual(events.map(e => e.code), ['M', 'R', 'CA']);
-  assert.deepStrictEqual(unknown, { FORM: 1 });
+  assert.deepStrictEqual(unknown, { ZZZ: 1 });
   assert.strictEqual(skipped, 1);
 });
 
@@ -201,14 +201,14 @@ test('RECU : libellé « Recup », blanc comme les repos', () => {
 
 test('monthSummary : jours travaillés (M, S, N, J, JS), repos, congés, autres', () => {
   const days = { 20261101: 'M', 20261102: 'M', 20261103: 'S', 20261104: 'N', 20261105: 'TN', 20261106: 'R',
-    20261107: 'RECU', 20261108: 'CA', 20261109: 'JS', 20261110: 'FORM', 20261110: 'FORM', 20261201: 'M' };
+    20261107: 'RECU', 20261108: 'CA', 20261109: 'JS', 20261110: 'ZZZ', 20261201: 'M' };
   const s = C.monthSummary(days, C.DEFAULT_CODES, 2026, 11);
   assert.strictEqual(s.travail.total, 5);
   assert.deepStrictEqual(s.travail.detail.map(d => d.code + d.n), ['M2', 'S1', 'N1', 'JS1']);
   assert.strictEqual(s.repos.total, 3);
   assert.deepStrictEqual(s.repos.detail.map(d => d.code), ['R', 'TN', 'RECU']);
   assert.strictEqual(s.conge.total, 1);
-  assert.deepStrictEqual(s.autre.detail.map(d => d.code + d.n), ['FORM1']);
+  assert.deepStrictEqual(s.autre.detail.map(d => d.code + d.n), ['ZZZ1']);
 });
 
 test('frenchHolidays : dates fixes et mobiles (Pâques)', () => {
@@ -240,4 +240,49 @@ test('teamOfDay : équipe groupée par service, travail d\'abord', () => {
   const t = C.teamOfDay(plan, '20261101', C.DEFAULT_CODES);
   assert.deepStrictEqual(t.map(g => g.code + ':' + g.names.join('/')), ['M:LEA/MARC', 'S:ABEL', 'R:ZOE', 'CA:EVE']);
   assert.strictEqual(t[2].kind, 'repos');
+});
+
+test('FORM : Formation, comptée comme jour travaillé (7 h)', () => {
+  const def = C.DEFAULT_CODES.find(c => c.code === 'FORM');
+  assert.strictEqual(def.label, 'Formation');
+  assert.strictEqual(C.dayKind(def), 'travail');
+  assert.strictEqual(C.codeMinutes(def), 420);
+});
+
+test('heures : durée par code, nuit à cheval, semaines ISO', () => {
+  const get = c => C.DEFAULT_CODES.find(d => d.code === c);
+  assert.strictEqual(C.codeMinutes(get('M')), 480);
+  assert.strictEqual(C.codeMinutes(get('N')), 480);
+  assert.strictEqual(C.codeMinutes(get('J')), 540);
+  assert.strictEqual(C.codeMinutes(get('R')), 0);
+  assert.deepStrictEqual(C.isoWeek({ y: 2026, m: 11, d: 2 }), { y: 2026, w: 45, monday: '20261102' });
+  assert.strictEqual(C.isoWeek({ y: 2027, m: 1, d: 1 }).w, 53); // 1er janv. 2027 = semaine 53 de 2026
+  // lundi 2 → dimanche 8 nov. : M, M, S, N, R, R, J ; et dimanche 1er nov. (semaine 44) : N
+  const days = { 20261101: 'N', 20261102: 'M', 20261103: 'M', 20261104: 'S', 20261105: 'N', 20261106: 'R', 20261108: 'J', 20261201: 'M' };
+  const h = C.monthHours(days, C.DEFAULT_CODES, 2026, 11);
+  assert.strictEqual(h.minutes, (8 * 5 + 9) * 60);
+  assert.deepStrictEqual(h.weeks.map(w => w.w + ':' + w.minutes / 60), ['44:8', '45:41']);
+});
+
+test('commentaires Excel : lus avec la case, gardés dans le planning (remarks)', () => {
+  const dates = [1, 2, 3, 4, 5].map(d => ({ y: 2026, m: 11, d }));
+  const m = [['Agent', ...dates], ['DUPONT', 'M', 'M', 'FORM', 'R', 'R']];
+  m.notes = { '1,3': 'Formation sûreté' };
+  const res = C.parseMatrix(m, { codes: C.DEFAULT_CODES });
+  const e = res.agents[0].entries.find(x => x.code === 'FORM');
+  assert.strictEqual(e.note, 'Formation sûreté');
+  const plan = C.mergePlan(null, res.agents);
+  assert.deepStrictEqual(plan.remarks, { DUPONT: { 20261103: 'Formation sûreté' } });
+  // un nouveau tableau sur la même période remplace aussi les commentaires
+  const again = C.mergePlan(plan, [{ name: 'DUPONT', entries: [{ date: dates[2], code: 'M' }] }]);
+  assert.deepStrictEqual(again.remarks, {});
+});
+
+test('export : rappel la veille à 20 h pour les jours travaillés seulement', () => {
+  const get = c => C.DEFAULT_CODES.find(d => d.code === c);
+  const evs = [{ date: { y: 2026, m: 11, d: 2 }, def: get('M'), timed: false }, { date: { y: 2026, m: 11, d: 3 }, def: get('R'), timed: false }];
+  const ics = C.buildICS(evs, { name: 'X', alarm: true });
+  assert.strictEqual((ics.match(/BEGIN:VALARM/g) || []).length, 1);
+  assert.ok(ics.includes('TRIGGER:-PT4H'));
+  assert.ok(!C.buildICS(evs, { name: 'X' }).includes('VALARM'));
 });

@@ -71,7 +71,7 @@ test('équipe : configuration, rejoindre, publier, recevoir, publier une mise à
   const after = await T.decrypt((await T.fetchPlan(gh.fetchFn)).text, code);
   assert.strictEqual(after.by, 'MARTIN');
   assert.strictEqual(after.agents.DUPONT[20261101], 'S');
-  assert.strictEqual(gh.files['planning.enc'].message, 'Planning publié par MARTIN');
+  assert.strictEqual(gh.files['planning.enc'].message, 'Planning publié'); // jamais de nom en clair
 });
 
 test('publication : si quelqu\'un publie entre-temps, on refusionne sur sa version', async () => {

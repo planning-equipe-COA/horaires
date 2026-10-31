@@ -249,3 +249,64 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .sum-maj .sum-detail { color: var(--text); }
 #calAgent[hidden] + #calToday { margin-left: auto; }
 .cal-sum.empty .sum-n { color: var(--muted); }
+
+/* ── Accueil (premier lancement) ────────────────────────────────────────── */
+.welcome h2 { font-size: 1.1rem; }
+.welcome-steps { margin: 0 0 12px; padding-left: 1.3em; display: flex; flex-direction: column; gap: 14px; }
+.welcome-steps li { display: flex; flex-direction: column; gap: 6px; }
+.welcome-steps li .hint { margin: 0; }
+.welcome-steps .actions { margin: 2px 0 0; flex-wrap: wrap; }
+.welcome-steps .w-done { display: none; color: var(--ok); font-weight: 600; }
+.welcome-steps li.done > .hint, .welcome-steps li.done > .actions, .welcome-steps li.done > select { display: none; }
+.welcome-steps li.done .w-done { display: inline; }
+#wWho:not(.todo):not(.done) { opacity: .5; }
+#wWho:not(.todo) select { display: none; }
+#wName { width: 100%; }
+button.link { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 9px 6px; }
+/* ── Comparaison ─────────────────────────────────────────────────────────── */
+.cal-compare { display: flex; align-items: center; gap: 8px; margin: -4px 0 12px; color: var(--muted); }
+.cal-compare select { flex: 1; min-width: 0; font-size: .9rem; padding: 6px 8px; }
+.cal-grid.comparing .cal-cell { min-height: 70px; }
+.cmp-chip .chip { opacity: .85; font-size: .64rem; box-shadow: inset 0 0 0 1px var(--line); }
+.cmp-none { background: transparent !important; color: var(--muted); }
+.cal-cell.swap { border: 1px dashed var(--ok); }
+.cal-row.swap { box-shadow: inset 3px 0 0 var(--ok); }
+.cal-row.selected.swap { box-shadow: inset 3px 0 0 var(--accent); }
+.cmp-inline { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--muted); font-size: .85rem; }
+.cmp-inline .chip { font-size: .68rem; }
+/* ── Vue Équipe ─────────────────────────────────────────────────────────── */
+.tt-wrap { overflow-x: auto; margin: 0 -4px; -webkit-overflow-scrolling: touch; }
+.team-table { border-collapse: separate; border-spacing: 0; font-size: .78rem; width: auto; }
+.team-table th, .team-table td { padding: 3px 2px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; min-width: 2.1em; }
+.team-table thead th { font-weight: 600; color: var(--muted); font-size: .72rem; line-height: 1.2; cursor: pointer; }
+.team-table thead th span { display: block; font-weight: 400; }
+.team-table .tt-name {
+  position: sticky; left: 0; z-index: 1; background: var(--card); text-align: left; padding: 3px 8px 3px 2px;
+  max-width: 7.5em; overflow: hidden; text-overflow: ellipsis; font-weight: 500; color: var(--text); font-size: .78rem;
+}
+.team-table tr.me .tt-name { font-weight: 700; color: var(--accent); }
+.team-table tr.me td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.team-table .we { background: color-mix(in srgb, var(--bg) 80%, transparent); }
+.team-table .today { box-shadow: inset 0 0 0 1px var(--accent); }
+.team-table thead th.today { color: var(--accent); }
+.team-table .sel { background: color-mix(in srgb, var(--accent) 16%, transparent) !important; }
+.team-table thead th.hol { color: var(--warn); }
+.team-table .chip { font-size: .62rem; min-width: 1.7em; padding: 0 2px; }
+.team-table td { cursor: pointer; }
+/* ── Commentaires du planning, historique, heures ──────────────────────── */
+.cal-cell.remark::before { content: '💬'; position: absolute; bottom: 2px; left: 3px; font-size: .55rem; }
+.day-remark { font-size: .9rem; overflow-wrap: anywhere; }
+.history { margin-top: 12px; font-size: .92rem; }
+.history > summary { cursor: pointer; color: var(--accent); }
+.hist-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.hist-row button { padding: 4px 10px; font-size: .85rem; }
+.hist-detail { flex-basis: 100%; font-size: .88rem; }
+.hist-detail button { margin-top: 6px; }
+.hist-detail .ok, .hint.err { font-weight: 600; }
+.hist-detail .ok { color: var(--ok); }
+.hint.err { color: var(--error); }
+.badge { font-size: .72rem; border: 1px solid var(--line); border-radius: 999px; padding: 0 6px; color: var(--muted); }
+.sum-hours .sum-n { font-size: 1.2rem; }
+.sum-hours .sum-detail { color: var(--text); }
+.cmp-legend { margin: -6px 0 12px; }
+.legend-swap { border: 1px dashed var(--ok); border-radius: 6px; padding: 0 5px; }

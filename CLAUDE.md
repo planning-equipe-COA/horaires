@@ -39,7 +39,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   affiche un aperçu (« N cases changent ») : rien ne part sans « Envoyer à l'équipe » (garde-fou
   demandé par l'utilisateur). Envoi = `mergePlan(planning publié, tableau importé)`. Pas de
   proposition si aucune case ne change ; rappel si le mois a été deviné ; « Annuler l'envoi »
-  pendant 2 min (republie le planning d'avant).
+  pendant 2 min (republie le planning d'avant). « Versions précédentes » (carte équipe) : historique
+  des commits de `planning.enc` (API publique), aperçu des cases différentes du planning d'équipe
+  actuel, puis « Restaurer » (republie cette version entière). Messages de commit **sans nom**
+  (« Planning publié / restauré ») : l'auteur reste dans le fichier chiffré.
   Synchro à l'ouverture et au retour sur l'appli (60 s min.) si `mh_team_code` ; jamais pendant un
   import. `plan.teamAt` = date de la publication reçue (seule info en clair de l'enveloppe), `teamBy`.
   Si le code ne déchiffre plus (code changé) : il est oublié et l'agent doit saisir le nouveau.
@@ -47,7 +50,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   mois dans un titre « OCTOBRE 2026 » ou le nom de la feuille, colonnes code/remarque à droite.
   Les homonymes dans deux blocs aux mêmes dates deviennent « NOM (2) ».
 - Codes : M Matin 6h-14h, S Soir 14h-22h, N Nuit 22h-6h (finit le lendemain), J Journée 7h30-16h30,
-  JS Journée de solidarité (libellé « JS », toujours sans horaires),
+  JS Journée de solidarité (libellé « JS », toujours sans horaires), FORM Formation (pastille
+  « Form » violette, jour travaillé ; absent du vrai planning, présent dans l'exemple),
   R Repos, Tn Tombée de nuit, RF, RC, RCN, ATT Repos, RECUP Récupération,
   RECU « Recup » (pastille « Recup » via `abbr`, blanc ; « RECU » se lisait « reçu »), CA/C Congé, EM Enfant malade,
   X « Absence » (sens exact à préciser par l'utilisateur).
@@ -71,7 +75,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   Sans planning sur le téléphone, le calendrier s'affiche quand même, vide (`EMPTY_PLAN` via
   `planView()`) : grille, liste, notes et résumé à zéro ; menu des agents masqué.
   Résumé du mois sous le calendrier (`monthSummary`, `dayKind`) : jours travaillés = codes à
-  horaires (M, S, N, J) + JS ; repos = pastille blanche (R, Tn, RF, RC, RCN, RECUP, RECU, ATT) ;
+  horaires (M, S, N, J) + JS + FORM ; repos = pastille blanche (R, Tn, RF, RC, RCN, RECUP, RECU, ATT) ;
   congés = pastille verte (CA, C) ; autres = le reste (EM, X, codes inconnus comme FORM).
   Résumé « Ce mois / Année » (`mh_sum`) + ligne « Travaillés en majoration » : dimanches, fériés
   (`frenchHolidays`, Pâques calculée) et nuits travaillés, comptés le jour où le service commence.
@@ -79,12 +83,24 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   si le mois suivant manque. Détail d'un jour (grille ou liste dépliée) : férié, équipe du jour
   groupée par code (`teamOfDay`), collègues en repos « pour un échange » si l'agent travaille, et
   note perso (`mh_notes` = { AAAAMMJJ: texte }, jamais envoyée, même avec le planning d'équipe).
-  Deux vues (`mh_view`) : « Mois » (grille) et « Liste » (jours de haut en bas, toucher un jour
-  déplie les collègues du même service). Glisser à gauche/droite change de mois dans les deux.
+  Trois vues (`mh_view`) : « Mois » (grille), « Liste » (jours de haut en bas, toucher un jour déplie
+  le détail) et « Équipe » (`renderTeamTable` : agents en lignes, jours en colonnes, noms figés,
+  « moi » en premier). Glisser à gauche/droite change de mois (Mois, Liste).
+  « Comparer avec un collègue » (Mois, Liste ; non mémorisé) : 2e pastille sous la mienne, cadre vert
+  pointillé = l'un travaille pendant que l'autre est en repos (échange possible).
+  Heures théoriques (`codeMinutes`, `monthHours`) : durée des horaires du code (sans pause, nuit à
+  cheval), `hours` pour JS et Formation (7 h) ; total du mois + semaines ISO, total de l'année.
+  Commentaires de cases Excel (`cell.c` → `matrix.notes` → `entry.note`) gardés dans
+  `plan.remarks` { NOM: { AAAAMMJJ: texte } } (fusionnés comme les codes, publiés avec le planning
+  d'équipe), affichés « 💬 » dans le détail du jour.
+  Accueil au premier lancement (`mh_welcome`, `mh_name_ok`) : récupérer le planning (code d'équipe
+  ou import), puis choisir son nom ; jamais montré à qui avait déjà planning + nom.
 - Jours modifiés : à chaque import, `diffSnapshot` compare chaque agent à son planning précédent ;
   bandeau « 🔔 » + point orange sur les cases jusqu'à « J'ai vu » (`changesSeen`), repris dans
   l'export. L'ancien suivi par export (`mh_snap`) n'est plus écrit ; il sert une fois de point de
   départ à `mh_plan`.
-- Idée en option, pas encore faite : rappel la veille (VALARM dans l'export .ics). Pas de notifications
-  web (iPhone : impossible sans serveur).
+- Export : case « Rappel la veille à 20 h » (`mh_alarm`, cochée par défaut) → VALARM sur les jours
+  travaillés. Apple le garde à l'import ; Google Agenda ignore les alarmes importées.
+  Pas de notifications web (iPhone : impossible sans serveur).
+- Écarté par l'utilisateur : « Partager → Planning COA » sur Android.
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.

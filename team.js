@@ -141,7 +141,7 @@
 
   // Publie : merge(planningActuel) → planningPublié. merge reçoit le planning d'équipe actuel
   // (déchiffré, ou null) et rend { plan, summary } ; on réessaie une fois si quelqu'un a publié entre-temps.
-  async function publishPlan(code, token, by, merge, fetchFn) {
+  async function publishPlan(code, token, by, merge, fetchFn, message) {
     for (let attempt = 0; ; attempt++) {
       const current = await readWithKey(PLAN_FILE, token, fetchFn);
       const remote = current ? await decrypt(current.text, code) : null;
@@ -149,7 +149,8 @@
       const at = new Date().toISOString();
       const text = await encrypt(Object.assign({}, out.plan, { at, by }), code, at);
       try {
-        await write(PLAN_FILE, text, current && current.sha, token, 'Planning publié par ' + by, fetchFn);
+        // message de commit public : jamais de nom (le nom de l'auteur reste dans le fichier chiffré)
+        await write(PLAN_FILE, text, current && current.sha, token, message || 'Planning publié', fetchFn);
         return { at, summary: out.summary };
       } catch (e) {
         if (e.message !== 'conflit' || attempt > 0) throw e;
@@ -157,6 +158,23 @@
     }
   }
 
+  // Versions publiées de planning.enc (historique GitHub, lecture publique) : [{ sha, date }]
+  async function listVersions(fetchFn, limit) {
+    const r = DATA_REPO;
+    const res = await (fetchFn || fetch)(`https://api.github.com/repos/${r.owner}/${r.repo}/commits?path=${PLAN_FILE}&sha=${r.branch}&per_page=${limit || 15}`,
+      { headers: { Accept: 'application/vnd.github+json' }, cache: 'no-store' });
+    if (!res.ok) throw new Error('reseau');
+    const list = await res.json();
+    return list.map(c => ({ sha: c.sha, date: c.commit && (c.commit.committer || c.commit.author || {}).date }));
+  }
+  // Contenu chiffré d'une version donnée
+  async function readVersion(sha, fetchFn) {
+    const r = DATA_REPO;
+    const res = await (fetchFn || fetch)(`https://raw.githubusercontent.com/${r.owner}/${r.repo}/${sha}/${PLAN_FILE}`);
+    if (!res.ok) throw new Error('reseau');
+    return res.text();
+  }
+
   return { DATA_REPO, PLAN_FILE, KEY_FILE, normCode, encrypt, decrypt, envelopeAt,
-    checkCode, setupKey, fetchPlan, publishPlan, readWithKey };
+    checkCode, setupKey, fetchPlan, publishPlan, readWithKey, listVersions, readVersion };
 });

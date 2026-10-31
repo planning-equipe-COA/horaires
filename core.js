@@ -11,7 +11,8 @@
     { code: 'S', label: 'Soir', allDay: false, start: '14:00', end: '22:00', include: true, color: 'jaune' },
     { code: 'N', label: 'Nuit', allDay: false, start: '22:00', end: '06:00', include: true, color: 'bleu' },
     { code: 'J', label: 'Journée', allDay: false, start: '07:30', end: '16:30', include: true, color: '' },
-    { code: 'JS', label: 'JS', allDay: true, start: '', end: '', include: true, color: '' },
+    { code: 'JS', label: 'JS', allDay: true, start: '', end: '', include: true, color: '', hours: 7 },
+    { code: 'FORM', label: 'Formation', abbr: 'Form', allDay: true, start: '', end: '', include: true, color: 'violet', hours: 7 },
     { code: 'R', label: 'Repos', allDay: true, start: '', end: '', include: true, color: 'blanc' },
     { code: 'Tn', label: 'Tombée de nuit', allDay: true, start: '', end: '', include: true, color: 'blanc' },
     { code: 'RF', label: 'RF', allDay: true, start: '', end: '', include: true, color: 'blanc' },
@@ -193,7 +194,8 @@
       for (const h of header.cols) {
         const code = normCode(row[h.c]);
         if (!code) continue;
-        cells.push({ date: h.date, code });
+        const note = matrix.notes && matrix.notes[r + ',' + h.c];
+        cells.push(note ? { date: h.date, code, note } : { date: h.date, code });
         if (known.has(code)) matched++;
       }
       // ligne d'agent : au moins 3 codes connus et 60 % des cases reconnues
@@ -221,6 +223,10 @@
       const row = [];
       for (let r = 0; r < matrix.length; r++) row.push(matrix[r] ? matrix[r][c] : null);
       out.push(row);
+    }
+    if (matrix.notes) {
+      out.notes = {};
+      for (const k of Object.keys(matrix.notes)) { const [r, c] = k.split(','); out.notes[c + ',' + r] = matrix.notes[k]; }
     }
     return out;
   }
@@ -263,6 +269,11 @@
           }
         }
         row.push(v);
+        // commentaire de la case (petit triangle rouge dans Excel)
+        if (cell && Array.isArray(cell.c) && cell.c.length) {
+          const text = cell.c.map(x => String(x.t || '').trim()).filter(Boolean).join(' / ').slice(0, 300);
+          if (text) (m.notes || (m.notes = {}))[(r - range.s.r) + ',' + (c - range.s.c)] = text;
+        }
       }
       m.push(row);
     }
@@ -359,19 +370,23 @@
         if (last == null || k > last) last = k;
       }
     }
-    const out = { agents: {} };
+    const out = { agents: {}, remarks: {} };
     const keep = k => (!minKey || k >= minKey) && (first == null || k < first || k > last);
-    const prevAgents = (prev && prev.agents) || {};
-    for (const name of Object.keys(prevAgents)) {
-      const days = {};
-      for (const k of Object.keys(prevAgents[name])) if (keep(k)) days[k] = prevAgents[name][k];
-      if (Object.keys(days).length) out.agents[name] = days;
+    for (const field of ['agents', 'remarks']) {
+      const src = (prev && prev[field]) || {};
+      for (const name of Object.keys(src)) {
+        const days = {};
+        for (const k of Object.keys(src[name])) if (keep(k)) days[k] = src[name][k];
+        if (Object.keys(days).length) out[field][name] = days;
+      }
     }
     for (const ag of agents) {
       const days = out.agents[ag.name] || (out.agents[ag.name] = {});
       for (const e of ag.entries) {
         const k = dateKey(e.date);
-        if (isValidDate(e.date) && (!minKey || k >= minKey)) days[k] = e.code;
+        if (!isValidDate(e.date) || (minKey && k < minKey)) continue;
+        days[k] = e.code;
+        if (e.note) (out.remarks[ag.name] || (out.remarks[ag.name] = {}))[k] = e.note;
       }
       if (!Object.keys(days).length) delete out.agents[ag.name];
     }
@@ -404,12 +419,51 @@
 
   // Nature d'un code pour le résumé du mois : travail (codes à horaires + JS), repos (pastille
   // blanche), congé (pastille verte), autre (EM, X, codes inconnus…)
+  const WORKED_ALL_DAY = new Set(['JS', 'FORM']); // journées travaillées sans horaire précis
   function dayKind(def) {
     if (!def) return 'autre';
-    if (!def.allDay || normCode(def.code) === 'JS') return 'travail';
+    if (!def.allDay || WORKED_ALL_DAY.has(normCode(def.code))) return 'travail';
     if (def.color === 'blanc') return 'repos';
     if (def.color === 'vert') return 'conge';
     return 'autre';
+  }
+
+  // Durée théorique d'un service en minutes (sans pause) : horaires du code, ou `hours` (JS, Formation)
+  function codeMinutes(def) {
+    if (!def || dayKind(def) !== 'travail') return 0;
+    if (def.hours) return Math.round(def.hours * 60);
+    const t = s => /^\d{2}:\d{2}$/.test(s || '') ? +s.slice(0, 2) * 60 + +s.slice(3) : null;
+    const a = t(def.start), b = t(def.end);
+    if (a == null || b == null) return 0;
+    return b > a ? b - a : b + 1440 - a; // nuit : finit le lendemain
+  }
+  // Semaine ISO (lundi → dimanche) d'une date : { y, w, monday: 'AAAAMMJJ' }
+  function isoWeek(d) {
+    const t = new Date(Date.UTC(d.y, d.m - 1, d.d));
+    const day = (t.getUTCDay() + 6) % 7;
+    const monday = new Date(t); monday.setUTCDate(t.getUTCDate() - day);
+    const thursday = new Date(t); thursday.setUTCDate(t.getUTCDate() - day + 3);
+    const jan1 = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 1));
+    const w = 1 + Math.round((thursday - jan1) / 864e5 / 7 - 0.5 + ((jan1.getUTCDay() + 6) % 7) / 7);
+    const mk = monday.getUTCFullYear() + pad(monday.getUTCMonth() + 1) + pad(monday.getUTCDate());
+    return { y: thursday.getUTCFullYear(), w, monday: mk };
+  }
+  // Heures d'un mois : total + par semaine ISO touchant le mois (semaines complètes, même à cheval)
+  function monthHours(days, codes, y, m) {
+    const map = new Map(codes.map(c => [normCode(c.code), c]));
+    const prefix = String(y) + (m ? pad(m) : '');
+    let total = 0;
+    const weeks = new Map();
+    const inPeriod = new Set();
+    for (const k of Object.keys(days || {})) {
+      const d = { y: +k.slice(0, 4), m: +k.slice(4, 6), d: +k.slice(6, 8) };
+      const min = codeMinutes(map.get(days[k]));
+      const wk = isoWeek(d), id = wk.y + '-' + pad(wk.w);
+      if (k.slice(0, prefix.length) === prefix) { total += min; inPeriod.add(id); }
+      if (!weeks.has(id)) weeks.set(id, { id, w: wk.w, monday: wk.monday, minutes: 0 });
+      weeks.get(id).minutes += min;
+    }
+    return { minutes: total, weeks: [...weeks.values()].filter(w => inPeriod.has(w.id)).sort((a, b) => a.monday.localeCompare(b.monday)) };
   }
 
   // Jours fériés en France métropolitaine : { 'AAAAMMJJ': 'nom' }
@@ -532,11 +586,16 @@
       }
       lines.push('SUMMARY:' + icsEscape(eventTitle(def)));
       if (COLORS[def.color]) lines.push('COLOR:' + COLORS[def.color].css);
+      if (opts.alarm && dayKind(def) === 'travail') {
+        // rappel la veille à 20 h (4 h avant minuit pour un événement « journée entière »)
+        lines.push('BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsEscape('Demain : ' + (def.label || def.code)),
+          'TRIGGER:' + (ev.timed ? '-PT10H' : '-PT4H'), 'END:VALARM');
+      }
       lines.push('END:VEVENT');
     }
     lines.push('END:VCALENDAR');
     return lines.join('\r\n') + '\r\n';
   }
 
-  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, monthSummary, frenchHolidays, holidayName, teamOfDay, parseMatrix, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
+  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, codeMinutes, isoWeek, monthHours, monthSummary, frenchHolidays, holidayName, teamOfDay, parseMatrix, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
 });

@@ -19,6 +19,21 @@
     <h1>Planning COA</h1>
   </header>
 
+  <section id="welcome" class="card welcome" hidden>
+    <h2>👋 Bienvenue dans Planning COA</h2>
+    <ol class="welcome-steps">
+      <li id="wTeam"><strong>Récupère le planning</strong>
+        <span class="hint">Avec les 4 mots de l'équipe, il arrive tout seul. Sinon, importe le tableau Excel.</span>
+        <span class="actions"><button id="wJoin" class="primary">J'ai le code d'équipe</button><button id="wImport">J'importe le tableau</button></span>
+        <span class="w-done">✓ Planning reçu</span></li>
+      <li id="wWho"><strong>Qui es-tu ?</strong>
+        <span class="hint">Pour afficher ton planning à l'ouverture et « Aujourd'hui / Demain ».</span>
+        <select id="wName" aria-label="Ton nom"></select>
+        <span class="w-done">✓ <span id="wNameDone"></span></span></li>
+    </ol>
+    <div class="actions"><button id="wOk" class="primary" hidden>C'est prêt 👍</button><button id="wSkip" class="link">Passer</button></div>
+  </section>
+
   <section id="calCard" class="card cal" hidden>
     <div id="nextDays" class="next-days" hidden></div>
     <p id="calRemind" class="remind" hidden></p>
@@ -31,16 +46,23 @@
       <select id="calAgent" aria-label="Planning de"></select>
       <button id="calToday">Aujourd'hui</button>
     </div>
+    <div id="compareRow" class="cal-compare">
+      <span aria-hidden="true">⇄</span>
+      <select id="calCompare" aria-label="Comparer avec un collègue"></select>
+    </div>
+    <p id="compareLegend" class="hint cmp-legend" hidden></p>
     <p id="teamStatus" class="team-status" hidden></p>
     <div class="seg" role="tablist" aria-label="Affichage">
       <button id="viewMonth" role="tab" data-view="month">Mois</button>
       <button id="viewList" role="tab" data-view="list">Liste</button>
+      <button id="viewTeam" role="tab" data-view="team">Équipe</button>
     </div>
     <div id="calChanges" class="changes" hidden></div>
     <p id="calPartial" class="changes" hidden>Ce calendrier vient de ton dernier export, qui ne gardait qu'un agent.
       <strong>Importe le tableau de service ci-dessous</strong> pour avoir toute l'équipe.</p>
     <div id="calGrid" class="cal-grid" role="grid"></div>
     <div id="calList" class="cal-list" hidden></div>
+    <div id="calTeam" class="cal-team" hidden></div>
     <p id="calEmpty" class="hint" hidden>Pas de planning pour ce mois : importe le tableau de service ci-dessous.</p>
     <div id="calDay" class="cal-day" hidden></div>
     <div id="sumBox" class="cal-sum-box">
@@ -94,6 +116,7 @@
     <p id="summary" class="summary"></p>
     <div id="unknown" class="unknown" hidden></div>
     <label class="check"><input type="checkbox" id="fromToday"> Seulement à partir d'aujourd'hui</label>
+    <label class="check"><input type="checkbox" id="alarm"> Rappel la veille à 20 h (jours travaillés)</label>
     <button id="download" class="primary">Télécharger pour mon agenda (.ics)</button>
     <details class="help">
       <summary>Comment l'ajouter à mon agenda ?</summary>
@@ -137,6 +160,11 @@
           <button id="teamSyncNow">Vérifier maintenant</button>
           <button id="teamLeave">Quitter</button>
         </div>
+        <details id="teamHistory" class="history">
+          <summary>Versions précédentes du planning d'équipe</summary>
+          <p class="hint">En cas d'erreur remarquée tard : choisis une version pour voir ce qu'elle change, puis restaure-la pour toute l'équipe.</p>
+          <div id="historyList"></div>
+        </details>
         <p class="hint"><a href="#" id="teamRenew">Renouveler la clé de publication</a></p>
       </div>
       <div id="teamSetup" hidden>
