@@ -23,8 +23,10 @@
     <h2>👋 Bienvenue dans Planning COA</h2>
     <ol class="welcome-steps">
       <li id="wTeam"><strong>Récupère le planning</strong>
-        <span class="hint">Avec les 4 mots de l'équipe, il arrive tout seul. Sinon, importe le tableau Excel.</span>
-        <span class="actions"><button id="wJoin" class="primary">J'ai le code d'équipe</button><button id="wImport">J'importe le tableau</button></span>
+        <span class="hint">Saisis ou colle les 4 mots de l'équipe : le planning arrive tout seul. Sinon, importe le tableau Excel.</span>
+        <span class="w-code"><input id="wCode" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="les 4 mots de l'équipe" aria-label="Code d'équipe"><button id="wPaste" type="button">📋 Coller</button></span>
+        <span class="actions"><button id="wJoin" class="primary">Rejoindre</button><button id="wImport">J'importe le tableau</button></span>
+        <span id="wMsg" class="w-msg" hidden></span>
         <span class="w-done">✓ Planning reçu</span></li>
       <li id="wWho"><strong>Qui es-tu ?</strong>
         <span class="hint">Pour afficher ton planning à l'ouverture et « Aujourd'hui / Demain ».</span>
@@ -160,6 +162,11 @@
         <div class="actions">
           <button id="teamSyncNow">Vérifier maintenant</button>
           <button id="teamLeave">Quitter</button>
+        </div>
+        <div id="iosCopy" class="ios-copy" hidden>
+          <p class="hint"><strong>Sur iPhone, l'icône de l'écran d'accueil a sa propre mémoire</strong> : à sa première ouverture,
+            il faudra redonner le code d'équipe. Copie-le maintenant, tu n'auras plus qu'à le coller.</p>
+          <button id="copyCode">📋 Copier le code pour l'écran d'accueil</button>
         </div>
         <details id="teamHistory" class="history">
           <summary>Versions précédentes du planning d'équipe</summary>

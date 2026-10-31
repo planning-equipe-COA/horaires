@@ -98,8 +98,12 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   `plan.remarks` { NOM: { AAAAMMJJ: texte } } (fusionnés comme les codes, publiés avec le planning
   d'équipe), signalés partout : message après import (« 💬 N commentaires lus »), 💬 sur la case
   (Mois, Équipe), texte sous la ligne (Liste) et dans « Aujourd'hui / Demain », détail du jour.
-  Accueil au premier lancement (`mh_welcome`, `mh_name_ok`) : récupérer le planning (code d'équipe
-  ou import), puis choisir son nom ; jamais montré à qui avait déjà planning + nom.
+  Accueil au premier lancement (`mh_welcome`, `mh_name_ok`) : récupérer le planning (champ code
+  d'équipe + « 📋 Coller » + « Rejoindre », ou import), puis choisir son nom ; jamais montré à qui
+  avait déjà planning + nom.
+  iPhone : l'icône d'écran d'accueil a un stockage séparé de Safari (code, planning, notes perdus à
+  l'ajout — impossible à contourner). Dans Safari (`isIOS && !isStandalone`), la carte équipe propose
+  « 📋 Copier le code pour l'écran d'accueil » ; l'accueil de l'icône le recolle en un geste.
 - Jours modifiés : à chaque import, `diffSnapshot` compare chaque agent à son planning précédent ;
   bandeau « 🔔 » + point orange sur les cases jusqu'à « J'ai vu » (`changesSeen`), repris dans
   l'export. L'ancien suivi par export (`mh_snap`) n'est plus écrit ; il sert une fois de point de

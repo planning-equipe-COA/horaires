@@ -322,6 +322,7 @@
     const joined = !!teamCode();
     $('teamOut').hidden = joined;
     $('teamIn').hidden = !joined;
+    $('iosCopy').hidden = !(joined && isIOS && !isStandalone);
     if (joined) {
       const p = state.plan;
       $('teamInfo').innerHTML = p && p.teamAt
@@ -367,32 +368,47 @@
   }
 
   let pendingCode = '';
-  async function joinTeam() {
-    const code = T.normCode($('teamCode').value);
+  // iPhone : l'icône de l'écran d'accueil a un stockage séparé de Safari (code, planning, notes)
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isStandalone = navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+
+  // Rejoindre depuis la carte équipe ou depuis l'accueil (champ et message différents)
+  async function joinTeam(fromWelcome) {
+    const input = fromWelcome ? $('wCode') : $('teamCode');
+    const btn = fromWelcome ? $('wJoin') : $('teamJoin');
+    const say = fromWelcome ? (text, kind) => { welcomeMsg(text, kind); teamMsg(text, kind); } : teamMsg;
+    const code = T.normCode(input.value);
     if (code.split('-').length < 3 || code.length < 12) {
-      teamMsg('Le code d\'équipe doit faire au moins 3 mots (ex. tarmac-cerise-boussole-neige).', 'err');
+      say('Le code d\'équipe doit faire au moins 3 mots (ex. tarmac-cerise-boussole-neige).', 'err');
       return;
     }
-    $('teamJoin').disabled = true;
-    teamMsg('Vérification du code…');
+    btn.disabled = true;
+    say('Vérification du code…');
     try {
       const res = await T.checkCode(code);
       if (res.status === 'absent') {
         pendingCode = code;
         $('teamSetup').hidden = false;
-        teamMsg('L\'équipe n\'est pas encore configurée. Si c\'est toi qui la crées, colle la clé GitHub ci-dessus ; sinon, vérifie le code.');
+        say('L\'équipe n\'est pas encore configurée avec ce code. Vérifie les 4 mots.');
         return;
       }
       store(STORAGE_TEAM_KEY, code);
-      $('teamCode').value = '';
-      teamMsg('✓ Code accepté.', 'ok');
+      input.value = '';
+      say('✓ Code accepté, récupération du planning…', 'ok');
       renderTeam();
       await syncTeam(true);
+      if (fromWelcome) welcomeMsg(state.plan && Object.keys(state.plan.agents).length
+        ? '✓ Planning reçu.' : '✓ Code accepté. Aucun planning publié pour l\'instant : importe le tableau.', 'ok');
     } catch (e) {
-      teamMsg(errText(e), 'err');
+      say(errText(e), 'err');
     } finally {
-      $('teamJoin').disabled = false;
+      btn.disabled = false;
     }
+  }
+  function welcomeMsg(text, kind) {
+    $('wMsg').hidden = !text;
+    $('wMsg').textContent = text || '';
+    $('wMsg').className = 'w-msg ' + (kind || '');
   }
 
   async function setupTeam() {
@@ -1138,8 +1154,29 @@
     });
   }
 
-  $('teamJoin').addEventListener('click', joinTeam);
-  $('teamCode').addEventListener('keydown', e => { if (e.key === 'Enter') joinTeam(); });
+  $('teamJoin').addEventListener('click', () => joinTeam(false));
+  $('teamCode').addEventListener('keydown', e => { if (e.key === 'Enter') joinTeam(false); });
+  $('wJoin').addEventListener('click', () => joinTeam(true));
+  $('wCode').addEventListener('keydown', e => { if (e.key === 'Enter') joinTeam(true); });
+  $('wPaste').addEventListener('click', async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && text.trim()) { $('wCode').value = text.trim(); joinTeam(true); return; }
+      welcomeMsg('Le presse-papier est vide : copie d\'abord le code (depuis Safari ou le message d\'un collègue).', 'err');
+    } catch (e) {
+      $('wCode').focus();
+      welcomeMsg('Fais un appui long dans le champ puis « Coller ».');
+    }
+  });
+  $('copyCode').addEventListener('click', async () => {
+    const btn = $('copyCode');
+    try {
+      await navigator.clipboard.writeText(teamCode());
+      btn.textContent = '✓ Code copié : colle-le dans l\'icône à sa première ouverture';
+    } catch (e) {
+      btn.textContent = 'Copie impossible : le code est ' + teamCode();
+    }
+  });
   $('teamSetupOk').addEventListener('click', setupTeam);
   $('teamSyncNow').addEventListener('click', () => syncTeam(true));
   $('teamLeave').addEventListener('click', () => {
@@ -1147,11 +1184,6 @@
     $('publishBox').hidden = true;
     teamMsg('Tu as quitté l\'équipe : ton calendrier reste sur ce téléphone, il ne se met plus à jour tout seul.');
     renderTeam();
-  });
-  $('wJoin').addEventListener('click', () => {
-    $('teamDetails').open = true;
-    $('teamDetails').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    setTimeout(() => $('teamCode').focus(), 400);
   });
   $('wImport').addEventListener('click', () => {
     $('drop').scrollIntoView({ behavior: 'smooth', block: 'center' });
