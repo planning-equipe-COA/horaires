@@ -210,3 +210,34 @@ test('monthSummary : jours travaillés (M, S, N, J, JS), repos, congés, autres'
   assert.strictEqual(s.conge.total, 1);
   assert.deepStrictEqual(s.autre.detail.map(d => d.code + d.n), ['FORM1']);
 });
+
+test('frenchHolidays : dates fixes et mobiles (Pâques)', () => {
+  const h26 = C.frenchHolidays(2026);
+  assert.strictEqual(Object.keys(h26).length, 11);
+  assert.strictEqual(h26['20260406'], 'Lundi de Pâques'); // Pâques 2026 : 5 avril
+  assert.strictEqual(h26['20260514'], 'Ascension');
+  assert.strictEqual(h26['20260525'], 'Lundi de Pentecôte');
+  assert.strictEqual(h26['20261111'], 'Armistice');
+  assert.strictEqual(C.frenchHolidays(2027)['20270329'], 'Lundi de Pâques'); // Pâques 2027 : 28 mars
+  assert.strictEqual(C.holidayName('20261225'), 'Noël');
+  assert.strictEqual(C.holidayName('20261224'), '');
+});
+
+test('monthSummary : dimanches, fériés et nuits travaillés ; cumul sur l\'année', () => {
+  // 1er nov. 2026 = dimanche et Toussaint ; 8 nov. = dimanche ; 11 nov. = Armistice (mercredi)
+  const days = { 20261101: 'M', 20261108: 'R', 20261111: 'N', 20261112: 'N', 20261115: 'S', 20261201: 'M', 20251201: 'M' };
+  const s = C.monthSummary(days, C.DEFAULT_CODES, 2026, 11);
+  assert.deepStrictEqual(s.sundays, ['20261101', '20261115']);
+  assert.deepStrictEqual(s.holidays.map(h => h.name), ['Toussaint', 'Armistice']);
+  assert.strictEqual(s.nights, 2);
+  const year = C.monthSummary(days, C.DEFAULT_CODES, 2026, null);
+  assert.strictEqual(year.travail.total, 5);
+  assert.strictEqual(year.repos.total, 1);
+});
+
+test('teamOfDay : équipe groupée par service, travail d\'abord', () => {
+  const plan = { agents: { ZOE: { 20261101: 'R' }, ABEL: { 20261101: 'S' }, MARC: { 20261101: 'M' }, LEA: { 20261101: 'M' }, EVE: { 20261101: 'CA' } } };
+  const t = C.teamOfDay(plan, '20261101', C.DEFAULT_CODES);
+  assert.deepStrictEqual(t.map(g => g.code + ':' + g.names.join('/')), ['M:LEA/MARC', 'S:ABEL', 'R:ZOE', 'CA:EVE']);
+  assert.strictEqual(t[2].kind, 'repos');
+});

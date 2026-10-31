@@ -21,6 +21,8 @@
   </header>
 
   <section id="calCard" class="card cal" hidden>
+    <div id="nextDays" class="next-days" hidden></div>
+    <p id="calRemind" class="remind" hidden></p>
     <div class="cal-head">
       <button id="calPrev" class="cal-nav" aria-label="Mois précédent">‹</button>
       <h2 id="calTitle"></h2>
@@ -42,7 +44,14 @@
     <div id="calList" class="cal-list" hidden></div>
     <p id="calEmpty" class="hint" hidden>Pas de planning pour ce mois : importe le tableau de service ci-dessous.</p>
     <div id="calDay" class="cal-day" hidden></div>
-    <div id="calTally" class="cal-sum"></div>
+    <div id="sumBox" class="cal-sum-box">
+      <div class="seg seg-sm" role="tablist" aria-label="Résumé">
+        <button id="sumMonth" role="tab" data-scope="month">Ce mois</button>
+        <button id="sumYear" role="tab" data-scope="year">Année</button>
+      </div>
+      <div id="calTally" class="cal-sum"></div>
+      <p id="sumNote" class="hint" hidden></p>
+    </div>
   </section>
 
   <section class="card">

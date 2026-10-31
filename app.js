@@ -8,6 +8,8 @@
   const STORAGE_SNAPSHOTS_KEY = 'mh_snap'; // ancien suivi des exports, repris une fois dans mh_plan
   const STORAGE_PLAN_KEY = 'mh_plan';
   const STORAGE_VIEW_KEY = 'mh_view';
+  const STORAGE_NOTES_KEY = 'mh_notes'; // notes perso par jour, sur ce téléphone uniquement
+  const STORAGE_SUM_KEY = 'mh_sum';
   const PLAN_KEEP_DAYS = 400;
   const CODES_VERSION = 6;
   const $ = id => document.getElementById(id);
@@ -106,7 +108,16 @@
   const state = { workbook: null, fileName: '', result: null, codes: loadCodes(), events: [],
     plan: loadPlan(), planBefore: undefined,
     cal: { y: today.y, m: today.m, agent: load(STORAGE_NAME_KEY) || '', selected: C.dateKey(today),
-      view: load(STORAGE_VIEW_KEY) === 'list' ? 'list' : 'month' } };
+      view: load(STORAGE_VIEW_KEY) === 'list' ? 'list' : 'month',
+      sum: load(STORAGE_SUM_KEY) === 'year' ? 'year' : 'month' } };
+
+  function loadNotes() { try { return JSON.parse(load(STORAGE_NOTES_KEY)) || {}; } catch (e) { return {}; } }
+  const notes = loadNotes();
+  function saveNote(key, text) {
+    const t = text.trim();
+    if (t) notes[key] = t.slice(0, 500); else delete notes[key];
+    store(STORAGE_NOTES_KEY, JSON.stringify(notes));
+  }
 
   // ── Fichier ───────────────────────────────────────────────────────────────
   function showError(msg) {
@@ -505,8 +516,9 @@
         if (k === todayKey) cls.push('today');
         if (k === state.cal.selected) cls.push('selected');
         if (changes.has(k) && !plan.changesSeen) cls.push('changed');
+        if (C.holidayName(k)) cls.push('holiday');
         html += `<button class="${cls.join(' ')}" data-key="${k}" aria-label="${d.d}${code ? ' : ' + esc(codeLabel(code)) : ''}">` +
-          `<span class="n">${d.d}</span>${code ? chip(code) : ''}</button>`;
+          `<span class="n">${d.d}</span>${code ? chip(code) : ''}${notes[k] ? '<span class="note-dot" aria-label="note">📝</span>' : ''}</button>`;
       }
     }
     $('calGrid').innerHTML = html;
@@ -518,6 +530,8 @@
     if (listView) renderList(days, changes, todayKey);
     $('calEmpty').hidden = inMonth > 0;
     renderSummary(days);
+    renderNextDays();
+    renderRemind();
 
     // changements apportés par le dernier tableau importé
     const list = [...changes.values()].filter(ch => ch.key >= todayKey);
@@ -533,20 +547,114 @@
     renderDay();
   }
 
-  // Résumé du mois : jours travaillés (détail Matin / Soir / Nuit), repos, congés, autres
+  // Résumé du mois ou de l'année : jours travaillés (détail Matin / Soir / Nuit), repos, congés,
+  // autres, puis dimanches / fériés / nuits travaillés (majorations)
   function renderSummary(days) {
-    const s = C.monthSummary(days, state.codes, state.cal.y, state.cal.m);
+    const year = state.cal.sum === 'year';
+    const prefix = year ? String(state.cal.y) : String(state.cal.y) + String(state.cal.m).padStart(2, '0');
+    const any = Object.keys(days || {}).some(k => k.slice(0, prefix.length) === prefix);
+    $('sumMonth').setAttribute('aria-selected', String(!year));
+    $('sumYear').setAttribute('aria-selected', String(year));
+    $('sumYear').textContent = 'Année ' + state.cal.y;
+    $('calTally').hidden = !any;
+    const keys = Object.keys(days || {}).filter(k => k.slice(0, 4) === String(state.cal.y)).sort();
+    $('sumNote').hidden = !year || !any;
+    if (year && keys.length) {
+      const fmt = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+      $('sumNote').textContent = `D'après les plannings gardés sur ce téléphone, du ${fmt(keys[0])} au ${fmt(keys[keys.length - 1])}.`;
+    }
+    if (!any) { $('calTally').innerHTML = ''; return; }
+    const s = C.monthSummary(days, state.codes, state.cal.y, year ? null : state.cal.m);
     const groups = [['travail', 'Jours travaillés'], ['repos', 'Repos'], ['conge', 'Congés'], ['autre', 'Autres']];
-    $('calTally').innerHTML = groups.filter(([k]) => s[k].total || k === 'travail' || k === 'repos').map(([k, title]) =>
+    let html = groups.filter(([k]) => s[k].total || k === 'travail' || k === 'repos').map(([k, title]) =>
       `<div class="sum-row sum-${k}"><span class="sum-n">${s[k].total}</span><span class="sum-title">${title}</span>` +
       `<span class="sum-detail">${s[k].detail.map(d =>
         `<span class="sum-item">${chip(d.code)} ${d.n} ${esc(codeLabel(d.code))}</span>`).join('')}</span></div>`).join('');
-    $('calTally').hidden = !Object.keys(days || {}).some(k => k.slice(0, 6) === String(state.cal.y) + String(state.cal.m).padStart(2, '0'));
+    const fmtShort = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+    const extra = [];
+    extra.push(`<span class="sum-item"><strong>${s.sundays.length}</strong> dimanche${s.sundays.length > 1 ? 's' : ''}` +
+      (!year && s.sundays.length ? ` <span class="muted">(${s.sundays.map(fmtShort).map(esc).join(', ')})</span>` : '') + '</span>');
+    extra.push(`<span class="sum-item"><strong>${s.holidays.length}</strong> férié${s.holidays.length > 1 ? 's' : ''}` +
+      (s.holidays.length && (!year || s.holidays.length <= 4) ? ` <span class="muted">(${s.holidays.map(h => esc(h.name)).join(', ')})</span>` : '') + '</span>');
+    extra.push(`<span class="sum-item"><strong>${s.nights}</strong> nuit${s.nights > 1 ? 's' : ''}</span>`);
+    html += `<div class="sum-row sum-maj"><span class="sum-n">💶</span><span class="sum-title">Travaillés en majoration</span>` +
+      `<span class="sum-detail">${extra.join('')}</span></div>`;
+    $('calTally').innerHTML = html;
+  }
+
+  // ── Aujourd'hui / Demain (toujours pour « moi ») ─────────────────────────
+  function meName() {
+    const me = load(STORAGE_NAME_KEY);
+    return state.plan && state.plan.agents[me] ? me : state.cal.agent;
+  }
+  function renderNextDays() {
+    const plan = state.plan, me = meName();
+    const days = (plan && plan.agents[me]) || {};
+    const t = todayDate(), tomorrow = utc(t); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const items = [['Aujourd\'hui', t], ['Demain', { y: tomorrow.getUTCFullYear(), m: tomorrow.getUTCMonth() + 1, d: tomorrow.getUTCDate() }]];
+    if (!items.some(([, d]) => days[C.dateKey(d)])) { $('nextDays').hidden = true; return; }
+    $('nextDays').hidden = false;
+    $('nextDays').innerHTML = items.map(([label, d]) => {
+      const k = C.dateKey(d), code = days[k];
+      const mates = code ? C.sameShift(plan, k, code, me) : [];
+      const wd = utc(d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', timeZone: 'UTC' });
+      return `<button class="next-day" data-key="${k}"><span class="next-label">${label} <span class="muted">${esc(wd)}</span></span>` +
+        `<span class="next-code">${code ? chip(code) + ' ' + esc(codeLabel(code)) : '<span class="muted">pas de planning</span>'}</span>` +
+        (code && C.dayKind(defOf(code)) === 'travail'
+          ? `<span class="next-mates">${mates.length ? 'avec ' + mates.slice(0, 3).map(esc).join(', ') + (mates.length > 3 ? ` +${mates.length - 3}` : '') : 'seul(e) en ' + esc(codeLabel(code))}</span>`
+          : '') +
+        (notes[k] ? `<span class="next-note">📝 ${esc(notes[k])}</span>` : '') + '</button>';
+    }).join('');
+  }
+
+  // ── Rappel de fin de mois : le planning du mois prochain n'est pas encore là ──
+  function renderRemind() {
+    const t = todayDate(), box = $('calRemind');
+    const next = t.m === 12 ? { y: t.y + 1, m: 1 } : { y: t.y, m: t.m + 1 };
+    const prefix = String(next.y) + String(next.m).padStart(2, '0');
+    const days = (state.plan && state.plan.agents[meName()]) || {};
+    box.hidden = t.d < 20 || Object.keys(days).some(k => k.slice(0, 6) === prefix);
+    if (box.hidden) return;
+    const month = new Date(Date.UTC(next.y, next.m - 1, 1)).toLocaleDateString('fr-FR', { month: 'long', timeZone: 'UTC' });
+    box.textContent = `📅 Le planning de ${month} n'est pas encore là. Dès qu'il sort, importe-le ci-dessous` +
+      (teamCode() ? ' : l\'appli te proposera de l\'envoyer à toute l\'équipe.' : '.');
+  }
+
+  // ── Détail d'un jour : férié, changement, équipe du jour, échanges, note perso ──
+  function dayDetailHTML(k, withHead) {
+    const plan = state.plan, name = state.cal.agent, d = keyToDate(k);
+    const code = (plan.agents[name] || {})[k];
+    let html = '';
+    if (withHead) {
+      const title = utc(d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+      html += `<div class="cal-day-head"><strong>${esc(title)}</strong>` +
+        (code ? ` ${chip(code)} <span>${esc(codeLabel(code))}</span>` : ' <span class="muted">pas de planning</span>') + '</div>';
+    }
+    const holiday = C.holidayName(k);
+    if (holiday) html += `<p class="day-holiday">🎉 Férié : ${esc(holiday)}</p>`;
+    const ch = ((plan.changes || {})[name] || []).find(c => c.key === k);
+    if (ch && !plan.changesSeen) html += `<p class="was">Avant le nouveau planning : ${esc(codeTitle(ch.before))}</p>`;
+
+    const team = C.teamOfDay(plan, k, state.codes);
+    if (team.length > 1 || (team.length === 1 && team[0].names.length > 1)) {
+      html += '<div class="day-team"><p class="day-sub">Équipe du jour</p>' + team.map(g =>
+        `<div class="team-row${g.code === code ? ' mine' : ''}"><span class="team-code">${chip(g.code)} ${esc(codeLabel(g.code))} <span class="muted">(${g.names.length})</span></span>` +
+        `<span class="team-names">${g.names.map(n => n === name ? `<strong>${esc(n)}</strong>` : esc(n)).join(', ')}</span></div>`).join('') + '</div>';
+    }
+    if (code && C.dayKind(defOf(code)) === 'travail') {
+      const free = team.filter(g => g.kind === 'repos').flatMap(g => g.names).filter(n => n !== name)
+        .sort((a, b) => a.localeCompare(b, 'fr'));
+      html += `<p class="day-swap">🔁 <span class="muted">Pour un échange, en repos ce jour-là :</span> ` +
+        (free.length ? free.map(esc).join(', ') : '<span class="muted">personne</span>') + '</p>';
+    }
+    html += `<label class="day-note"><span class="day-sub">📝 Ma note <span class="muted">(gardée sur ce téléphone)</span></span>` +
+      `<textarea data-note="${k}" rows="2" maxlength="500" placeholder="ex. échangé avec Paul, RDV…">${esc(notes[k] || '')}</textarea></label>`;
+    return html;
   }
 
   // Vue liste : les jours du mois de haut en bas ; toucher un jour déplie les collègues du même service
   function renderList(days, changes, todayKey) {
-    const { y, m } = state.cal, plan = state.plan, name = state.cal.agent;
+    const { y, m } = state.cal, plan = state.plan;
     let html = '';
     for (const d of C.monthGrid(y, m).flat()) {
       if (!d) continue;
@@ -560,17 +668,13 @@
       const ch = !plan.changesSeen && changes.get(k);
       if (ch) cls.push('changed');
       const dayName = utc(d).toLocaleDateString('fr-FR', { weekday: 'short', timeZone: 'UTC' }).replace('.', '');
-      html += `<button class="${cls.join(' ')}" data-key="${k}">` +
+      if (C.holidayName(k)) cls.push('holiday');
+      html += `<button class="${cls.join(' ')}" data-key="${k}" aria-expanded="${k === state.cal.selected}">` +
         `<span class="cal-row-date"><span class="wd">${esc(dayName)}</span><span class="n">${d.d}</span></span>` +
         `<span class="cal-row-code">${code ? chip(code) + ' ' + esc(codeLabel(code)) : '<span class="muted">—</span>'}` +
-        (ch ? ` <span class="was">avant : ${esc(codeTitle(ch.before))}</span>` : '') + '</span>';
-      if (k === state.cal.selected && code) {
-        const others = C.sameShift(plan, k, code, name);
-        html += `<span class="cal-row-mates">${others.length
-          ? `Aussi ${esc(codeLabel(code))} : ${others.map(esc).join(', ')}`
-          : `Personne d'autre en ${esc(codeLabel(code))}`}</span>`;
-      }
-      html += '</button>';
+        (ch ? ` <span class="was">avant : ${esc(codeTitle(ch.before))}</span>` : '') +
+        (notes[k] ? ' <span class="note-dot">📝</span>' : '') + '</span></button>';
+      if (k === state.cal.selected) html += `<div class="cal-row-detail">${dayDetailHTML(k, false)}</div>`;
     }
     $('calList').innerHTML = html;
   }
@@ -578,21 +682,10 @@
   function renderDay() {
     const k = state.cal.selected, box = $('calDay');
     if (state.cal.view === 'list') { box.hidden = true; return; }
-    const plan = state.plan, name = state.cal.agent;
+    const plan = state.plan;
     const d = k && keyToDate(k);
     if (!plan || !d || d.y !== state.cal.y || d.m !== state.cal.m) { box.hidden = true; return; }
-    const code = (plan.agents[name] || {})[k];
-    const title = utc(d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
-    let html = `<div class="cal-day-head"><strong>${esc(title)}</strong>` +
-      (code ? ` ${chip(code)} <span>${esc(codeLabel(code))}</span>` : ' <span class="muted">pas de planning</span>') + '</div>';
-    const ch = ((plan.changes || {})[name] || []).find(c => c.key === k);
-    if (ch && !plan.changesSeen) html += `<p class="was">Avant le nouveau planning : ${esc(codeTitle(ch.before))}</p>`;
-    if (code) {
-      const others = C.sameShift(plan, k, code, name);
-      html += others.length
-        ? `<p class="mates"><span class="muted">Aussi ${esc(codeLabel(code))} (${others.length}) :</span> ${others.map(esc).join(', ')}</p>`
-        : `<p class="mates muted">Personne d'autre en ${esc(codeLabel(code))} ce jour-là.</p>`;
-    }
+    const html = dayDetailHTML(k, true);
     box.innerHTML = html;
     box.hidden = false;
   }
@@ -753,9 +846,40 @@
     const row = $('calList').querySelector('.cal-row.selected') || $('calList').querySelector('.cal-row.today');
     if (row) row.scrollIntoView({ block: 'center' });
   }
+  // notes : enregistrées à la frappe ; l'indicateur 📝 est mis à jour à la sortie du champ
+  ['calDay', 'calList'].forEach(id => {
+    $(id).addEventListener('input', e => { if (e.target.dataset.note) saveNote(e.target.dataset.note, e.target.value); });
+    $(id).addEventListener('focusout', e => {
+      if (!e.target.dataset.note) return;
+      const k = e.target.dataset.note;
+      document.querySelectorAll(`[data-key="${k}"]`).forEach(el => {
+        const host = el.classList.contains('cal-row') ? el.querySelector('.cal-row-code') : el;
+        const dot = host && host.querySelector('.note-dot');
+        if (notes[k] && !dot && host) host.insertAdjacentHTML('beforeend', '<span class="note-dot">📝</span>');
+        if (!notes[k] && dot) dot.remove();
+      });
+      renderNextDays();
+    });
+  });
+  $('nextDays').addEventListener('click', e => {
+    const b = e.target.closest('.next-day[data-key]');
+    if (!b) return;
+    const d = keyToDate(b.dataset.key);
+    state.cal.y = d.y; state.cal.m = d.m; state.cal.selected = b.dataset.key;
+    const me = meName();
+    if (me) state.cal.agent = me;
+    renderCalendar();
+    if (state.cal.view === 'list') scrollToSelected();
+    else $('calDay').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  });
+  ['sumMonth', 'sumYear'].forEach(id => $(id).addEventListener('click', e => {
+    state.cal.sum = e.currentTarget.dataset.scope;
+    store(STORAGE_SUM_KEY, state.cal.sum);
+    renderSummary((state.plan.agents[state.cal.agent]) || {});
+  }));
   $('calList').addEventListener('click', e => {
     const row = e.target.closest('.cal-row[data-key]');
-    if (!row) return;
+    if (!row) return; // clic dans le détail déplié (note…) : on ne referme pas
     state.cal.selected = state.cal.selected === row.dataset.key ? '' : row.dataset.key;
     renderCalendar();
   });

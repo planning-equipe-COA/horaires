@@ -201,3 +201,49 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .sum-detail:empty { display: none; }
 .sum-item { display: inline-flex; align-items: center; gap: 4px; }
 .sum-item .chip { font-size: .7rem; }
+
+/* ── Aujourd'hui / Demain ───────────────────────────────────────────────── */
+.next-days { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.next-day {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left;
+  padding: 10px 12px; border-radius: 12px; background: var(--bg); min-width: 0;
+}
+.next-label { font-size: .8rem; font-weight: 600; }
+.next-label .muted { font-weight: 400; }
+.next-code { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 1.02rem; }
+.next-code .chip { font-size: .8rem; }
+.next-mates, .next-note { font-size: .78rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.remind {
+  margin: 0 0 12px; padding: 9px 12px; border-radius: 10px; font-size: .9rem;
+  background: color-mix(in srgb, var(--accent) 12%, transparent); border-left: 4px solid var(--accent);
+}
+/* ── Jours : fériés, notes, détail ──────────────────────────────────────── */
+.cal-cell.holiday .n { text-decoration: underline; text-decoration-color: var(--warn); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.cal-cell.today.holiday .n { text-decoration: none; }
+.cal-row.holiday .wd { color: var(--warn); }
+.note-dot { font-size: .62rem; line-height: 1; }
+.cal-cell .note-dot { position: absolute; bottom: 2px; right: 3px; }
+.day-holiday { color: var(--warn); font-weight: 600; }
+.day-sub { display: block; font-size: .8rem; font-weight: 600; color: var(--muted); margin: 10px 0 4px; text-transform: none; }
+.day-team { margin-top: 4px; }
+.team-row { display: grid; grid-template-columns: minmax(7.5em, auto) 1fr; gap: 2px 8px; padding: 4px 0; border-top: 1px solid var(--line); font-size: .86rem; }
+.team-row:first-of-type { border-top: 0; }
+.team-row.mine { font-weight: 500; }
+.team-code { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.team-code .chip { font-size: .68rem; }
+.team-names { overflow-wrap: anywhere; }
+.day-swap { font-size: .88rem; overflow-wrap: anywhere; }
+.day-note { display: block; }
+.day-note textarea {
+  width: 100%; font: inherit; font-size: .92rem; color: var(--text); background: var(--card);
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; resize: vertical;
+}
+.cal-row-detail { padding: 2px 10px 12px 3.9em; background: var(--bg); border-bottom: 1px solid var(--line); box-shadow: inset 3px 0 0 var(--accent); }
+.cal-row-detail .team-row { grid-template-columns: 1fr; }
+/* ── Résumé Mois / Année ────────────────────────────────────────────────── */
+.cal-sum-box { margin-top: 14px; }
+.seg-sm { margin-bottom: 4px; }
+.seg-sm button { padding: 5px 8px; font-size: .85rem; }
+.cal-sum { margin-top: 4px; border-top: 0; }
+.sum-maj .sum-n { font-size: 1.2rem; }
+.sum-maj .sum-detail { color: var(--text); }

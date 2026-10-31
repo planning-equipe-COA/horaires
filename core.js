@@ -412,18 +412,58 @@
     return 'autre';
   }
 
-  // Résumé d'un mois pour un agent : { travail: {total, detail:[{code, def, n}]}, repos, conge, autre }
-  // detail suit l'ordre des codes (M, S, N… puis les inconnus)
+  // Jours fériés en France métropolitaine : { 'AAAAMMJJ': 'nom' }
+  function easter(y) { // algorithme grégorien anonyme
+    const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4;
+    const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31), day = ((h + l - 7 * m + 114) % 31) + 1;
+    return { y, m: month, d: day };
+  }
+  function addDays(d, n) {
+    const t = new Date(Date.UTC(d.y, d.m - 1, d.d + n));
+    return { y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate() };
+  }
+  const holidayCache = {};
+  function frenchHolidays(y) {
+    if (holidayCache[y]) return holidayCache[y];
+    const e = easter(y), out = {};
+    const add = (d, name) => { out[dateKey(d)] = name; };
+    add({ y, m: 1, d: 1 }, 'Jour de l\'an');
+    add(addDays(e, 1), 'Lundi de Pâques');
+    add({ y, m: 5, d: 1 }, 'Fête du Travail');
+    add({ y, m: 5, d: 8 }, 'Victoire 1945');
+    add(addDays(e, 39), 'Ascension');
+    add(addDays(e, 50), 'Lundi de Pentecôte');
+    add({ y, m: 7, d: 14 }, 'Fête nationale');
+    add({ y, m: 8, d: 15 }, 'Assomption');
+    add({ y, m: 11, d: 1 }, 'Toussaint');
+    add({ y, m: 11, d: 11 }, 'Armistice');
+    add({ y, m: 12, d: 25 }, 'Noël');
+    return (holidayCache[y] = out);
+  }
+  function holidayName(key) { return frenchHolidays(+key.slice(0, 4))[key] || ''; }
+
+  // Résumé d'un mois (ou d'une année si m est nul) pour un agent :
+  // { travail|repos|conge|autre: {total, detail:[{code, def, n}]}, sundays: [clé], holidays: [{key, name}], nights }
+  // Majorations comptées sur les jours travaillés, le jour où le service commence.
   function monthSummary(days, codes, y, m) {
-    const prefix = String(y) + pad(m);
+    const prefix = m ? String(y) + pad(m) : String(y);
     const map = new Map(codes.map(c => [normCode(c.code), c]));
     const order = codes.map(c => normCode(c.code));
-    const out = {};
+    const out = { sundays: [], holidays: [], nights: 0 };
     for (const kind of ['travail', 'repos', 'conge', 'autre']) out[kind] = { total: 0, detail: [] };
     const counts = new Map();
-    for (const k of Object.keys(days || {})) {
-      if (k.slice(0, 6) !== prefix) continue;
-      counts.set(days[k], (counts.get(days[k]) || 0) + 1);
+    for (const k of Object.keys(days || {}).sort()) {
+      if (k.slice(0, prefix.length) !== prefix) continue;
+      const code = days[k];
+      counts.set(code, (counts.get(code) || 0) + 1);
+      if (dayKind(map.get(code)) !== 'travail') continue;
+      if (new Date(Date.UTC(+k.slice(0, 4), +k.slice(4, 6) - 1, +k.slice(6, 8))).getUTCDay() === 0) out.sundays.push(k);
+      const h = holidayName(k);
+      if (h) out.holidays.push({ key: k, name: h });
+      if (code === 'N') out.nights++;
     }
     const rank = c => { const i = order.indexOf(c); return i < 0 ? order.length : i; };
     for (const code of [...counts.keys()].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))) {
@@ -432,6 +472,26 @@
       group.detail.push({ code, def, n });
     }
     return out;
+  }
+
+  // Toute l'équipe un jour donné, regroupée par code dans l'ordre des codes (M, S, N… puis repos…)
+  function teamOfDay(plan, key, codes) {
+    const map = new Map(codes.map(c => [normCode(c.code), c]));
+    const order = codes.map(c => normCode(c.code));
+    const groups = new Map();
+    const agents = (plan && plan.agents) || {};
+    for (const name of Object.keys(agents)) {
+      const code = agents[name][key];
+      if (!code) continue;
+      if (!groups.has(code)) groups.set(code, []);
+      groups.get(code).push(name);
+    }
+    const rank = c => { const i = order.indexOf(c); return i < 0 ? order.length : i; };
+    const kindRank = { travail: 0, repos: 1, conge: 2, autre: 3 };
+    return [...groups.keys()]
+      .map(code => ({ code, def: map.get(code), kind: dayKind(map.get(code)),
+        names: groups.get(code).sort((a, b) => a.localeCompare(b, 'fr')) }))
+      .sort((a, b) => kindRank[a.kind] - kindRank[b.kind] || rank(a.code) - rank(b.code) || a.code.localeCompare(b.code));
   }
 
   function icsEscape(s) {
@@ -478,5 +538,5 @@
     return lines.join('\r\n') + '\r\n';
   }
 
-  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, monthSummary, parseMatrix, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
+  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, monthSummary, frenchHolidays, holidayName, teamOfDay, parseMatrix, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
 });

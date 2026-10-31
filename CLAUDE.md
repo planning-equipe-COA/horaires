@@ -68,12 +68,18 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   Résumé du mois sous le calendrier (`monthSummary`, `dayKind`) : jours travaillés = codes à
   horaires (M, S, N, J) + JS ; repos = pastille blanche (R, Tn, RF, RC, RCN, RECUP, RECU, ATT) ;
   congés = pastille verte (CA, C) ; autres = le reste (EM, X, codes inconnus comme FORM).
+  Résumé « Ce mois / Année » (`mh_sum`) + ligne « Travaillés en majoration » : dimanches, fériés
+  (`frenchHolidays`, Pâques calculée) et nuits travaillés, comptés le jour où le service commence.
+  En haut : « Aujourd'hui / Demain » pour `mh_name` (toucher = aller au jour). Rappel à partir du 20
+  si le mois suivant manque. Détail d'un jour (grille ou liste dépliée) : férié, équipe du jour
+  groupée par code (`teamOfDay`), collègues en repos « pour un échange » si l'agent travaille, et
+  note perso (`mh_notes` = { AAAAMMJJ: texte }, jamais envoyée, même avec le planning d'équipe).
   Deux vues (`mh_view`) : « Mois » (grille) et « Liste » (jours de haut en bas, toucher un jour
   déplie les collègues du même service). Glisser à gauche/droite change de mois dans les deux.
 - Jours modifiés : à chaque import, `diffSnapshot` compare chaque agent à son planning précédent ;
   bandeau « 🔔 » + point orange sur les cases jusqu'à « J'ai vu » (`changesSeen`), repris dans
   l'export. L'ancien suivi par export (`mh_snap`) n'est plus écrit ; il sert une fois de point de
   départ à `mh_plan`.
-- Idées validées mais en option, pas encore faites : rappel la veille (VALARM), comparer deux agents
-  côte à côte (échanges de poste).
+- Idée en option, pas encore faite : rappel la veille (VALARM dans l'export .ics). Pas de notifications
+  web (iPhone : impossible sans serveur).
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.
