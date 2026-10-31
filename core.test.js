@@ -157,3 +157,34 @@ test('JS (journée de solidarité) : journée entière, même avec les horaires'
   assert.strictEqual(events[0].timed, false);
   assert.strictEqual(events[1].timed, true);
 });
+
+test('mergePlan : un nouveau tableau remplace sa période, garde le reste, oublie le passé', () => {
+  const d = (m, day) => ({ y: 2026, m, d: day });
+  const oct = [{ name: 'DUPONT', entries: [{ date: d(10, 30), code: 'M' }, { date: d(10, 31), code: 'S' }] },
+    { name: 'MARTIN', entries: [{ date: d(10, 30), code: 'N' }, { date: d(10, 31), code: 'N' }] }];
+  let plan = C.mergePlan(null, oct);
+  assert.deepStrictEqual(plan.agents.DUPONT, { 20261030: 'M', 20261031: 'S' });
+  // nouveau tableau du 31/10 au 01/11 : MARTIN n'y figure plus → sa case du 31 disparaît
+  const nov = [{ name: 'DUPONT', entries: [{ date: d(10, 31), code: 'R' }, { date: d(11, 1), code: 'M' }] }];
+  plan = C.mergePlan(plan, nov);
+  assert.deepStrictEqual(plan.agents.DUPONT, { 20261030: 'M', 20261031: 'R', 20261101: 'M' });
+  assert.deepStrictEqual(plan.agents.MARTIN, { 20261030: 'N' });
+  // les jours avant minKey sont oubliés, un agent sans jour disparaît
+  plan = C.mergePlan(plan, [], '20261031');
+  assert.deepStrictEqual(plan.agents, { DUPONT: { 20261031: 'R', 20261101: 'M' } });
+});
+
+test('monthGrid : semaines du lundi au dimanche', () => {
+  const weeks = C.monthGrid(2026, 11); // 1er novembre 2026 = dimanche
+  assert.strictEqual(weeks[0].length, 7);
+  assert.deepStrictEqual(weeks[0].slice(0, 6), [null, null, null, null, null, null]);
+  assert.deepStrictEqual(weeks[0][6], { y: 2026, m: 11, d: 1 });
+  assert.deepStrictEqual(weeks[weeks.length - 1].filter(Boolean).pop(), { y: 2026, m: 11, d: 30 });
+  assert.strictEqual(C.monthGrid(2026, 2).flat().filter(Boolean).length, 28);
+});
+
+test('sameShift : collègues du même service, sans soi-même', () => {
+  const plan = { agents: { DUPONT: { 20261101: 'M' }, MARTIN: { 20261101: 'M' }, ABEL: { 20261101: 'M' }, ZOE: { 20261101: 'S' } } };
+  assert.deepStrictEqual(C.sameShift(plan, '20261101', 'M', 'DUPONT'), ['ABEL', 'MARTIN']);
+  assert.deepStrictEqual(C.sameShift(plan, '20261102', 'M', 'DUPONT'), []);
+});

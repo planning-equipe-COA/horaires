@@ -1,14 +1,16 @@
 # Mes Horaires
 
-Page web statique : un agent dépose le tableau de service Excel de l'équipe, choisit son nom,
-et télécharge un fichier `.ics` à importer dans son agenda (Apple, Google, Samsung).
+Appli web statique (installable sur l'écran d'accueil) : un agent dépose le tableau de service
+Excel de l'équipe ; le planning est gardé sur le téléphone et affiché dans le **calendrier de
+l'appli** (écran principal). L'export `.ics` vers l'agenda du téléphone reste en option.
 L'utilisateur échange en français. En ligne : https://planning-equipe-coa.github.io/horaires/
 (GitHub Pages, branche `main`, racine) — un `git push` sur `main` met en ligne en ~1 min.
 
 ## Fichiers
 - `core.js` — logique pure, module UMD : lecture de la grille (`parseMatrix`, `sheetToMatrix`),
   codes par défaut (`DEFAULT_CODES`), événements (`buildEvents`), export (`buildICS`).
-- `app.js` — interface (IIFE), réglages dans localStorage (`mh_codes`, `mh_codes_v`, `mh_name`).
+- `app.js` — interface (IIFE), réglages dans localStorage (`mh_codes`, `mh_codes_v`, `mh_name`,
+  `mh_plan`). `mh_name` = dernier agent consulté (l'appli rouvre dessus).
 - `index.html`, `style.css` — UI mobile d'abord, mode sombre.
 - `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` — ajout à l'écran d'accueil
   (pas de service worker, volontairement : évite d'afficher une ancienne version en cache).
@@ -37,9 +39,16 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - Si un changement des valeurs par défaut doit toucher les réglages déjà enregistrés sur les
   téléphones, incrémenter `CODES_VERSION` dans app.js et ajouter la migration dans `loadCodes`.
 - Case « Seulement à partir d'aujourd'hui » (cochée par défaut, `mh_from_today`) : n'exporte pas les jours passés.
-- Jours modifiés : à chaque téléchargement, le planning de l'agent est gardé dans localStorage
-  (`mh_snap`, 120 jours) ; au tableau suivant, `diffSnapshot` liste les jours changés sur la période
-  commune (encadré « 🔔 » + lignes marquées « avant : … » dans l'aperçu).
+- Calendrier : `mh_plan` = { agents: { NOM: { AAAAMMJJ: CODE } }, at, file, changes, changesSeen }.
+  Toute l'équipe est gardée (pour « Aussi Matin : … » au toucher d'un jour), 400 jours max.
+  `mergePlan` : un nouveau tableau remplace toute sa période, le reste est conservé.
+  Recalculé depuis `state.planBefore` à chaque réglage du fichier (feuille, mois, codes).
+  Tous les codes s'affichent dans le calendrier, même décochés (la case ne vaut que pour l'export).
+  À l'ouverture : mois en cours s'il a des jours, sinon le prochain mois rempli.
+- Jours modifiés : à chaque import, `diffSnapshot` compare chaque agent à son planning précédent ;
+  bandeau « 🔔 » + point orange sur les cases jusqu'à « J'ai vu » (`changesSeen`), repris dans
+  l'export. L'ancien suivi par export (`mh_snap`) n'est plus écrit ; il sert une fois de point de
+  départ à `mh_plan`.
 - Idées validées mais en option, pas encore faites : rappel la veille (VALARM), comparer deux agents
   côte à côte (échanges de poste).
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.

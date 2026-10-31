@@ -343,6 +343,63 @@
     return out;
   }
 
+  // ── Planning gardé sur le téléphone (vue calendrier) ─────────────────────
+  // plan = { agents: { NOM: { 'AAAAMMJJ': 'CODE' } } }
+  // Un nouveau tableau remplace toute la période qu'il couvre (pour tous les agents : un agent
+  // absent du nouveau tableau n'a plus de case sur cette période) ; le reste est conservé.
+  // Les jours antérieurs à minKey sont oubliés.
+  function mergePlan(prev, agents, minKey) {
+    let first = null, last = null;
+    for (const ag of agents) {
+      for (const e of ag.entries) {
+        const k = dateKey(e.date);
+        if (first == null || k < first) first = k;
+        if (last == null || k > last) last = k;
+      }
+    }
+    const out = { agents: {} };
+    const keep = k => (!minKey || k >= minKey) && (first == null || k < first || k > last);
+    const prevAgents = (prev && prev.agents) || {};
+    for (const name of Object.keys(prevAgents)) {
+      const days = {};
+      for (const k of Object.keys(prevAgents[name])) if (keep(k)) days[k] = prevAgents[name][k];
+      if (Object.keys(days).length) out.agents[name] = days;
+    }
+    for (const ag of agents) {
+      const days = out.agents[ag.name] || (out.agents[ag.name] = {});
+      for (const e of ag.entries) {
+        const k = dateKey(e.date);
+        if (isValidDate(e.date) && (!minKey || k >= minKey)) days[k] = e.code;
+      }
+      if (!Object.keys(days).length) delete out.agents[ag.name];
+    }
+    return out;
+  }
+
+  // Semaines du mois, du lundi au dimanche : tableau de 7 cases {y,m,d} ou null
+  function monthGrid(y, m) {
+    const first = new Date(Date.UTC(y, m - 1, 1));
+    const offset = (first.getUTCDay() + 6) % 7; // lundi = 0
+    const count = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const cells = [];
+    for (let i = 0; i < offset; i++) cells.push(null);
+    for (let d = 1; d <= count; d++) cells.push({ y, m, d });
+    while (cells.length % 7) cells.push(null);
+    const weeks = [];
+    for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+    return weeks;
+  }
+
+  // Collègues ayant le même code ce jour-là (hors l'agent lui-même), triés par nom
+  function sameShift(plan, key, code, self) {
+    const out = [];
+    const agents = (plan && plan.agents) || {};
+    for (const name of Object.keys(agents)) {
+      if (name !== self && agents[name][key] === code) out.push(name);
+    }
+    return out.sort((a, b) => a.localeCompare(b, 'fr'));
+  }
+
   function icsEscape(s) {
     return String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
   }
@@ -387,5 +444,5 @@
     return lines.join('\r\n') + '\r\n';
   }
 
-  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, parseMatrix, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
+  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, parseMatrix, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
 });

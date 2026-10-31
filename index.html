@@ -17,18 +17,36 @@
 <main>
   <header>
     <h1>Mes Horaires</h1>
-    <p class="sub">Du planning Excel à ton agenda Apple ou Google.</p>
+    <p class="sub">Ton planning, toujours dans ta poche.</p>
   </header>
 
+  <section id="calCard" class="card cal" hidden>
+    <div class="cal-head">
+      <button id="calPrev" class="cal-nav" aria-label="Mois précédent">‹</button>
+      <h2 id="calTitle"></h2>
+      <button id="calNext" class="cal-nav" aria-label="Mois suivant">›</button>
+    </div>
+    <div class="cal-tools">
+      <select id="calAgent" aria-label="Planning de"></select>
+      <button id="calToday">Aujourd'hui</button>
+    </div>
+    <div id="calChanges" class="changes" hidden></div>
+    <div id="calGrid" class="cal-grid" role="grid"></div>
+    <p id="calEmpty" class="hint" hidden>Pas de planning pour ce mois : importe le tableau de service ci-dessous.</p>
+    <div id="calDay" class="cal-day" hidden></div>
+    <p id="calTally" class="cal-tally"></p>
+  </section>
+
   <section class="card">
-    <h2><span class="step">1</span> Le planning</h2>
+    <h2><span class="step">1</span> <span id="importTitle">Le planning</span></h2>
     <label id="drop" class="drop" for="file">
       <strong>Choisir le fichier Excel</strong>
       <span>ou le glisser ici (.xls, .xlsx)</span>
       <span id="fileName" class="file-name"></span>
     </label>
     <input id="file" type="file" accept=".xls,.xlsx,.xlsm,.csv" hidden>
-    <p class="hint">Le fichier est lu sur ton appareil, rien n'est envoyé sur Internet.</p>
+    <p id="saved" class="saved" hidden></p>
+    <p class="hint">Le fichier est lu sur ton appareil et le planning reste sur ce téléphone : rien n'est envoyé sur Internet.</p>
     <div id="sheetRow" class="row" hidden>
       <label for="sheet">Feuille</label>
       <select id="sheet"></select>
@@ -47,7 +65,7 @@
   </section>
 
   <section id="previewCard" class="card" hidden>
-    <h2><span class="step">3</span> Vérifier et exporter</h2>
+    <h2><span class="step">3</span> Ajouter à l'agenda du téléphone <span class="opt">facultatif</span></h2>
     <div id="changes" class="changes" hidden></div>
     <p id="summary" class="summary"></p>
     <div id="unknown" class="unknown" hidden></div>
@@ -72,7 +90,6 @@
       </ol>
       <p>Si Google Agenda refuse le fichier, mets l'appli à jour depuis le Play Store. En dernier recours : <a href="https://calendar.google.com/calendar/r/settings/export" target="_blank" rel="noopener">page d'import de Google Agenda</a> dans Chrome (menu ⋮ → « Version pour ordinateur » si besoin).</p>
       <p>Si le planning change, refais l'export et réimporte-le : les jours déjà présents sont mis à jour, pas dupliqués.</p>
-      <p>L'appli retient ton dernier export sur ce téléphone (rien n'est envoyé) : au tableau suivant, elle te signale les jours qui ont changé.</p>
     </details>
     <div class="table-wrap"><table id="preview"></table></div>
   </section>
