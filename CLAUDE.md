@@ -111,5 +111,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - Export : case « Rappel la veille à 20 h » (`mh_alarm`, cochée par défaut) → VALARM sur les jours
   travaillés. Apple le garde à l'import ; Google Agenda ignore les alarmes importées.
   Pas de notifications web (iPhone : impossible sans serveur).
+- Cartes 1 à 3 dépliantes (`<details class="fold">` : `importDetails`, `agentDetails`,
+  `exportDetails`), comme « Planning d'équipe », « Partager », « Codes ». Import ouvert tant qu'il n'y
+  a aucun planning et dès qu'un fichier est lu (aperçu + « Envoyer à l'équipe » y sont) ; replié à
+  l'ouverture sinon. « Qui es-tu ? » ouvert, export (facultatif) replié. Le rappel de fin de mois
+  ouvre l'import.
 - Écarté par l'utilisateur : « Partager → Planning COA » sur Android.
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.

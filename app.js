@@ -181,6 +181,7 @@
     books.sort((a, b) => a.first.localeCompare(b.first));
     state.books = books;
     state.workbook = books[0].wb;
+    $('importDetails').open = true; // l'aperçu et « Envoyer à l'équipe » sont dans cette carte
     state.fileName = books.map(b => b.name).join(' + ');
     state.planBefore = state.plan; // les tableaux remplacent leur période dans ce planning
     $('saved').hidden = true;
@@ -565,6 +566,9 @@
     const empty = !names.length;
     $('calCard').hidden = false;
     $('importTitle').textContent = empty ? 'Le planning' : 'Nouveau planning';
+    // carte 1 ouverte tant qu'il n'y a aucun planning (ou pendant un import), repliée sinon
+    if (!state.foldInit) { state.foldInit = true; $('importDetails').open = empty; }
+    if (empty) $('importDetails').open = true;
     const me = load(STORAGE_NAME_KEY);
     if (!empty && !names.includes(state.cal.agent)) state.cal.agent = names.includes(me) ? me : names[0];
     const name = empty ? '' : state.cal.agent;
@@ -1185,7 +1189,13 @@
     teamMsg('Tu as quitté l\'équipe : ton calendrier reste sur ce téléphone, il ne se met plus à jour tout seul.');
     renderTeam();
   });
+  // le rappel de fin de mois mène directement à l'import
+  $('calRemind').addEventListener('click', () => {
+    $('importDetails').open = true;
+    $('drop').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
   $('wImport').addEventListener('click', () => {
+    $('importDetails').open = true;
     $('drop').scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
   $('wName').addEventListener('change', e => {

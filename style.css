@@ -327,3 +327,9 @@ button.link { background: none; border: 0; color: var(--muted); text-decoration:
 .ios-copy { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--bg); }
 .ios-copy .hint { margin: 0 0 8px; }
 .welcome-steps li.done > .w-code, .welcome-steps li.done > .w-msg { display: none; }
+
+/* cartes 1 à 3 dépliantes, comme « Partager » et « Codes » */
+.fold > summary { cursor: pointer; list-style-position: inside; }
+.fold > summary h2 { display: inline-flex; margin: 0; }
+.fold[open] > summary { margin-bottom: 12px; }
+.remind { cursor: pointer; }

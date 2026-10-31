@@ -78,7 +78,8 @@
   </section>
 
   <section class="card">
-    <h2><span class="step">1</span> <span id="importTitle">Le planning</span></h2>
+    <details id="importDetails" class="fold" open>
+      <summary><h2><span class="step">1</span> <span id="importTitle">Le planning</span></h2></summary>
     <label id="drop" class="drop" for="file">
       <strong>Choisir le fichier Excel</strong>
       <span>ou le glisser ici (.xls, .xlsx) · tu peux en sélectionner plusieurs</span>
@@ -106,15 +107,19 @@
     </div>
     <p id="multiWarn" class="hint warn" hidden></p>
     <p id="error" class="error" hidden></p>
+    </details>
   </section>
 
   <section id="agentCard" class="card" hidden>
-    <h2><span class="step">2</span> Qui es-tu ?</h2>
+    <details id="agentDetails" class="fold" open>
+      <summary><h2><span class="step">2</span> Qui es-tu ?</h2></summary>
     <select id="agent"></select>
+    </details>
   </section>
 
   <section id="previewCard" class="card" hidden>
-    <h2><span class="step">3</span> Ajouter à l'agenda du téléphone <span class="opt">facultatif</span></h2>
+    <details id="exportDetails" class="fold">
+      <summary><h2><span class="step">3</span> Ajouter à l'agenda du téléphone <span class="opt">facultatif</span></h2></summary>
     <div id="changes" class="changes" hidden></div>
     <p id="summary" class="summary"></p>
     <div id="unknown" class="unknown" hidden></div>
@@ -142,6 +147,7 @@
       <p>Si le planning change, refais l'export et réimporte-le : les jours déjà présents sont mis à jour, pas dupliqués.</p>
     </details>
     <div class="table-wrap"><table id="preview"></table></div>
+    </details>
   </section>
 
   <section class="card">
