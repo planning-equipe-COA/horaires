@@ -92,7 +92,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   cheval), `hours` pour JS et Formation (7 h) ; total du mois + semaines ISO, total de l'année.
   Commentaires de cases Excel (`cell.c` → `matrix.notes` → `entry.note`) gardés dans
   `plan.remarks` { NOM: { AAAAMMJJ: texte } } (fusionnés comme les codes, publiés avec le planning
-  d'équipe), affichés « 💬 » dans le détail du jour.
+  d'équipe), signalés partout : message après import (« 💬 N commentaires lus »), 💬 sur la case
+  (Mois, Équipe), texte sous la ligne (Liste) et dans « Aujourd'hui / Demain », détail du jour.
   Accueil au premier lancement (`mh_welcome`, `mh_name_ok`) : récupérer le planning (code d'équipe
   ou import), puis choisir son nom ; jamais montré à qui avait déjà planning + nom.
 - Jours modifiés : à chaque import, `diffSnapshot` compare chaque agent à son planning précédent ;

@@ -294,7 +294,12 @@ button.link { background: none; border: 0; color: var(--muted); text-decoration:
 .team-table .chip { font-size: .62rem; min-width: 1.7em; padding: 0 2px; }
 .team-table td { cursor: pointer; }
 /* ── Commentaires du planning, historique, heures ──────────────────────── */
-.cal-cell.remark::before { content: '💬'; position: absolute; bottom: 2px; left: 3px; font-size: .55rem; }
+.cal-cell.remark::before { content: '💬'; position: absolute; bottom: 3px; left: 3px; font-size: .68rem; line-height: 1; }
+.row-remark { grid-column: 2; font-size: .82rem; color: var(--muted); font-style: italic; overflow-wrap: anywhere; }
+.next-remark { font-style: italic; }
+.saved-remarks { font-weight: 500; color: var(--text); }
+.team-table td.remark { position: relative; }
+.tt-remark { position: absolute; top: 0; right: 0; font-size: .5rem; line-height: 1; }
 .day-remark { font-size: .9rem; overflow-wrap: anywhere; }
 .history { margin-top: 12px; font-size: .92rem; }
 .history > summary { cursor: pointer; color: var(--accent); }
@@ -310,3 +315,4 @@ button.link { background: none; border: 0; color: var(--muted); text-decoration:
 .sum-hours .sum-detail { color: var(--text); }
 .cmp-legend { margin: -6px 0 12px; }
 .legend-swap { border: 1px dashed var(--ok); border-radius: 6px; padding: 0 5px; }
+.cal-cell.remark { padding-bottom: 15px; }

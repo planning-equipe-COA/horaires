@@ -254,9 +254,13 @@
     state.cal.agent = $('agent').value;
     if (!load(STORAGE_NAME_KEY) && state.cal.agent) store(STORAGE_NAME_KEY, state.cal.agent);
     const fmt = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+    const nRemarks = res.agents.reduce((n, a) => n + a.entries.filter(e => e.note).length, 0);
+    const mine = (res.agents.find(a => a.name === state.cal.agent) || { entries: [] }).entries.filter(e => e.note).length;
     $('saved').hidden = !keys.length;
-    $('saved').textContent = keys.length
-      ? `✓ Planning enregistré sur ce téléphone, du ${fmt(keys[0])} au ${fmt(keys[keys.length - 1])}.` : '';
+    $('saved').innerHTML = keys.length
+      ? `✓ Planning enregistré sur ce téléphone, du ${esc(fmt(keys[0]))} au ${esc(fmt(keys[keys.length - 1]))}.` +
+        (nRemarks ? `<br><span class="saved-remarks">💬 ${nRemarks} commentaire${nRemarks > 1 ? 's' : ''} de case${nRemarks > 1 ? 's' : ''} lu${nRemarks > 1 ? 's' : ''} dans le fichier` +
+          (mine ? ` (dont ${mine} sur ton planning)` : '') + ' : repère le 💬 dans le calendrier.</span>' : '') : '';
     renderCalendar();
     schedulePublish();
   }
@@ -689,6 +693,7 @@
         (code && C.dayKind(defOf(code)) === 'travail'
           ? `<span class="next-mates">${mates.length ? 'avec ' + mates.slice(0, 3).map(esc).join(', ') + (mates.length > 3 ? ` +${mates.length - 3}` : '') : 'seul(e) en ' + esc(codeLabel(code))}</span>`
           : '') +
+        (((plan.remarks || {})[me] || {})[k] ? `<span class="next-note next-remark">💬 ${esc(plan.remarks[me][k])}</span>` : '') +
         (notes[k] ? `<span class="next-note">📝 ${esc(notes[k])}</span>` : '') + '</button>';
     }).join('');
   }
@@ -758,7 +763,8 @@
       for (const d of dates) {
         const k = C.dateKey(d), wd = utc(d).getUTCDay();
         const cls = [wd === 0 || wd === 6 ? 'we' : '', k === todayKey ? 'today' : '', k === state.cal.selected ? 'sel' : ''].filter(Boolean).join(' ');
-        html += `<td class="${cls}" data-key="${k}">${days[k] ? chip(days[k]) : ''}</td>`;
+        const rk = ((plan.remarks || {})[n] || {})[k];
+        html += `<td class="${cls}${rk ? ' remark' : ''}" data-key="${k}"${rk ? ` title="${esc(rk)}"` : ''}>${days[k] ? chip(days[k]) : ''}${rk ? '<span class="tt-remark">💬</span>' : ''}</td>`;
       }
       html += '</tr>';
     }
@@ -791,10 +797,10 @@
         `<span class="cal-row-date"><span class="wd">${esc(dayName)}</span><span class="n">${d.d}</span></span>` +
         `<span class="cal-row-code">${code ? chip(code) + ' ' + esc(codeLabel(code)) : '<span class="muted">—</span>'}` +
         (ch ? ` <span class="was">avant : ${esc(codeTitle(ch.before))}</span>` : '') +
-        (remarks[k] ? ' <span class="note-dot" title="commentaire du planning">💬</span>' : '') +
         (notes[k] ? ' <span class="note-dot">📝</span>' : '') +
         (cmp ? `<span class="cmp-inline">⇄ ${cmp[k] ? chip(cmp[k]) + ' ' + esc(codeLabel(cmp[k])) : '<span class="muted">—</span>'}</span>` : '') +
-        '</span></button>';
+        '</span>' +
+        (remarks[k] ? `<span class="row-remark">💬 ${esc(remarks[k])}</span>` : '') + '</button>';
       if (k === state.cal.selected) html += `<div class="cal-row-detail">${dayDetailHTML(k, false)}</div>`;
     }
     $('calList').innerHTML = html;
