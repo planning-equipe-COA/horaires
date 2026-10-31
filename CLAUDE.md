@@ -28,7 +28,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   Les homonymes dans deux blocs aux mêmes dates deviennent « NOM (2) ».
 - Codes : M Matin 6h-14h, S Soir 14h-22h, N Nuit 22h-6h (finit le lendemain), J Journée 7h30-16h30,
   JS Journée de solidarité (libellé « JS », toujours sans horaires),
-  R Repos, Tn Tombée de nuit, RF, RC, RCN, ATT Repos, RECUP Récupération, CA/C Congé, EM Enfant malade,
+  R Repos, Tn Tombée de nuit, RF, RC, RCN, ATT Repos, RECUP Récupération,
+  RECU « Recup » (pastille « Recup » via `abbr`, blanc ; « RECU » se lisait « reçu »), CA/C Congé, EM Enfant malade,
   X « Absence » (sens exact à préciser par l'utilisateur).
 - **Tous les codes** vont dans l'agenda, en **journée entière sans horaires** (tout le monde
   connaît les horaires). L'option « Ajouter les horaires » a été retirée à la demande de

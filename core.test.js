@@ -188,3 +188,13 @@ test('sameShift : collègues du même service, sans soi-même', () => {
   assert.deepStrictEqual(C.sameShift(plan, '20261101', 'M', 'DUPONT'), ['ABEL', 'MARTIN']);
   assert.deepStrictEqual(C.sameShift(plan, '20261102', 'M', 'DUPONT'), []);
 });
+
+test('RECU : libellé « Recup », blanc comme les repos', () => {
+  const def = C.DEFAULT_CODES.find(c => c.code === 'RECU');
+  assert.strictEqual(def.label, 'Recup');
+  assert.strictEqual(def.abbr, 'Recup');
+  assert.strictEqual(def.color, C.DEFAULT_CODES.find(c => c.code === 'R').color);
+  const { events, unknown } = C.buildEvents([{ date: { y: 2026, m: 11, d: 2 }, code: 'RECU' }], C.DEFAULT_CODES);
+  assert.deepStrictEqual(unknown, {});
+  assert.strictEqual(C.eventTitle(events[0].def), '⚪ Recup');
+});

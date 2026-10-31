@@ -9,7 +9,7 @@
   const STORAGE_PLAN_KEY = 'mh_plan';
   const STORAGE_VIEW_KEY = 'mh_view';
   const PLAN_KEEP_DAYS = 400;
-  const CODES_VERSION = 5;
+  const CODES_VERSION = 6;
   const $ = id => document.getElementById(id);
 
   function esc(s) {
@@ -47,6 +47,15 @@
         if (version < 5) {
           const defaults = new Map(C.DEFAULT_CODES.map(d => [C.normCode(d.code), d.color]));
           saved.forEach(c => { if (c.color === undefined) c.color = defaults.get(C.normCode(c.code)) || ''; });
+        }
+        // v6 : RECU (ajouté à la main depuis « codes non reconnus ») → « Recup », blanc comme les repos
+        if (version < 6) {
+          saved.forEach(c => {
+            if (C.normCode(c.code) !== 'RECU') return;
+            if (!c.label || C.normCode(c.label) === 'RECU') c.label = 'Recup';
+            if (!c.color) c.color = 'blanc';
+            if (!c.abbr) c.abbr = 'Recup';
+          });
         }
         if (version < CODES_VERSION) {
           store(STORAGE_CODES_VERSION_KEY, String(CODES_VERSION));
@@ -89,7 +98,7 @@
   function codeLabel(code) { const def = defOf(code); return def ? (def.label || def.code) : code; }
   function chip(code) {
     const def = defOf(code);
-    const text = def ? def.code : code;
+    const text = def ? (def.abbr || def.code) : code;
     return `<span class="chip${text.length > 3 ? ' long' : ''}" data-color="${esc(def && def.color || '')}">${esc(text)}</span>`;
   }
 

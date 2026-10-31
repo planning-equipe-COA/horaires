@@ -18,6 +18,8 @@
     { code: 'RC', label: 'RC', allDay: true, start: '', end: '', include: true, color: 'blanc' },
     { code: 'RCN', label: 'Repos', allDay: true, start: '', end: '', include: true, color: 'blanc' },
     { code: 'RECUP', label: 'Récupération', allDay: true, start: '', end: '', include: true, color: 'blanc' },
+    // « RECU » se lisait « reçu » : affiché « Recup » (abbr = texte de la pastille du calendrier)
+    { code: 'RECU', label: 'Recup', abbr: 'Recup', allDay: true, start: '', end: '', include: true, color: 'blanc' },
     { code: 'CA', label: 'Congé', allDay: true, start: '', end: '', include: true, color: 'vert' },
     { code: 'C', label: 'Congé', allDay: true, start: '', end: '', include: true, color: 'vert' },
     { code: 'EM', label: 'Enfant malade', allDay: true, start: '', end: '', include: true, color: '' },
