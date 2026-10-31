@@ -79,10 +79,10 @@
     <h2><span class="step">1</span> <span id="importTitle">Le planning</span></h2>
     <label id="drop" class="drop" for="file">
       <strong>Choisir le fichier Excel</strong>
-      <span>ou le glisser ici (.xls, .xlsx)</span>
+      <span>ou le glisser ici (.xls, .xlsx) · tu peux en sélectionner plusieurs</span>
       <span id="fileName" class="file-name"></span>
     </label>
-    <input id="file" type="file" accept=".xls,.xlsx,.xlsm,.csv" hidden>
+    <input id="file" type="file" accept=".xls,.xlsx,.xlsm,.csv" multiple hidden>
     <p id="saved" class="saved" hidden></p>
     <div id="publishBox" class="publish" hidden>
       <p id="publishMsg" class="publish-msg"></p>
@@ -102,6 +102,7 @@
       <input id="month" type="month">
       <p class="hint warn">Le mois ou l'année n'apparaît pas dans le fichier : vérifie-le ici.</p>
     </div>
+    <p id="multiWarn" class="hint warn" hidden></p>
     <p id="error" class="error" hidden></p>
   </section>
 

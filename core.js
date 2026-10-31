@@ -246,6 +246,28 @@
     return best;
   }
 
+  // Plusieurs tableaux lus d'un coup (ex. novembre + décembre) → un seul résultat.
+  // Même nom d'agent = même personne ; pour un même jour, le dernier tableau de la liste l'emporte.
+  function combineResults(results) {
+    const agents = new Map();
+    let monthAssumed = false, ctx = null, total = 0;
+    for (const res of results) {
+      monthAssumed = monthAssumed || res.monthAssumed;
+      if (!ctx) ctx = res.ctx;
+      total += res.total || 0;
+      for (const ag of res.agents) {
+        if (!agents.has(ag.name)) agents.set(ag.name, new Map());
+        const days = agents.get(ag.name);
+        for (const e of ag.entries) days.set(dateKey(e.date), e);
+      }
+    }
+    return {
+      agents: [...agents].map(([name, days]) => ({ name,
+        entries: [...days.keys()].sort().map(k => days.get(k)) })),
+      monthAssumed, ctx, total,
+    };
+  }
+
   // Convertit une feuille SheetJS en matrice (dates Excel → {y,m,d}, sans fuseau horaire)
   function sheetToMatrix(XLSX, ws) {
     if (!ws || !ws['!ref']) return [];
@@ -597,5 +619,5 @@
     return lines.join('\r\n') + '\r\n';
   }
 
-  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, codeMinutes, isoWeek, monthHours, monthSummary, frenchHolidays, holidayName, teamOfDay, parseMatrix, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
+  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, codeMinutes, isoWeek, monthHours, monthSummary, frenchHolidays, holidayName, teamOfDay, parseMatrix, combineResults, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
 });

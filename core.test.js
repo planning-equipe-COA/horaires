@@ -286,3 +286,15 @@ test('export : rappel la veille à 20 h pour les jours travaillés seulement', (
   assert.ok(ics.includes('TRIGGER:-PT4H'));
   assert.ok(!C.buildICS(evs, { name: 'X' }).includes('VALARM'));
 });
+
+test('combineResults : plusieurs tableaux (mois différents) fusionnés par agent', () => {
+  const nov = { agents: [{ name: 'DUPONT', entries: [{ date: { y: 2026, m: 11, d: 30 }, code: 'M' }] },
+    { name: 'MARTIN', entries: [{ date: { y: 2026, m: 11, d: 30 }, code: 'S' }] }], monthAssumed: false, total: 2 };
+  const dec = { agents: [{ name: 'DUPONT', entries: [{ date: { y: 2026, m: 12, d: 1 }, code: 'N' }, { date: { y: 2026, m: 11, d: 30 }, code: 'R' }] },
+    { name: 'GARCIA', entries: [{ date: { y: 2026, m: 12, d: 1 }, code: 'M' }] }], monthAssumed: true, total: 3 };
+  const r = C.combineResults([nov, dec]);
+  assert.deepStrictEqual(r.agents.map(a => a.name), ['DUPONT', 'MARTIN', 'GARCIA']);
+  assert.deepStrictEqual(r.agents[0].entries.map(e => C.dateKey(e.date) + e.code), ['20261130R', '20261201N']);
+  assert.strictEqual(r.monthAssumed, true);
+  assert.strictEqual(r.total, 5);
+});

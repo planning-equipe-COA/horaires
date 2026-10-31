@@ -140,59 +140,90 @@
     $('error').hidden = !msg;
   }
 
-  function readFile(file) {
-    if (!file) return;
+  // Un ou plusieurs fichiers Excel (ex. novembre + décembre) : combinés en un seul planning
+  function readOne(file) {
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onerror = () => resolve({ name: file.name, error: true });
+      reader.onload = () => {
+        try {
+          resolve({ name: file.name, wb: XLSX.read(new Uint8Array(reader.result), { type: 'array', cellNF: true }) });
+        } catch (e) { resolve({ name: file.name, error: true }); }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+  async function readFiles(fileList) {
+    const files = [...(fileList || [])];
+    if (!files.length) return;
     showError('');
-    const reader = new FileReader();
-    reader.onerror = () => showError('Impossible de lire ce fichier.');
-    reader.onload = () => {
-      try {
-        state.workbook = XLSX.read(new Uint8Array(reader.result), { type: 'array', cellNF: true });
-      } catch (e) {
-        state.workbook = null;
-        showError('Ce fichier n\'est pas un classeur Excel lisible.');
-        return;
-      }
-      state.fileName = file.name;
-      state.planBefore = state.plan; // le tableau remplace sa période dans ce planning
-      $('saved').hidden = true;
-      $('fileName').textContent = file.name;
-      const names = state.workbook.SheetNames;
-      $('sheet').innerHTML = names.map((n, i) => `<option value="${i}">${esc(n)}</option>`).join('');
-      $('sheetRow').hidden = names.length < 2;
-      $('month').value = '';
-      // feuille par défaut : celle où l'on reconnaît le plus de cases
+    const read = await Promise.all(files.map(readOne));
+    const bad = read.filter(b => b.error).map(b => b.name);
+    const books = read.filter(b => !b.error);
+    if (!books.length) {
+      state.workbook = null; state.books = [];
+      showError(files.length > 1 ? 'Aucun de ces fichiers n\'est un classeur Excel lisible.' : 'Ce fichier n\'est pas un classeur Excel lisible.');
+      return;
+    }
+    // feuille par défaut de chaque fichier : celle où l'on reconnaît le plus de cases
+    $('month').value = '';
+    for (const b of books) {
       let best = 0, bestCount = -1;
-      names.forEach((n, i) => {
-        const count = parseSheet(i).total;
+      b.wb.SheetNames.forEach((n, i) => {
+        const count = parseBook(b, i).total;
         if (count > bestCount) { best = i; bestCount = count; }
       });
-      $('sheet').value = String(best);
-      refresh();
-    };
-    reader.readAsArrayBuffer(file);
+      b.sheet = best;
+    }
+    // ordre chronologique (le plus récent l'emporte en cas de jours communs)
+    const firstKey = b => { const r = parseBook(b, b.sheet); const k = r.agents.flatMap(a => a.entries.map(e => C.dateKey(e.date))).sort(); return k[0] || ''; };
+    books.forEach(b => { b.first = firstKey(b); });
+    books.sort((a, b) => a.first.localeCompare(b.first));
+    state.books = books;
+    state.workbook = books[0].wb;
+    state.fileName = books.map(b => b.name).join(' + ');
+    state.planBefore = state.plan; // les tableaux remplacent leur période dans ce planning
+    $('saved').hidden = true;
+    $('fileName').innerHTML = books.map(b => esc(b.name)).join('<br>') +
+      (bad.length ? `<br><span class="warn-text">Illisible, ignoré : ${bad.map(esc).join(', ')}</span>` : '');
+    const multi = books.length > 1;
+    const names = books[0].wb.SheetNames;
+    $('sheet').innerHTML = names.map((n, i) => `<option value="${i}">${esc(n)}</option>`).join('');
+    $('sheet').value = String(books[0].sheet);
+    $('sheetRow').hidden = multi || names.length < 2;
+    refresh();
   }
 
-  function parseSheet(index) {
-    const name = state.workbook.SheetNames[index];
-    const matrix = C.sheetToMatrix(XLSX, state.workbook.Sheets[name]);
-    const opts = { codes: state.codes, sheetName: name + ' ' + state.fileName };
-    const ym = $('month').value.match(/^(\d{4})-(\d{2})$/);
+  function parseBook(book, index) {
+    const name = book.wb.SheetNames[index];
+    const matrix = C.sheetToMatrix(XLSX, book.wb.Sheets[name]);
+    const opts = { codes: state.codes, sheetName: name + ' ' + book.name };
+    const ym = state.books && state.books.length === 1 && $('month').value.match(/^(\d{4})-(\d{2})$/);
     if (ym) { opts.year = +ym[1]; opts.month = +ym[2]; }
     return C.parseMatrix(matrix, opts);
   }
+  function parseSheet(index) { return parseBook(state.books[0], index); }
 
   // ── Affichage ─────────────────────────────────────────────────────────────
   function refresh() {
-    if (!state.workbook) return;
-    const res = state.result = parseSheet(+$('sheet').value);
-    $('monthRow').hidden = !res.monthAssumed;
-    if (res.monthAssumed && !$('month').value && res.ctx) {
+    if (!state.workbook || !state.books || !state.books.length) return;
+    const multi = state.books.length > 1;
+    if (!multi) state.books[0].sheet = +$('sheet').value;
+    const results = state.books.map(b => parseBook(b, b.sheet));
+    const res = state.result = multi ? C.combineResults(results) : results[0];
+    // plusieurs fichiers : pas de réglage du mois fichier par fichier, mais un avertissement
+    const guessed = multi ? state.books.filter((b, i) => results[i].monthAssumed && results[i].agents.length) : [];
+    $('multiWarn').hidden = !guessed.length;
+    $('multiWarn').textContent = guessed.length
+      ? `Le mois n'est pas écrit dans ${guessed.map(b => '« ' + b.name + ' »').join(', ')} : l'appli a supposé le mois en cours. Si c'est faux, importe ce fichier seul pour régler le mois.` : '';
+    $('monthRow').hidden = multi || !res.monthAssumed;
+    if (!multi && res.monthAssumed && !$('month').value && res.ctx) {
       $('month').value = res.ctx.y + '-' + String(res.ctx.m).padStart(2, '0');
     }
     if (!res.agents.length) {
       $('agentCard').hidden = $('previewCard').hidden = true;
-      showError('Aucun planning reconnu dans cette feuille. Vérifie les codes ci-dessous ou essaie une autre feuille.');
+      showError(multi ? 'Aucun planning reconnu dans ces fichiers. Vérifie les codes ci-dessous.'
+        : 'Aucun planning reconnu dans cette feuille. Vérifie les codes ci-dessous ou essaie une autre feuille.');
       return;
     }
     showError('');
@@ -258,7 +289,8 @@
     const mine = (res.agents.find(a => a.name === state.cal.agent) || { entries: [] }).entries.filter(e => e.note).length;
     $('saved').hidden = !keys.length;
     $('saved').innerHTML = keys.length
-      ? `✓ Planning enregistré sur ce téléphone, du ${esc(fmt(keys[0]))} au ${esc(fmt(keys[keys.length - 1]))}.` +
+      ? `✓ Planning enregistré sur ce téléphone, du ${esc(fmt(keys[0]))} au ${esc(fmt(keys[keys.length - 1]))}` +
+        (state.books && state.books.length > 1 ? ` (${state.books.length} fichiers combinés).` : '.') +
         (nRemarks ? `<br><span class="saved-remarks">💬 ${nRemarks} commentaire${nRemarks > 1 ? 's' : ''} de case${nRemarks > 1 ? 's' : ''} lu${nRemarks > 1 ? 's' : ''} dans le fichier` +
           (mine ? ` (dont ${mine} sur ton planning)` : '') + ' : repère le 💬 dans le calendrier.</span>' : '') : '';
     renderCalendar();
@@ -928,7 +960,7 @@
   }
 
   // ── Événements UI ─────────────────────────────────────────────────────────
-  $('file').addEventListener('change', e => readFile(e.target.files[0]));
+  $('file').addEventListener('change', e => { readFiles(e.target.files); e.target.value = ''; });
   const drop = $('drop');
   ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => {
     e.preventDefault(); drop.classList.add('over');
@@ -936,7 +968,7 @@
   ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => {
     e.preventDefault(); drop.classList.remove('over');
   }));
-  drop.addEventListener('drop', e => readFile(e.dataTransfer.files[0]));
+  drop.addEventListener('drop', e => readFiles(e.dataTransfer.files));
   $('sheet').addEventListener('change', () => { $('month').value = ''; refresh(); });
   $('month').addEventListener('change', refresh);
   $('agent').addEventListener('change', () => {

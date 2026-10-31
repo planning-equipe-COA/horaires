@@ -2,7 +2,7 @@
 // Réseau d'abord : en ligne, on sert toujours la dernière version publiée (et on met la copie à
 // jour) ; sans réseau, ou s'il ne répond pas assez vite, on sert la copie gardée sur le téléphone.
 // Aucune donnée de planning ne passe ici : elle reste dans le localStorage de la page.
-const CACHE = 'mh-app-v6';
+const CACHE = 'mh-app-v7';
 const FILES = [
   './', 'index.html', 'app.js', 'core.js', 'team.js', 'style.css', 'xlsx.full.min.js',
   'manifest.json?v=3', 'icon-192.png?v=2', 'icon-512.png?v=2', 'apple-touch-icon.png?v=2',
