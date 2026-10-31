@@ -184,3 +184,7 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .publish-confirm { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); }
 .publish-confirm p { margin: 0 0 4px; font-size: .92rem; }
 .publish-confirm .actions button { flex: 1; }
+.publish-msg { margin: 0 0 8px; font-size: .92rem; }
+.publish-msg:empty { display: none; }
+.publish-msg.ok { color: var(--ok); font-weight: 600; }
+.publish-msg.err { color: var(--error); font-weight: 600; }

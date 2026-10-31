@@ -55,15 +55,11 @@
     <input id="file" type="file" accept=".xls,.xlsx,.xlsm,.csv" hidden>
     <p id="saved" class="saved" hidden></p>
     <div id="publishBox" class="publish" hidden>
-      <button id="publish" class="primary">📤 Publier pour l'équipe</button>
-      <div id="publishConfirm" class="publish-confirm" hidden>
-        <p id="publishPreview"></p>
-        <div class="actions">
-          <button id="publishOk" class="primary">Confirmer la publication</button>
-          <button id="publishCancel">Annuler</button>
-        </div>
+      <p id="publishMsg" class="publish-msg"></p>
+      <div class="actions">
+        <button id="publish" class="primary" hidden>📤 Envoyer à l'équipe</button>
+        <button id="publishUndo" hidden>Annuler l'envoi</button>
       </div>
-      <p id="publishMsg" class="hint" hidden></p>
     </div>
     <p id="importHint" class="hint">Le fichier est lu sur ton appareil et le planning reste sur ce téléphone : rien n'est envoyé sur Internet.</p>
     <div id="sheetRow" class="row" hidden>
@@ -118,7 +114,7 @@
       <summary><h2>👥 Planning d'équipe</h2></summary>
       <div id="teamOut">
         <p class="hint">Avec le code d'équipe, le planning publié par un collègue arrive tout seul dans ton calendrier,
-          et tu peux toi aussi publier le nouveau tableau quand il sort. Le planning est chiffré avec ce code :
+          et quand tu importes le nouveau tableau, il est envoyé à toute l'équipe. Le planning est chiffré avec ce code :
           sans lui, personne ne peut le lire.</p>
         <div class="row">
           <label for="teamCode">Code d'équipe</label>

@@ -32,7 +32,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   lecture/écriture) est chiffrée avec le code d'équipe dans `donnees/cle.enc` → tout agent qui a le
   code peut publier, la clé ne peut pas toucher à l'appli. Lecture publique via raw.githubusercontent
   (cache ~5 min) ; écriture via l'API contents avec `sha` (conflit → on relit, on refusionne, une fois).
-  Publier = `mergePlan(planning publié, tableau importé)` après un aperçu « N cases changent ».
+  **Envoi automatique** : tout import d'un agent de l'équipe est publié (1,2 s après le dernier réglage)
+  = `mergePlan(planning publié, tableau importé)`. Garde-fous : rien si aucune case ne change ;
+  bouton « Envoyer » si le mois a été deviné (`monthAssumed`) ; « Annuler l'envoi » pendant 2 min
+  (republie le planning d'avant).
   Synchro à l'ouverture et au retour sur l'appli (60 s min.) si `mh_team_code` ; jamais pendant un
   import. `plan.teamAt` = date de la publication reçue (seule info en clair de l'enveloppe), `teamBy`.
   Si le code ne déchiffre plus (code changé) : il est oublié et l'agent doit saisir le nouveau.

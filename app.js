@@ -129,6 +129,7 @@
       }
       state.fileName = file.name;
       state.planBefore = state.plan; // le tableau remplace sa période dans ce planning
+      state.monthOk = false;
       $('saved').hidden = true;
       $('fileName').textContent = file.name;
       const names = state.workbook.SheetNames;
@@ -214,7 +215,6 @@
   function savePlanFromImport(res) {
     applyAgents(state.planBefore || null, res.agents, { at: new Date().toISOString(), file: state.fileName });
     state.importAgents = res.agents;
-    resetPublish();
 
     // calendrier : on montre le mois en cours s'il est dans le tableau, sinon son premier mois
     const keys = res.agents.flatMap(a => a.entries.map(e => C.dateKey(e.date))).sort();
@@ -229,8 +229,8 @@
     $('saved').hidden = !keys.length;
     $('saved').textContent = keys.length
       ? `✓ Planning enregistré sur ce téléphone, du ${fmt(keys[0])} au ${fmt(keys[keys.length - 1])}.` : '';
-    $('publishBox').hidden = !keys.length || !teamCode();
     renderCalendar();
+    schedulePublish();
   }
 
   // ── Planning d'équipe (voir team.js) ──────────────────────────────────────
@@ -271,7 +271,7 @@
       $('teamStatus').textContent = `👥 Planning d'équipe du ${longDate(p.teamAt)}` + (p.teamBy ? `, publié par ${p.teamBy}` : '');
     }
     $('importHint').textContent = joined
-      ? 'Le fichier Excel reste sur ton appareil. Seuls les noms et les codes sont publiés, chiffrés avec le code d\'équipe, et seulement si tu touches « Publier pour l\'équipe ».'
+      ? 'Le fichier Excel reste sur ton appareil. Comme tu es dans l\'équipe, les noms et les codes de ton import sont envoyés à tes collègues, chiffrés avec le code d\'équipe.'
       : 'Le fichier est lu sur ton appareil et le planning reste sur ce téléphone : rien n\'est envoyé sur Internet.';
   }
 
@@ -343,9 +343,9 @@
       pendingCode = '';
       $('teamToken').value = '';
       $('teamSetup').hidden = true;
-      teamMsg('✓ Équipe configurée. Importe le tableau puis touche « Publier pour l\'équipe ».', 'ok');
+      teamMsg('✓ Équipe configurée. Importe le tableau : il sera envoyé à toute l\'équipe.', 'ok');
       renderTeam();
-      if (state.importAgents) $('publishBox').hidden = false;
+      schedulePublish();
     } catch (e) {
       teamMsg(errText(e), 'err');
     } finally {
@@ -353,17 +353,14 @@
     }
   }
 
-  // Publication en deux temps : aperçu (cases qui changent pour l'équipe), puis confirmation
-  function resetPublish() {
-    $('publish').hidden = false;
-    $('publish').disabled = false;
-    $('publishConfirm').hidden = true;
-    $('publishMsg').hidden = true;
-  }
+  // Publication automatique : l'import d'un agent de l'équipe est envoyé à tous, sans bouton.
+  // Garde-fous : rien si le fichier ne change rien, attente de vérification si le mois a été deviné,
+  // et « Annuler l'envoi » pendant 2 minutes (republie le planning d'avant).
+  const UNDO_MS = 120000;
+  let publishTimer = null, undoTimer = null, undoInfo = null;
   function publishMsg(text, kind) {
-    $('publishMsg').hidden = !text;
     $('publishMsg').textContent = text || '';
-    $('publishMsg').className = 'hint ' + (kind || '');
+    $('publishMsg').className = 'publish-msg ' + (kind || '');
   }
   function countChanges(before, after) {
     let n = 0;
@@ -374,55 +371,78 @@
     }
     return n;
   }
-  async function previewPublish() {
-    if (!state.importAgents) return;
-    $('publish').disabled = true;
-    publishMsg('Lecture du planning de l\'équipe…');
-    try {
-      const remote = await T.fetchPlan();
-      const current = remote ? await T.decrypt(remote.text, teamCode()) : null;
-      const merged = C.mergePlan(current, state.importAgents, minKeep());
-      const n = countChanges(current, merged);
-      const keys = state.importAgents.flatMap(a => a.entries.map(e => C.dateKey(e.date))).sort();
-      const fmt = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', timeZone: 'UTC' });
-      $('publishPreview').innerHTML = !current
-        ? `Premier planning de l'équipe : <strong>${state.importAgents.length} agents</strong>, du ${esc(fmt(keys[0]))} au ${esc(fmt(keys[keys.length - 1]))}.`
-        : n
-          ? `Ton fichier remplace la période du ${esc(fmt(keys[0]))} au ${esc(fmt(keys[keys.length - 1]))} pour toute l'équipe : ` +
-            `<strong>${n} case${n > 1 ? 's changent' : ' change'}</strong> par rapport au planning publié le ${esc(longDate(remote.at))}` +
-            (current.by ? ` par ${esc(current.by)}` : '') + '.'
-          : 'Ce fichier est identique au planning déjà publié : rien à publier.';
-      $('publishOk').hidden = !!current && !n;
-      $('publish').hidden = true;
-      $('publishConfirm').hidden = false;
-      publishMsg('');
-    } catch (e) {
-      $('publish').disabled = false;
-      publishMsg(errText(e), 'err');
+  function schedulePublish() {
+    clearTimeout(publishTimer);
+    if (!teamCode() || !state.importAgents || !state.importAgents.length) { $('publishBox').hidden = true; return; }
+    $('publishBox').hidden = false;
+    $('publishUndo').hidden = true;
+    if (state.result && state.result.monthAssumed && !state.monthOk) {
+      publishMsg('Le mois n\'est pas écrit dans le fichier : vérifie-le ci-dessus avant de l\'envoyer à l\'équipe.');
+      $('publish').hidden = false;
+      return;
     }
+    $('publish').hidden = true;
+    publishMsg('Envoi à l\'équipe…');
+    publishTimer = setTimeout(doPublish, 1200); // laisse le temps de changer de feuille ou de mois
   }
-  async function confirmPublish() {
-    const code = teamCode();
+  async function publishKey() {
+    const key = await T.checkCode(teamCode());
+    if (key.status !== 'ok') throw new Error('cle');
+    return key.token;
+  }
+  async function doPublish() {
+    const agents = state.importAgents;
     const by = $('agent').value || load(STORAGE_NAME_KEY) || '';
-    $('publishOk').disabled = true;
-    publishMsg('Publication…');
+    let previous = null, n = 0;
     try {
-      const key = await T.checkCode(code);
-      if (key.status !== 'ok') throw new Error('cle');
-      const res = await T.publishPlan(code, key.token, by,
-        current => ({ plan: { agents: C.mergePlan(current, state.importAgents, minKeep()).agents } }));
+      const token = await publishKey();
+      const res = await T.publishPlan(teamCode(), token, by, current => {
+        previous = current;
+        const merged = { agents: C.mergePlan(current, agents, minKeep()).agents };
+        n = countChanges(current, merged);
+        if (current && !n) throw new Error('identique');
+        return { plan: merged };
+      });
+      if (agents !== state.importAgents) return; // un autre réglage a déjà relancé l'envoi
       state.plan.teamAt = res.at;
       state.plan.teamBy = by;
       savePlan();
-      $('publishConfirm').hidden = true;
-      publishMsg('✓ Publié ! Tes collègues le recevront à la prochaine ouverture de l\'appli.', 'ok');
       renderTeam();
+      publishMsg(previous
+        ? `✓ Envoyé à l'équipe : ${n} case${n > 1 ? 's changent' : ' change'}. Tes collègues le recevront à l'ouverture de l'appli.`
+        : `✓ Premier planning de l'équipe envoyé (${agents.length} agents).`, 'ok');
+      undoInfo = { previous, by };
+      $('publishUndo').hidden = false;
+      clearTimeout(undoTimer);
+      undoTimer = setTimeout(() => { $('publishUndo').hidden = true; undoInfo = null; }, UNDO_MS);
     } catch (e) {
-      publishMsg(errText(e), 'err');
-    } finally {
-      $('publishOk').disabled = false;
+      if (e.message === 'identique') { publishMsg('✓ L\'équipe a déjà ce planning.', 'ok'); return; }
+      publishMsg('Pas envoyé à l\'équipe : ' + errText(e), 'err');
+      $('publish').textContent = 'Réessayer l\'envoi';
+      $('publish').hidden = false;
     }
   }
+  async function undoPublish() {
+    if (!undoInfo) return;
+    const info = undoInfo;
+    $('publishUndo').disabled = true;
+    publishMsg('Annulation…');
+    try {
+      const token = await publishKey();
+      const res = await T.publishPlan(teamCode(), token, info.by,
+        () => ({ plan: { agents: info.previous ? info.previous.agents : {} } }));
+      state.plan.teamAt = res.at;
+      savePlan();
+      undoInfo = null;
+      $('publishUndo').hidden = true;
+      publishMsg('↩︎ Envoi annulé : l\'équipe garde le planning d\'avant. Ton fichier reste sur ce téléphone seulement.', 'ok');
+    } catch (e) {
+      publishMsg('Annulation impossible : ' + errText(e), 'err');
+    } finally {
+      $('publishUndo').disabled = false;
+    }
+  }
+
 
   // ── Calendrier ────────────────────────────────────────────────────────────
   const WEEKDAYS = ['lu', 'ma', 'me', 'je', 've', 'sa', 'di'];
@@ -801,9 +821,8 @@
     $('teamSetup').hidden = false;
     $('teamToken').focus();
   });
-  $('publish').addEventListener('click', previewPublish);
-  $('publishOk').addEventListener('click', confirmPublish);
-  $('publishCancel').addEventListener('click', resetPublish);
+  $('publish').addEventListener('click', () => { state.monthOk = true; schedulePublish(); });
+  $('publishUndo').addEventListener('click', undoPublish);
   // au retour sur l'appli (elle reste souvent ouverte en arrière-plan), on revérifie
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && Date.now() - lastSync > 60000) syncTeam(false);
