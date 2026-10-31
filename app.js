@@ -217,6 +217,7 @@
     const name = state.cal.agent;
     $('calAgent').innerHTML = names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
     $('calAgent').value = name;
+    $('calPartial').hidden = !!plan.at; // repris de l'ancien suivi des exports, pas encore d'import
 
     const { y, m } = state.cal;
     $('calTitle').textContent = new Date(Date.UTC(y, m - 1, 1))
