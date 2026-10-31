@@ -13,16 +13,33 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   `mh_plan`). `mh_name` = dernier agent consulté (l'appli rouvre dessus).
 - `index.html`, `style.css` — UI mobile d'abord, mode sombre.
 - `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` — ajout à l'écran d'accueil.
-- `sw.js` — hors connexion, **réseau d'abord** (`cache: 'no-cache'`, délai 4 s) : en ligne on sert
+- `sw.js` — hors connexion (`team.js` est dans `FILES`), **réseau d'abord** (`cache: 'no-cache'`, délai 4 s) : en ligne on sert
   toujours la dernière version, la copie n'est utilisée que sans réseau. Tout nouveau fichier de l'appli
   (ou changement du `?v=` des icônes) doit être ajouté à `FILES` ; changer `CACHE` purge l'ancienne copie.
 - `xlsx.full.min.js` — SheetJS 0.20.3 embarqué (pas de CDN).
-- `core.test.js` — tests : `node --test core.test.js` (à lancer avant chaque push).
+- `team.js` — planning d'équipe partagé (module UMD `TeamSync`) : chiffrement WebCrypto
+  (PBKDF2-SHA256 600 000 itérations → AES-GCM) avec le code d'équipe, lecture/écriture GitHub.
+- `core.test.js`, `team.test.js` — tests : `node --test core.test.js team.test.js` (avant chaque push).
 - `exemple-planning.xls` — planning fictif pour essayer.
 
 ## Règles
-- **Confidentialité** : le fichier Excel est lu dans le navigateur, rien n'est envoyé nulle part.
-  Ne jamais ajouter d'envoi réseau, d'analytics ni de vrai planning dans le dépôt (il est public).
+- **Confidentialité** : le fichier Excel est lu dans le navigateur et n'est jamais envoyé.
+  Ne jamais ajouter d'analytics ni de vrai planning dans ce dépôt (il est public).
+  Seule exception, voulue par l'utilisateur : le **planning d'équipe** (noms + codes par jour, rien
+  d'autre), chiffré sur le téléphone, publié dans le dépôt public séparé `planning-equipe-COA/donnees`
+  (`planning.enc`). Le code d'équipe n'est jamais stocké en ligne (il est donné de vive voix).
+- Planning d'équipe : la clé GitHub (fine-grained, **seulement** le dépôt `donnees`, Contents en
+  lecture/écriture) est chiffrée avec le code d'équipe dans `donnees/cle.enc` → tout agent qui a le
+  code peut publier, la clé ne peut pas toucher à l'appli. Lecture publique via raw.githubusercontent
+  (cache ~5 min) ; écriture via l'API contents avec `sha` (conflit → on relit, on refusionne, une fois).
+  **Après chaque import** d'un agent de l'équipe, l'appli compare d'elle-même au planning publié et
+  affiche un aperçu (« N cases changent ») : rien ne part sans « Envoyer à l'équipe » (garde-fou
+  demandé par l'utilisateur). Envoi = `mergePlan(planning publié, tableau importé)`. Pas de
+  proposition si aucune case ne change ; rappel si le mois a été deviné ; « Annuler l'envoi »
+  pendant 2 min (republie le planning d'avant).
+  Synchro à l'ouverture et au retour sur l'appli (60 s min.) si `mh_team_code` ; jamais pendant un
+  import. `plan.teamAt` = date de la publication reçue (seule info en clair de l'enveloppe), `teamBy`.
+  Si le code ne déchiffre plus (code changé) : il est oublié et l'agent doit saisir le nouveau.
 - Format réel : deux blocs d'agents, en-têtes « lu ma … di » puis numéros de jour (05 … 31, 01),
   mois dans un titre « OCTOBRE 2026 » ou le nom de la feuille, colonnes code/remarque à droite.
   Les homonymes dans deux blocs aux mêmes dates deviennent « NOM (2) ».
@@ -54,9 +71,6 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   bandeau « 🔔 » + point orange sur les cases jusqu'à « J'ai vu » (`changesSeen`), repris dans
   l'export. L'ancien suivi par export (`mh_snap`) n'est plus écrit ; il sert une fois de point de
   départ à `mh_plan`.
-- Écarté : synchronisation du planning entre collègues (essayée puis retirée le 31/10/2026). L'utilisateur
-  la voulait sans aucune clé ; impossible sans un stockage en ligne avec autorisation d'écriture.
-  Chacun importe le fichier sur son téléphone.
 - Idées validées mais en option, pas encore faites : rappel la veille (VALARM), comparer deux agents
   côte à côte (échanges de poste).
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.
