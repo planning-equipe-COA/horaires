@@ -30,7 +30,6 @@
       <select id="calAgent" aria-label="Planning de"></select>
       <button id="calToday">Aujourd'hui</button>
     </div>
-    <p id="teamStatus" class="team-status" hidden></p>
     <div class="seg" role="tablist" aria-label="Affichage">
       <button id="viewMonth" role="tab" data-view="month">Mois</button>
       <button id="viewList" role="tab" data-view="list">Liste</button>
@@ -54,14 +53,7 @@
     </label>
     <input id="file" type="file" accept=".xls,.xlsx,.xlsm,.csv" hidden>
     <p id="saved" class="saved" hidden></p>
-    <div id="publishBox" class="publish" hidden>
-      <p id="publishMsg" class="publish-msg"></p>
-      <div class="actions">
-        <button id="publish" class="primary" hidden>📤 Envoyer à l'équipe</button>
-        <button id="publishUndo" hidden>Annuler l'envoi</button>
-      </div>
-    </div>
-    <p id="importHint" class="hint">Le fichier est lu sur ton appareil et le planning reste sur ce téléphone : rien n'est envoyé sur Internet.</p>
+    <p class="hint">Le fichier est lu sur ton appareil et le planning reste sur ce téléphone : rien n'est envoyé sur Internet.</p>
     <div id="sheetRow" class="row" hidden>
       <label for="sheet">Feuille</label>
       <select id="sheet"></select>
@@ -110,41 +102,6 @@
   </section>
 
   <section class="card">
-    <details id="teamDetails">
-      <summary><h2>👥 Planning d'équipe</h2></summary>
-      <div id="teamOut">
-        <p class="hint">Avec le code d'équipe, le planning publié par un collègue arrive tout seul dans ton calendrier,
-          et quand tu importes le nouveau tableau, il est envoyé à toute l'équipe. Le planning est chiffré avec ce code :
-          sans lui, personne ne peut le lire.</p>
-        <div class="row">
-          <label for="teamCode">Code d'équipe</label>
-          <input id="teamCode" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="ex. tarmac-cerise-boussole-neige">
-        </div>
-        <div class="actions"><button id="teamJoin" class="primary">Rejoindre</button></div>
-      </div>
-      <div id="teamIn" hidden>
-        <p id="teamInfo"></p>
-        <div class="actions">
-          <button id="teamSyncNow">Vérifier maintenant</button>
-          <button id="teamLeave">Quitter</button>
-        </div>
-        <p class="hint"><a href="#" id="teamRenew">Renouveler la clé de publication</a></p>
-      </div>
-      <div id="teamSetup" hidden>
-        <p class="hint"><strong>Configuration (une seule fois, par la personne qui crée l'équipe) :</strong>
-          colle la clé GitHub du dépôt « donnees ». Elle sera chiffrée avec le code d'équipe et ne sera
-          jamais affichée.</p>
-        <div class="row">
-          <label for="teamToken">Clé GitHub</label>
-          <input id="teamToken" type="password" autocomplete="off" placeholder="github_pat_…">
-        </div>
-        <div class="actions"><button id="teamSetupOk" class="primary">Enregistrer la clé</button></div>
-      </div>
-      <p id="teamMsg" class="team-msg" hidden></p>
-    </details>
-  </section>
-
-  <section class="card">
     <details id="shareDetails">
       <summary><h2>Partager avec un collègue</h2></summary>
       <p class="hint">Fais scanner ce QR code avec l'appareil photo du téléphone.</p>
@@ -172,7 +129,6 @@
 </main>
 <script src="xlsx.full.min.js"></script>
 <script src="core.js"></script>
-<script src="team.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
