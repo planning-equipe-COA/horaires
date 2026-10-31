@@ -402,6 +402,38 @@
     return out.sort((a, b) => a.localeCompare(b, 'fr'));
   }
 
+  // Nature d'un code pour le résumé du mois : travail (codes à horaires + JS), repos (pastille
+  // blanche), congé (pastille verte), autre (EM, X, codes inconnus…)
+  function dayKind(def) {
+    if (!def) return 'autre';
+    if (!def.allDay || normCode(def.code) === 'JS') return 'travail';
+    if (def.color === 'blanc') return 'repos';
+    if (def.color === 'vert') return 'conge';
+    return 'autre';
+  }
+
+  // Résumé d'un mois pour un agent : { travail: {total, detail:[{code, def, n}]}, repos, conge, autre }
+  // detail suit l'ordre des codes (M, S, N… puis les inconnus)
+  function monthSummary(days, codes, y, m) {
+    const prefix = String(y) + pad(m);
+    const map = new Map(codes.map(c => [normCode(c.code), c]));
+    const order = codes.map(c => normCode(c.code));
+    const out = {};
+    for (const kind of ['travail', 'repos', 'conge', 'autre']) out[kind] = { total: 0, detail: [] };
+    const counts = new Map();
+    for (const k of Object.keys(days || {})) {
+      if (k.slice(0, 6) !== prefix) continue;
+      counts.set(days[k], (counts.get(days[k]) || 0) + 1);
+    }
+    const rank = c => { const i = order.indexOf(c); return i < 0 ? order.length : i; };
+    for (const code of [...counts.keys()].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))) {
+      const def = map.get(code), n = counts.get(code), group = out[dayKind(def)];
+      group.total += n;
+      group.detail.push({ code, def, n });
+    }
+    return out;
+  }
+
   function icsEscape(s) {
     return String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
   }
@@ -446,5 +478,5 @@
     return lines.join('\r\n') + '\r\n';
   }
 
-  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, parseMatrix, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
+  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, monthSummary, parseMatrix, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
 });

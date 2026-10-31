@@ -198,3 +198,15 @@ test('RECU : libellé « Recup », blanc comme les repos', () => {
   assert.deepStrictEqual(unknown, {});
   assert.strictEqual(C.eventTitle(events[0].def), '⚪ Recup');
 });
+
+test('monthSummary : jours travaillés (M, S, N, J, JS), repos, congés, autres', () => {
+  const days = { 20261101: 'M', 20261102: 'M', 20261103: 'S', 20261104: 'N', 20261105: 'TN', 20261106: 'R',
+    20261107: 'RECU', 20261108: 'CA', 20261109: 'JS', 20261110: 'FORM', 20261110: 'FORM', 20261201: 'M' };
+  const s = C.monthSummary(days, C.DEFAULT_CODES, 2026, 11);
+  assert.strictEqual(s.travail.total, 5);
+  assert.deepStrictEqual(s.travail.detail.map(d => d.code + d.n), ['M2', 'S1', 'N1', 'JS1']);
+  assert.strictEqual(s.repos.total, 3);
+  assert.deepStrictEqual(s.repos.detail.map(d => d.code), ['R', 'TN', 'RECU']);
+  assert.strictEqual(s.conge.total, 1);
+  assert.deepStrictEqual(s.autre.detail.map(d => d.code + d.n), ['FORM1']);
+});

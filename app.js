@@ -496,12 +496,11 @@
 
     let html = WEEKDAYS.map(w => `<div class="cal-wd">${w}</div>`).join('');
     let inMonth = 0;
-    const counts = {};
     for (const week of C.monthGrid(y, m)) {
       for (const d of week) {
         if (!d) { html += '<div class="cal-cell blank"></div>'; continue; }
         const k = C.dateKey(d), code = days[k];
-        if (code) { inMonth++; const l = codeLabel(code); counts[l] = (counts[l] || 0) + 1; }
+        if (code) inMonth++;
         const cls = ['cal-cell'];
         if (k === todayKey) cls.push('today');
         if (k === state.cal.selected) cls.push('selected');
@@ -518,7 +517,7 @@
     $('viewList').setAttribute('aria-selected', String(listView));
     if (listView) renderList(days, changes, todayKey);
     $('calEmpty').hidden = inMonth > 0;
-    $('calTally').innerHTML = Object.keys(counts).map(l => `<span>${counts[l]} ${esc(l)}</span>`).join('');
+    renderSummary(days);
 
     // changements apportés par le dernier tableau importé
     const list = [...changes.values()].filter(ch => ch.key >= todayKey);
@@ -532,6 +531,17 @@
         '</ul><button id="calChangesOk">J\'ai vu</button>';
     }
     renderDay();
+  }
+
+  // Résumé du mois : jours travaillés (détail Matin / Soir / Nuit), repos, congés, autres
+  function renderSummary(days) {
+    const s = C.monthSummary(days, state.codes, state.cal.y, state.cal.m);
+    const groups = [['travail', 'Jours travaillés'], ['repos', 'Repos'], ['conge', 'Congés'], ['autre', 'Autres']];
+    $('calTally').innerHTML = groups.filter(([k]) => s[k].total || k === 'travail' || k === 'repos').map(([k, title]) =>
+      `<div class="sum-row sum-${k}"><span class="sum-n">${s[k].total}</span><span class="sum-title">${title}</span>` +
+      `<span class="sum-detail">${s[k].detail.map(d =>
+        `<span class="sum-item">${chip(d.code)} ${d.n} ${esc(codeLabel(d.code))}</span>`).join('')}</span></div>`).join('');
+    $('calTally').hidden = !Object.keys(days || {}).some(k => k.slice(0, 6) === String(state.cal.y) + String(state.cal.m).padStart(2, '0'));
   }
 
   // Vue liste : les jours du mois de haut en bas ; toucher un jour déplie les collègues du même service

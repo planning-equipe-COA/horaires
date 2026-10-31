@@ -189,3 +189,15 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .publish-msg.ok { color: var(--ok); font-weight: 600; }
 .publish-msg.err { color: var(--error); font-weight: 600; }
 .hint a, .team-msg a { color: var(--accent); }
+
+/* ── Résumé du mois ─────────────────────────────────────────────────────── */
+.cal-sum { margin-top: 14px; border-top: 1px solid var(--line); }
+.sum-row { display: grid; grid-template-columns: 2.4em 1fr; grid-template-areas: "n title" "n detail"; column-gap: 10px; padding: 10px 2px 8px; border-bottom: 1px solid var(--line); }
+.sum-row:last-child { border-bottom: 0; }
+.sum-n { grid-area: n; font-size: 1.5rem; font-weight: 700; line-height: 1.1; text-align: center; }
+.sum-travail .sum-n { color: var(--accent); }
+.sum-title { grid-area: title; font-weight: 600; }
+.sum-detail { grid-area: detail; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .85rem; color: var(--muted); }
+.sum-detail:empty { display: none; }
+.sum-item { display: inline-flex; align-items: center; gap: 4px; }
+.sum-item .chip { font-size: .7rem; }
