@@ -11,7 +11,7 @@
   const STORAGE_NOTES_KEY = 'mh_notes'; // notes perso par jour, sur ce téléphone uniquement
   const STORAGE_SUM_KEY = 'mh_sum';
   const PLAN_KEEP_DAYS = 400;
-  const CODES_VERSION = 7;
+  const CODES_VERSION = 8;
   const $ = id => document.getElementById(id);
 
   function esc(s) {
@@ -72,6 +72,10 @@
             if (c.hours === undefined && d.hours) c.hours = d.hours;
             if (c.abbr === undefined && d.abbr) c.abbr = d.abbr;
           });
+        }
+        // v8 : X affiché « X » tel quel (motif volontairement non affiché)
+        if (version < 8) {
+          saved.forEach(c => { if (C.normCode(c.code) === 'X' && c.label === 'Absence') c.label = 'X'; });
         }
         if (version < CODES_VERSION) {
           store(STORAGE_CODES_VERSION_KEY, String(CODES_VERSION));

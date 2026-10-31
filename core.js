@@ -24,7 +24,7 @@
     { code: 'CA', label: 'Congé', allDay: true, start: '', end: '', include: true, color: 'vert' },
     { code: 'C', label: 'Congé', allDay: true, start: '', end: '', include: true, color: 'vert' },
     { code: 'EM', label: 'Enfant malade', allDay: true, start: '', end: '', include: true, color: '' },
-    { code: 'X', label: 'Absence', allDay: true, start: '', end: '', include: true, color: '' },
+    { code: 'X', label: 'X', allDay: true, start: '', end: '', include: true, color: '' },
     { code: 'ATT', label: 'Repos', allDay: true, start: '', end: '', include: true, color: 'blanc' },
   ];
 

@@ -107,7 +107,7 @@ test('couleurs : pastille dans le titre et propriété COLOR', () => {
   const { events } = C.buildEvents(entries, C.DEFAULT_CODES);
   const ics = C.buildICS(events, { name: 'X' });
   for (const t of ['🟤 Matin', '🟡 Soir', '🔵 Nuit', '⚪ Repos', '🟢 Congé']) assert.ok(ics.includes('SUMMARY:' + t), t);
-  assert.ok(ics.includes('SUMMARY:Absence\r\nEND:VEVENT'));
+  assert.ok(ics.includes('SUMMARY:X\r\nEND:VEVENT'));
   assert.ok(ics.includes('COLOR:saddlebrown'));
 });
 

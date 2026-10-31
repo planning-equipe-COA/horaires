@@ -54,7 +54,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   « Form » violette, jour travaillé ; absent du vrai planning, présent dans l'exemple),
   R Repos, Tn Tombée de nuit, RF, RC, RCN, ATT Repos, RECUP Récupération,
   RECU « Recup » (pastille « Recup » via `abbr`, blanc ; « RECU » se lisait « reçu »), CA/C Congé, EM Enfant malade,
-  X « Absence » (sens exact à préciser par l'utilisateur).
+  X affiché « X » tel quel (choix de l'utilisateur : ne pas afficher de motif), rangé dans « Autres ».
 - **Tous les codes** vont dans l'agenda, en **journée entière sans horaires** (tout le monde
   connaît les horaires). L'option « Ajouter les horaires » a été retirée à la demande de
   l'utilisateur : l'interface n'expose plus ni horaires ni réglage début/fin. Les horaires restent
@@ -80,7 +80,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   `planView()`) : grille, liste, notes et résumé à zéro ; menu des agents masqué.
   Résumé du mois sous le calendrier (`monthSummary`, `dayKind`) : jours travaillés = codes à
   horaires (M, S, N, J) + JS + FORM ; repos = pastille blanche (R, Tn, RF, RC, RCN, RECUP, RECU, ATT) ;
-  congés = pastille verte (CA, C) ; autres = le reste (EM, X, codes inconnus comme FORM).
+  congés = pastille verte (CA, C) ; autres = le reste (EM, X, codes inconnus).
   Résumé « Ce mois / Année » (`mh_sum`) + ligne « Travaillés en majoration » : dimanches, fériés
   (`frenchHolidays`, Pâques calculée) et nuits travaillés, comptés le jour où le service commence.
   En haut : « Aujourd'hui / Demain » pour `mh_name` (toucher = aller au jour). Rappel à partir du 20
