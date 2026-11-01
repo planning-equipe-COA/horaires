@@ -248,7 +248,7 @@
       $('month').value = res.ctx.y + '-' + String(res.ctx.m).padStart(2, '0');
     }
     if (!res.agents.length) {
-      $('agentCard').hidden = $('previewCard').hidden = true;
+      $('previewCard').hidden = true;
       showError(multi ? 'Aucun planning reconnu dans ces fichiers. Vérifie les codes ci-dessous.'
         : 'Aucun planning reconnu dans cette feuille. Vérifie les codes ci-dessous ou essaie une autre feuille.');
       return;
@@ -257,7 +257,6 @@
     const previous = $('agent').value || load(STORAGE_NAME_KEY);
     $('agent').innerHTML = nameOptions(res.agents.map(a => a.name));
     if (res.agents.some(a => a.name === previous)) $('agent').value = previous;
-    $('agentCard').hidden = res.agents.length < 2;
     savePlanFromImport(res);
     renderPreview();
   }
@@ -978,6 +977,7 @@
 
   function renderPreview() {
     const agent = state.result.agents.find(a => a.name === $('agent').value) || state.result.agents[0];
+    state.exportName = agent.name;
     const built = C.buildEvents(agent.entries, state.codes);
     const unknown = built.unknown;
     const now = new Date();
@@ -1052,7 +1052,7 @@
   // ── Export ────────────────────────────────────────────────────────────────
   function download() {
     if (!state.events.length) return;
-    const name = $('agent').value;
+    const name = state.exportName || $('agent').value;
     const ics = C.buildICS(state.events, { name, alarm: $('alarm').checked });
     const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }));
     const a = document.createElement('a');

@@ -118,10 +118,11 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - Export : case « Rappel la veille à 20 h » (`mh_alarm`, cochée par défaut) → VALARM sur les jours
   travaillés. Apple le garde à l'import ; Google Agenda ignore les alarmes importées.
   Pas de notifications web (iPhone : impossible sans serveur).
-- Cartes 1 à 3 dépliantes (`<details class="fold">` : `importDetails`, `agentDetails`,
-  `exportDetails`), comme « Planning d'équipe », « Partager », « Codes ». Import ouvert tant qu'il n'y
+- Cartes dépliantes (`<details class="fold">` : `importDetails`, `exportDetails`), comme « Planning d'équipe », « Partager », « Codes ». Import ouvert tant qu'il n'y
   a aucun planning et dès qu'un fichier est lu (aperçu + « Envoyer à l'équipe » y sont) ; replié à
-  l'ouverture sinon. « Qui es-tu ? » ouvert, export (facultatif) replié. Le rappel de fin de mois
+  l'ouverture sinon. Export (facultatif) replié. Carte « Qui es-tu ? » supprimée (doublon) : le nom se
+  choisit dans le menu sous la date (`#calAgent`) ou à l'accueil ; `#agent` reste caché et synchronisé,
+  l'export .ics prend `state.exportName`. Le rappel de fin de mois
   ouvre l'import.
 - **Ordre des noms (vue Équipe)** : bouton « ↕︎ Réorganiser les noms » → liste avec poignée ☰ à gauche
   (glisser-déposer au doigt, Pointer Events, défilement auto près des bords), « Terminé »

@@ -112,16 +112,11 @@
     </details>
   </section>
 
-  <section id="agentCard" class="card" hidden>
-    <details id="agentDetails" class="fold" open>
-      <summary><h2>Qui es-tu ?</h2></summary>
-    <select id="agent"></select>
-    </details>
-  </section>
-
   <section id="previewCard" class="card" hidden>
     <details id="exportDetails" class="fold">
       <summary><h2>Ajouter à l'agenda du téléphone <span class="opt">facultatif</span></h2></summary>
+    <!-- agent exporté = celui choisi sous la date du calendrier (menu caché, synchronisé) -->
+    <select id="agent" hidden aria-hidden="true"></select>
     <div id="changes" class="changes" hidden></div>
     <p id="summary" class="summary"></p>
     <div id="unknown" class="unknown" hidden></div>
