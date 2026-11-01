@@ -175,6 +175,18 @@
     return res.text();
   }
 
+  // Code responsable (numéros utiles) : seule son empreinte PBKDF2 est gardée, dans le planning chiffré
+  async function hashSecret(secret, saltB64) {
+    const salt = saltB64 ? fromB64(saltB64) : globalThis.crypto.getRandomValues(new Uint8Array(16));
+    const base = await subtle().importKey('raw', utf8.encode(normCode(secret)), 'PBKDF2', false, ['deriveBits']);
+    const bits = await subtle().deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 200000 }, base, 256);
+    return { salt: toB64(salt), hash: toB64(new Uint8Array(bits)) };
+  }
+  async function checkSecret(secret, stored) {
+    if (!stored || !stored.salt || !stored.hash) return false;
+    return (await hashSecret(secret, stored.salt)).hash === stored.hash;
+  }
+
   return { DATA_REPO, PLAN_FILE, KEY_FILE, normCode, encrypt, decrypt, envelopeAt,
-    checkCode, setupKey, fetchPlan, publishPlan, readWithKey, listVersions, readVersion };
+    checkCode, setupKey, fetchPlan, publishPlan, readWithKey, listVersions, readVersion, hashSecret, checkSecret };
 });

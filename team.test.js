@@ -100,3 +100,11 @@ test('publication : si quelqu\'un publie entre-temps, on refusionne sur sa versi
   const final = await T.decrypt(gh.files['planning.enc'].text, code);
   assert.deepStrictEqual(Object.keys(final.agents).sort(), ['A', 'B', 'C']);
 });
+
+test('code responsable : empreinte vérifiable, mauvais code refusé', async () => {
+  const stored = await T.hashSecret('Phare Moulin Azur');
+  assert.ok(!JSON.stringify(stored).includes('phare'));
+  assert.strictEqual(await T.checkSecret('phare-moulin-azur', stored), true);
+  assert.strictEqual(await T.checkSecret('phare-moulin', stored), false);
+  assert.strictEqual(await T.checkSecret('x', null), false);
+});

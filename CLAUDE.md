@@ -133,5 +133,13 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   (`nameWithPhone`). Limites dites à l'utilisateur : visibles par tous ceux qui ont le code, restent
   dans l'historique chiffré. Rotation automatique du code écartée (sans intérêt) : changer le code
   quand quelqu'un quitte l'équipe.
+- **Numéros utiles (opérationnels uniquement)** : icône 📞 en haut à droite (`#utilesBtn`, visible une fois
+  l'équipe rejointe) → panneau depuis le bas (`#utilesSheet`) : service + numéro, Appeler / SMS.
+  **Seul le responsable modifie** : « 🔒 Modifier (responsable) » demande le code responsable (≥ 3 mots,
+  différent du code d'équipe), défini la 1re fois ; seule son empreinte PBKDF2 est gardée
+  (`TeamSync.hashSecret/checkSecret`, champ `admin`). Verrou applicatif (pas cryptographique), dit à
+  l'utilisateur. Liste dans le planning chiffré (`utiles` { list:[{label, tel}], at }, commit « Numéros
+  utiles mis à jour »), copie locale `mh_utiles`. **Toute publication doit reporter `utiles` et
+  `admin`** via `keepShared(current)`. Pas de numéros de collègues dans ce panneau (choix de l'utilisateur).
 - Écarté par l'utilisateur : « Partager → Planning COA » sur Android.
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.

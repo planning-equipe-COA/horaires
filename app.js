@@ -282,6 +282,16 @@
       `<a class="tel-link" href="sms:${esc(raw)}" aria-label="SMS à ${esc(n)}">💬</a></span>`;
   }
 
+  // ── Numéros utiles (opérationnels) : liste tenue par le responsable seul (code responsable),
+  // transmise chiffrée avec le planning d'équipe ; copie locale mh_utiles { list, at, admin }.
+  const STORAGE_UTILES_KEY = 'mh_utiles';
+  function loadUtiles() { try { return JSON.parse(load(STORAGE_UTILES_KEY)) || { list: [] }; } catch (e) { return { list: [] }; } }
+  function saveUtiles(u) { store(STORAGE_UTILES_KEY, JSON.stringify(u || { list: [] })); }
+  // à reporter dans TOUTE publication, sinon la liste et le verrou seraient perdus
+  function keepShared(current) {
+    return { utiles: (current && current.utiles) || null, admin: (current && current.admin) || null };
+  }
+
   function planToAgents(agents, remarks) {
     return Object.keys(agents || {}).map(name => ({ name,
       entries: Object.keys(agents[name]).sort().map(k => {
@@ -367,6 +377,7 @@
     $('teamOut').hidden = joined;
     $('teamIn').hidden = !joined;
     $('iosCopy').hidden = !(joined && isIOS && !isStandalone);
+    $('utilesBtn').hidden = !joined;
     if (joined) {
       const p = state.plan;
       $('teamInfo').innerHTML = p && p.teamAt
@@ -397,6 +408,7 @@
       const data = await T.decrypt(remote.text, code);
       if (data.roles && newestRoles(loadRoles(), data.roles) === data.roles) saveRoles(data.roles);
       saveContacts(data.contacts || {});
+      saveUtiles({ list: (data.utiles && data.utiles.list) || [], at: data.utiles && data.utiles.at, admin: data.admin || null });
       const n = applyAgents(state.plan, planToAgents(data.agents, data.remarks),
         { at: remote.at, file: 'équipe', teamAt: remote.at, teamBy: data.by || null });
       openOnUsefulMonth();
@@ -555,7 +567,7 @@
         previous = current;
         const full = C.mergePlan(current, agents, minKeep());
         const merged = { agents: full.agents, remarks: full.remarks, roles: newestRoles(current && current.roles, loadRoles()),
-          contacts: (current && current.contacts) || {} };
+          contacts: (current && current.contacts) || {}, ...keepShared(current) };
         n = countChanges(current, merged);
         if (current && !n) throw new Error('identique'); // quelqu'un l'a envoyé entre-temps
         return { plan: merged };
@@ -588,7 +600,7 @@
       const token = await publishKey();
       const res = await T.publishPlan(teamCode(), token, info.by,
         current => ({ plan: { agents: info.previous ? info.previous.agents : {}, remarks: info.previous && info.previous.remarks || {},
-          roles: info.previous && info.previous.roles || loadRoles(), contacts: (current && current.contacts) || {} } }));
+          roles: info.previous && info.previous.roles || loadRoles(), contacts: (current && current.contacts) || {}, ...keepShared(current) } }));
       state.plan.teamAt = res.at;
       savePlan();
       undoInfo = null;
@@ -1362,7 +1374,7 @@
         if (key.status !== 'ok') throw new Error('cle');
         const res = await T.publishPlan(teamCode(), key.token, by,
           current => ({ plan: { agents: data.agents || {}, remarks: data.remarks || {}, roles: newestRoles(current && current.roles, loadRoles()),
-            contacts: (current && current.contacts) || {} } }), undefined, 'Planning restauré');
+            contacts: (current && current.contacts) || {}, ...keepShared(current) } }), undefined, 'Planning restauré');
         applyAgents(state.plan, planToAgents(data.agents, data.remarks),
           { at: res.at, file: 'équipe', teamAt: res.at, teamBy: by || null });
         renderCalendar();
@@ -1415,7 +1427,7 @@
       if (key.status !== 'ok') throw new Error('cle');
       const res = await T.publishPlan(teamCode(), key.token, load(STORAGE_NAME_KEY) || '', current => ({ plan: {
         agents: (current && current.agents) || {}, remarks: (current && current.remarks) || {}, roles: updated,
-        contacts: (current && current.contacts) || {} } }), undefined, 'Ordre mis à jour');
+        contacts: (current && current.contacts) || {}, ...keepShared(current) } }), undefined, 'Ordre mis à jour');
       if (state.plan && before && state.plan.teamAt === before.at) { state.plan.teamAt = res.at; savePlan(); renderTeam(); }
       state.orderMsg += ' Envoyé à l\'équipe : tes collègues ont le même ordre.';
     } catch (e) {
@@ -1452,7 +1464,7 @@
         contacts = Object.assign({}, (current && current.contacts) || {});
         if (tel) contacts[me] = { tel, at: new Date().toISOString() }; else delete contacts[me];
         return { plan: { agents: (current && current.agents) || {}, remarks: (current && current.remarks) || {},
-          roles: (current && current.roles) || loadRoles(), contacts } };
+          roles: (current && current.roles) || loadRoles(), contacts, ...keepShared(current) } };
       }, undefined, 'Coordonnées mises à jour');
       saveContacts(contacts);
       if (state.plan && before && state.plan.teamAt === before.at) { state.plan.teamAt = res.at; savePlan(); renderTeam(); }
@@ -1473,6 +1485,130 @@
   });
   $('myPhoneRemove').addEventListener('click', () => publishMyPhone(null));
   $('teamDetails').addEventListener('toggle', () => { if ($('teamDetails').open) renderMyPhone(); });
+
+  // ── Panneau « Numéros utiles » (icône 📞 en haut à droite) ────────────────
+  const ut = { unlocked: false, draft: null, newAdmin: null };
+  function telHref(v) { return String(v || '').replace(/[^\d+]/g, ''); }
+  function utilesMsg(text, kind) {
+    $('utilesMsg').hidden = !text;
+    $('utilesMsg').textContent = text || '';
+    $('utilesMsg').className = 'team-msg ' + (kind || '');
+  }
+  function renderUtilesView() {
+    const list = loadUtiles().list || [];
+    $('utilesView').innerHTML = list.length ? list.map(u =>
+      `<div class="u-row"><div class="u-text"><span class="u-label">${esc(u.label)}</span><span class="u-tel">${esc(u.tel)}</span></div>` +
+      `<a class="u-act" href="tel:${esc(telHref(u.tel))}" aria-label="Appeler ${esc(u.label)}">📞</a>` +
+      `<a class="u-act" href="sms:${esc(telHref(u.tel))}" aria-label="SMS à ${esc(u.label)}">💬</a></div>`).join('')
+      : '<p class="hint">Aucun numéro pour l\'instant.</p>';
+  }
+  function openUtiles() {
+    ut.unlocked = false; ut.draft = null; ut.newAdmin = null;
+    $('utilesView').hidden = false; $('utilesEdit').hidden = true; $('utilesAdmin').hidden = false;
+    utilesMsg('');
+    renderUtilesView();
+    $('utilesSheet').hidden = false;
+    document.body.classList.add('sheet-open');
+  }
+  function closeUtiles() {
+    $('utilesSheet').hidden = true;
+    document.body.classList.remove('sheet-open');
+  }
+  // étape « verrou » : définir le code responsable (1re fois) ou le saisir
+  function renderUtilesLock() {
+    const hasAdmin = !!loadUtiles().admin;
+    $('utilesView').hidden = true; $('utilesAdmin').hidden = true; $('utilesEdit').hidden = false;
+    $('utilesEdit').innerHTML = hasAdmin
+      ? '<p class="hint">Réservé au responsable de la liste.</p>' +
+        '<div class="w-code"><input id="uSecret" type="password" autocomplete="off" placeholder="Code responsable" aria-label="Code responsable">' +
+        '<button id="uUnlock" type="button" class="primary">Déverrouiller</button></div>' +
+        '<div class="actions"><button id="uBack" class="link" type="button">Retour</button></div>'
+      : '<p class="hint"><strong>Première fois :</strong> choisis un code responsable (au moins 3 mots, différent des 4 mots de l\'équipe). ' +
+        'Il sera demandé pour toute modification. Garde-le pour toi.</p>' +
+        '<input id="uSecret" type="password" autocomplete="new-password" placeholder="Code responsable" aria-label="Code responsable" class="u-input">' +
+        '<input id="uSecret2" type="password" autocomplete="new-password" placeholder="Confirme le code" aria-label="Confirmation" class="u-input">' +
+        '<div class="actions"><button id="uDefine" type="button" class="primary">Définir</button><button id="uBack" class="link" type="button">Retour</button></div>';
+    setTimeout(() => { const i = $('uSecret'); if (i) i.focus(); }, 50);
+  }
+  function renderUtilesEdit() {
+    $('utilesView').hidden = true; $('utilesAdmin').hidden = true; $('utilesEdit').hidden = false;
+    $('utilesEdit').innerHTML = '<p class="hint">Mode responsable : modifie, ajoute ou supprime des numéros, puis envoie à l\'équipe.</p>' +
+      ut.draft.map((u, i) => `<div class="u-edit" data-i="${i}">` +
+        `<input class="u-input" data-f="label" value="${esc(u.label)}" placeholder="Service (ex. PC opérations)" aria-label="Service">` +
+        `<input class="u-input" data-f="tel" value="${esc(u.tel)}" placeholder="Numéro" inputmode="tel" aria-label="Numéro">` +
+        `<button type="button" data-del="${i}" aria-label="Supprimer">🗑</button></div>`).join('') +
+      '<div class="actions"><button id="uAdd" type="button">+ Ajouter un numéro</button></div>' +
+      '<div class="actions"><button id="uSave" type="button" class="primary">Enregistrer pour l\'équipe</button>' +
+      '<button id="uCancel" class="link" type="button">Annuler</button></div>';
+  }
+  async function saveUtilesList() {
+    const list = ut.draft.map(u => ({ label: u.label.trim(), tel: u.tel.trim() })).filter(u => u.label || u.tel);
+    const bad = list.find(u => !u.label || (u.tel.match(/\d/g) || []).length < 2);
+    if (bad) { utilesMsg('Chaque ligne doit avoir un nom de service et un numéro.', 'err'); return; }
+    $('uSave').disabled = true;
+    utilesMsg('Envoi à l\'équipe…');
+    try {
+      const before = await T.fetchPlan();
+      const key = await T.checkCode(teamCode());
+      if (key.status !== 'ok') throw new Error('cle');
+      const utiles = { list, at: new Date().toISOString() };
+      let admin = null;
+      const res = await T.publishPlan(teamCode(), key.token, load(STORAGE_NAME_KEY) || '', current => {
+        admin = ut.newAdmin || (current && current.admin) || null;
+        return { plan: { agents: (current && current.agents) || {}, remarks: (current && current.remarks) || {},
+          roles: (current && current.roles) || loadRoles(), contacts: (current && current.contacts) || {}, utiles, admin } };
+      }, undefined, 'Numéros utiles mis à jour');
+      saveUtiles({ list, at: utiles.at, admin });
+      if (state.plan && before && state.plan.teamAt === before.at) { state.plan.teamAt = res.at; savePlan(); renderTeam(); }
+      ut.unlocked = false; ut.draft = null; ut.newAdmin = null;
+      $('utilesEdit').hidden = true; $('utilesView').hidden = false; $('utilesAdmin').hidden = false;
+      renderUtilesView();
+      utilesMsg('✓ Numéros enregistrés et envoyés à l\'équipe.', 'ok');
+    } catch (e) {
+      utilesMsg('Pas envoyé : ' + errText(e), 'err');
+      const b = document.getElementById('uSave'); if (b) b.disabled = false;
+    }
+  }
+  $('utilesBtn').addEventListener('click', openUtiles);
+  $('utilesSheet').addEventListener('click', async e => {
+    if (e.target.closest('[data-close]')) { closeUtiles(); return; }
+    const id = e.target.id;
+    if (id === 'utilesAdmin') { utilesMsg(''); renderUtilesLock(); return; }
+    if (id === 'uBack' || id === 'uCancel') { openUtiles(); return; }
+    if (id === 'uDefine') {
+      const a = $('uSecret').value, b = $('uSecret2').value, code = T.normCode(a);
+      if (code.split('-').length < 3) { utilesMsg('Le code responsable doit faire au moins 3 mots.', 'err'); return; }
+      if (code === teamCode()) { utilesMsg('Choisis un code différent des 4 mots de l\'équipe.', 'err'); return; }
+      if (code !== T.normCode(b)) { utilesMsg('Les deux saisies ne correspondent pas.', 'err'); return; }
+      ut.newAdmin = await T.hashSecret(a);
+      ut.unlocked = true; ut.draft = (loadUtiles().list || []).map(u => Object.assign({}, u));
+      if (!ut.draft.length) ut.draft.push({ label: '', tel: '' });
+      utilesMsg('Code responsable choisi : il sera enregistré avec la liste.', 'ok');
+      renderUtilesEdit();
+      return;
+    }
+    if (id === 'uUnlock') {
+      const ok = await T.checkSecret($('uSecret').value, loadUtiles().admin);
+      if (!ok) { utilesMsg('Code responsable incorrect.', 'err'); return; }
+      ut.unlocked = true; ut.draft = (loadUtiles().list || []).map(u => Object.assign({}, u));
+      if (!ut.draft.length) ut.draft.push({ label: '', tel: '' });
+      utilesMsg('');
+      renderUtilesEdit();
+      return;
+    }
+    if (!ut.unlocked) return;
+    if (id === 'uAdd') { ut.draft.push({ label: '', tel: '' }); renderUtilesEdit(); const ins = $('utilesEdit').querySelectorAll('.u-edit input[data-f="label"]'); ins[ins.length - 1].focus(); return; }
+    if (e.target.dataset.del !== undefined) { ut.draft.splice(+e.target.dataset.del, 1); renderUtilesEdit(); return; }
+    if (id === 'uSave') saveUtilesList();
+  });
+  $('utilesSheet').addEventListener('input', e => {
+    const row = e.target.closest('.u-edit');
+    if (row && ut.draft) ut.draft[+row.dataset.i][e.target.dataset.f] = e.target.value;
+  });
+  $('utilesSheet').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.id === 'uSecret' && document.getElementById('uUnlock')) $('uUnlock').click();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('utilesSheet').hidden) closeUtiles(); });
 
   $('teamRenew').addEventListener('click', e => {
     e.preventDefault();

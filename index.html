@@ -15,8 +15,9 @@
 </head>
 <body>
 <main>
-  <header>
+  <header class="app-head">
     <h1>Planning COA</h1>
+    <button id="utilesBtn" class="hdr-btn" type="button" aria-label="Numéros utiles" title="Numéros utiles" hidden>📞</button>
   </header>
 
   <section id="welcome" class="card welcome" hidden>
@@ -232,6 +233,20 @@
     </details>
   </section>
 </main>
+
+<div id="utilesSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="utilesTitle" hidden>
+  <div class="sheet-backdrop" data-close></div>
+  <div class="sheet-panel">
+    <div class="sheet-head">
+      <h2 id="utilesTitle">📞 Numéros utiles</h2>
+      <button class="sheet-close" type="button" data-close aria-label="Fermer">✕</button>
+    </div>
+    <div id="utilesView"></div>
+    <div id="utilesEdit" hidden></div>
+    <div class="sheet-foot"><button id="utilesAdmin" class="link" type="button">🔒 Modifier (responsable)</button></div>
+    <p id="utilesMsg" class="team-msg" hidden></p>
+  </div>
+</div>
 <script src="xlsx.full.min.js"></script>
 <script src="core.js"></script>
 <script src="team.js"></script>
