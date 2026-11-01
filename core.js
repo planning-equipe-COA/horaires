@@ -250,7 +250,8 @@
   // Les règles sont saisies dans l'appli (jamais dans ce code public) : listes de noms séparés par
   // des virgules, « Sanchez (2) » vise l'homonyme « … (2) ». Un mot de la règle doit correspondre à
   // un mot du nom (sans accents ni majuscules).
-  const GROUPS = [{ id: 'coa', label: 'COA' }, { id: 'roa', label: 'ROA' }, { id: 'np', label: 'Non postés' }];
+  // ordre du tableau Équipe : ROA, COA, administratif (id « np » conservé pour les réglages déjà enregistrés)
+  const GROUPS = [{ id: 'roa', label: 'ROA' }, { id: 'coa', label: 'COA' }, { id: 'np', label: 'Administratif' }];
   function parseRuleList(text) {
     return String(text || '').split(/[,;\n]+/).map(s => s.trim()).filter(Boolean).map(s => {
       const m = s.match(/^(.*?)\s*\((\d+)\)\s*$/);
@@ -272,9 +273,9 @@
     if (parseRuleList(rules.roa).some(r => ruleMatches(r, name))) return 'roa';
     return 'coa';
   }
-  // Noms triés : COA, puis ROA, puis non postés ; ordre alphabétique dans chaque groupe
+  // Noms triés : ROA, puis COA, puis administratif ; ordre alphabétique dans chaque groupe
   function orderAgents(names, rules) {
-    const rank = { coa: 0, roa: 1, np: 2 };
+    const rank = { roa: 0, coa: 1, np: 2 };
     return names.slice().sort((a, b) => rank[groupOf(a, rules)] - rank[groupOf(b, rules)] || a.localeCompare(b, 'fr'));
   }
   // Règles saisies qui ne correspondent à aucun agent (fautes de frappe)

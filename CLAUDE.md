@@ -117,10 +117,11 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   l'ouverture sinon. « Qui es-tu ? » ouvert, export (facultatif) replié. Le rappel de fin de mois
   ouvre l'import.
 - **Rôles des agents** (carte « Rôles des agents ») : COA par défaut ; l'utilisateur saisit les ROA et
-  les non postés (noms séparés par des virgules, « Nom (2) » = homonyme ; `groupOf`, `orderAgents`,
+  les administratifs (noms séparés par des virgules, « Nom (2) » = homonyme ; `groupOf`, `orderAgents`,
   `unmatchedRules`). **Ne jamais écrire de vrais noms ni de rôles dans ce code public** : les règles
   vivent dans `mh_roles` { roa, np, at } et partent chiffrées avec le planning d'équipe (`roles`,
-  le plus récent l'emporte). Ordre partout : COA, ROA, non postés (menus en `<optgroup>`, vue Équipe
-  avec intitulés de groupe, l'agent consulté en tête de son groupe).
+  le plus récent l'emporte). **Seul le tableau Équipe** est groupé, dans l'ordre ROA (responsables des
+  opérations aériennes), COA (coordonnateurs), Administratif (id `np`), avec intitulés de groupe et
+  l'agent consulté en tête de son groupe ; les menus de noms restent alphabétiques.
 - Écarté par l'utilisateur : « Partager → Planning COA » sur Android.
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.

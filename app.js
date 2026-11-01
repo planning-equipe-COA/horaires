@@ -252,14 +252,10 @@
   function loadRoles() { try { return JSON.parse(load(STORAGE_ROLES_KEY)) || null; } catch (e) { return null; } }
   function saveRoles(r) { store(STORAGE_ROLES_KEY, JSON.stringify(r)); }
   function newestRoles(a, b) { if (!a) return b || null; if (!b) return a; return (a.at || '') >= (b.at || '') ? a : b; }
-  function orderNames(names) { return C.orderAgents(names, loadRoles()); }
-  // <option> regroupées par rôle (COA, ROA, non postés), sans intitulé s'il n'y a qu'un groupe
+  // menus de noms : ordre alphabétique simple (les rôles ne regroupent que le tableau Équipe)
+  function orderNames(names) { return names.slice().sort((a, b) => a.localeCompare(b, 'fr')); }
   function nameOptions(names, exclude) {
-    const roles = loadRoles(), list = orderNames(names).filter(n => n !== exclude);
-    const groups = C.GROUPS.map(g => ({ g, items: list.filter(n => C.groupOf(n, roles) === g.id) })).filter(x => x.items.length);
-    const opt = n => `<option value="${esc(n)}">${esc(n)}</option>`;
-    if (groups.length < 2) return list.map(opt).join('');
-    return groups.map(x => `<optgroup label="${esc(x.g.label)}">${x.items.map(opt).join('')}</optgroup>`).join('');
+    return orderNames(names).filter(n => n !== exclude).map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
   }
 
   function planToAgents(agents, remarks) {
@@ -822,7 +818,7 @@
   function renderTeamTable(plan, names, me, todayKey) {
     const { y, m } = state.cal;
     const dates = C.monthGrid(y, m).flat().filter(Boolean);
-    // COA, ROA, non postés (intitulé par groupe) ; toi en tête de ton groupe
+    // ROA, COA, administratif (intitulé par groupe) ; toi en tête de ton groupe
     const roles = loadRoles();
     const rows = [];
     const groups = C.GROUPS.map(g => {
@@ -1356,7 +1352,7 @@
         agents: (current && current.agents) || {}, remarks: (current && current.remarks) || {}, roles } }), undefined, 'Rôles mis à jour');
       // si ce téléphone était à jour, il l'est toujours (seuls les rôles ont changé)
       if (state.plan && before && state.plan.teamAt === before.at) { state.plan.teamAt = res.at; savePlan(); renderTeam(); }
-      rolesMsg('✓ Rôles enregistrés et envoyés à l\'équipe : tes collègues auront le même classement.', 'ok');
+      rolesMsg('✓ Rôles enregistrés et envoyés à l\'équipe : tes collègues auront le même tableau Équipe.', 'ok');
     } catch (e) {
       rolesMsg('Rôles enregistrés sur ce téléphone, mais pas envoyés à l\'équipe : ' + errText(e), 'err');
     } finally {

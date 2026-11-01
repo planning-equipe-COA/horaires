@@ -308,7 +308,7 @@ test('rôles : COA par défaut, ROA et non postés saisis, homonyme (2), ordre d
   assert.strictEqual(C.groupOf('COULMEAU Ève', rules), 'np');
   assert.strictEqual(C.groupOf('DUPONT Élise', null), 'coa');
   assert.deepStrictEqual(C.orderAgents(names, rules),
-    ['ABEL Jo', 'DUPONT Élise', 'SANCHEZ Ana', 'BELSUNCE Marc', 'SANCHEZ Ana (2)', 'COULMEAU Ève', 'CRAUCHET Léo']);
+    ['BELSUNCE Marc', 'SANCHEZ Ana (2)', 'ABEL Jo', 'DUPONT Élise', 'SANCHEZ Ana', 'COULMEAU Ève', 'CRAUCHET Léo']);
   assert.deepStrictEqual(C.unmatchedRules(names, { roa: 'Belsunce, Bernadin', np: '' }), ['Bernadin']);
   // accents et majuscules ignorés, mot entier seulement
   assert.strictEqual(C.groupOf('ÉVÊQUE Paul', { roa: 'eveque' }), 'roa');
