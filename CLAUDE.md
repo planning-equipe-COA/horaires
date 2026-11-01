@@ -122,7 +122,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - Cartes dépliantes (`<details class="fold">` : `importDetails`, `exportDetails`), comme « 🔑 Code d'équipe », « 📲 Partager l'application », « 🎨 Codes et couleurs »
   (renommées pour ne plus se confondre avec la vue Équipe et « Partager » mon numéro). Import ouvert tant qu'il n'y
   a aucun planning et dès qu'un fichier est lu (aperçu + « Envoyer à l'équipe » y sont) ; replié à
-  l'ouverture sinon. Export (facultatif) replié. Titre de l'import : « Importer un fichier Excel » (« Nouveau planning »
+  l'ouverture sinon. Export (facultatif) replié. Titre de l'import : « Importer un nouveau planning » (verbe voulu : « Nouveau planning » seul
   faisait croire qu'un planning attendait là). Carte « Qui es-tu ? » supprimée (doublon) : le nom se
   choisit dans le menu sous la date (`#calAgent`) ou à l'accueil ; `#agent` reste caché et synchronisé,
   l'export .ics prend `state.exportName`. Le rappel de fin de mois
