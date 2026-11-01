@@ -119,7 +119,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - Export : case « Rappel la veille à 20 h » (`mh_alarm`, cochée par défaut) → VALARM sur les jours
   travaillés. Apple le garde à l'import ; Google Agenda ignore les alarmes importées.
   Pas de notifications web (iPhone : impossible sans serveur).
-- Cartes dépliantes (`<details class="fold">` : `importDetails`, `exportDetails`), comme « 🔑 Code d'équipe », « 📲 Installer l'appli chez un collègue », « 🎨 Codes et couleurs »
+- Cartes dépliantes (`<details class="fold">` : `importDetails`, `exportDetails`), comme « 🔑 Code d'équipe », « 📲 Partager l'application », « 🎨 Codes et couleurs »
   (renommées pour ne plus se confondre avec la vue Équipe et « Partager » mon numéro). Import ouvert tant qu'il n'y
   a aucun planning et dès qu'un fichier est lu (aperçu + « Envoyer à l'équipe » y sont) ; replié à
   l'ouverture sinon. Export (facultatif) replié. Titre de l'import : « Importer un fichier Excel » (« Nouveau planning »
