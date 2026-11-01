@@ -648,7 +648,6 @@
   const EMPTY_PLAN = { agents: {}, changes: {}, changesSeen: true, at: 'vide' };
   function planView() { return state.plan || EMPTY_PLAN; }
   function renderCalendar() {
-    renderRules(); // carte « Règles du planning » si elle est ouverte
     const plan = planView();
     const names = orderNames(Object.keys(plan.agents));
     const empty = !names.length;
@@ -905,35 +904,8 @@
     } else html += '<p class="muted">Aucune permutation qui respecte les règles ci-dessous.</p>';
     if (r.free.length) html += `<p class="muted">En repos ce jour-là, sans jour à rendre trouvé : ${r.free.map(f => nameWithPhone(f)).join(', ')}</p>`;
     html += '<p class="hint">Classement : 11 h de repos ou plus d\'abord, puis même jour, jour rendu proche, même horaire. ' +
-      'Semaine de plus de 48 h classée après. Jamais moins de 9 h de repos, plus de 6 jours ni plus de 3 nuits d\'affilée, ni plus de 3 jours par semaine pour un mi-temps (toi et ton collègue). Détails dans « 📏 Règles du planning ». Jour rendu : jusqu\'à un mois avant ou après.</p></details>';
+      'Semaine de plus de 48 h classée après. Jamais moins de 9 h de repos, plus de 6 jours ni plus de 3 nuits d\'affilée, ni plus de 3 jours par semaine pour un mi-temps (toi et ton collègue). Jour rendu : jusqu\'à un mois avant ou après.</p></details>';
     return html;
-  }
-
-  // Carte « Règles du planning » : ce que le planning chargé respecte, face aux règles des permutations
-  function renderRules() {
-    if (!$('rulesDetails').open) return;
-    const st = C.planStats(planView(), state.codes);
-    if (!st.agents) { $('rulesBox').innerHTML = '<p class="muted">Pas encore de planning chargé.</p>'; return; }
-    const hm = min => Math.floor(min / 60) + ' h' + (min % 60 ? ' ' + String(min % 60).padStart(2, '0') : '');
-    const fmt = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-    const pairs = Object.entries(st.shortPairs).sort((a, b) => b[1] - a[1]).map(([p, n]) => `${esc(p)} ×${n}`).join(', ');
-    const row = (label, seen, rule) => `<div class="rule-row"><div class="rule-label">${label}</div>` +
-      `<div>Dans le planning : <strong>${seen}</strong></div>` + (rule ? `<div class="muted">Permutations : ${rule}</div>` : '') + '</div>';
-    let html = `<p>${st.agents} agents, du ${esc(fmt(st.from))} au ${esc(fmt(st.to))}.</p>` +
-      '<div class="rules">' +
-      row('Repos le plus court entre deux services', st.minGap === Infinity ? '—' : hm(st.minGap) +
-        (st.shortRests ? ` <span class="muted">· ${st.shortRests} fois sous 11 h (${pairs})</span>` : ''), '9 h minimum, 11 h de préférence') +
-      row('Jours travaillés d\'affilée', `${st.maxRun} au plus` + (st.runsAtMax ? ` <span class="muted">(${st.runsAtMax} fois)</span>` : ''), '6 maximum, 5 de préférence') +
-      row('Nuits d\'affilée', `${st.maxNights} au plus`, '3 maximum') +
-      row('Semaine la plus chargée', hm(st.maxWeekMin) + (st.weeksOver48 ? ` <span class="muted">· ${st.weeksOver48} semaine${st.weeksOver48 > 1 ? 's' : ''} au-delà de 48 h</span>` : ''), 'au-delà de 48 h : classée après') +
-      row('Nuits dans un mois', `${st.maxNightsMonth} au plus`, '') +
-      (st.half ? row(`Mi-temps (${st.half} agent${st.half > 1 ? 's' : ''} « 1/2 T »)`, `${st.halfMaxDays} jours travaillés par semaine au plus`, '3 jours par semaine maximum') : '') +
-      (st.h32 ? row(`Agents à 32 h (${st.h32})`, `semaine la plus chargée : ${hm(st.h32MaxWeekMin)}`, 'au-delà de 32 h dans la semaine : classée après') : '') +
-      '</div>';
-    const unk = Object.entries(st.unknown);
-    if (unk.length) html += `<p class="muted">Codes inconnus de l'appli : ${unk.map(([c, n]) => `${esc(c)} ×${n}`).join(', ')}. ` +
-      'Ajoute-les dans « Codes et couleurs » pour qu\'ils soient comptés correctement.</p>';
-    $('rulesBox').innerHTML = html;
   }
 
   // Vue « Équipe » : tous les agents en lignes, les jours du mois en colonnes (comme le tableau Excel)
@@ -1278,7 +1250,6 @@
     cell.classList.add('selected');
     renderDay();
   });
-  $('rulesDetails').addEventListener('toggle', renderRules);
   // « Voir les N autres » permutations (détail du jour, vue Mois ou Liste)
   document.addEventListener('click', e => {
     const btn = e.target.closest('.swap-all');

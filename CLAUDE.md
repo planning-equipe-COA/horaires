@@ -111,8 +111,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   semaine (lun.→dim.) > 48 h classée après (JS/FORM sans horaires = 8 h–17 h). Ensuite : même jour,
   jour rendu proche, même horaire. Règles vérifiées sur 6 vrais mois (oct. 2026 → mai 2027) : repos
   mini 9 h 30 (S→J), 6 jours max, 3 nuits max, après N toujours N ou TN, semaine max 52 h (10 > 48 h).
-  Carte « 📏 Règles du planning » (`planStats`, `renderRules`) : mêmes mesures sur le planning chargé,
-  calculées sur le téléphone, + codes inconnus.
+  Carte « 📏 Règles du planning » retirée à la demande de l'utilisateur (vue par tous) ; `planStats`
+  reste dans core.js (testé) pour une analyse ponctuelle.
   6 affichées + « Voir les N autres » ; pour les deux agents ; puis collègues en repos sans jour à rendre, et
   note perso (`mh_notes` = { AAAAMMJJ: texte }, jamais envoyée, même avec le planning d'équipe).
   Trois vues (`mh_view`) : « Mois » (grille), « Liste » (jours de haut en bas, toucher un jour déplie
@@ -139,7 +139,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - Export : case « Rappel la veille à 20 h » (`mh_alarm`, cochée par défaut) → VALARM sur les jours
   travaillés. Apple le garde à l'import ; Google Agenda ignore les alarmes importées.
   Pas de notifications web (iPhone : impossible sans serveur).
-- Cartes dépliantes (`<details class="fold">` : `importDetails`, `exportDetails`), comme « 🔑 Code d'équipe », « 📲 Partager l'application », « 🎨 Codes et couleurs »
+- Cartes dépliantes (`<details class="fold">` : `importDetails`, `exportDetails`), comme « 📲 Partager l'application », puis « 🔑 Code d'équipe » (ordre voulu), « 🎨 Codes et couleurs »
   (renommées pour ne plus se confondre avec la vue Équipe et « Partager » mon numéro). Import ouvert tant qu'il n'y
   a aucun planning et dès qu'un fichier est lu (aperçu + « Envoyer à l'équipe » y sont) ; replié à
   l'ouverture sinon. Export (facultatif) replié. Titre de l'import : « Importer un nouveau planning » (verbe voulu : « Nouveau planning » seul
