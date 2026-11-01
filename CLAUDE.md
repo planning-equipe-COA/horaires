@@ -135,6 +135,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   quand quelqu'un quitte l'équipe.
 - **Numéros utiles (opérationnels uniquement)** : icône 📞 en haut à droite (`#utilesBtn`, visible une fois
   l'équipe rejointe) → panneau depuis le bas (`#utilesSheet`) : service + numéro, Appeler / SMS.
+  Cadenas visible **seulement sur le téléphone du responsable** (`mh_admin` = '1' après une saisie
+  réussie du code) ; ailleurs, appui long de 2 s sur le titre « 📞 Numéros utiles » le fait apparaître.
   **Seul le responsable modifie** : « 🔒 Modifier (responsable) » demande le code responsable (≥ 3 mots,
   différent du code d'équipe), défini la 1re fois ; seule son empreinte PBKDF2 est gardée
   (`TeamSync.hashSecret/checkSecret`, champ `admin`). Verrou applicatif (pas cryptographique), dit à

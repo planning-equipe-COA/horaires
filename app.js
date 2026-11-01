@@ -1294,6 +1294,8 @@
   $('teamLeave').addEventListener('click', () => {
     store(STORAGE_TEAM_KEY, '');
     saveContacts({}); // plus dans l'équipe : on ne garde pas les numéros des collègues
+    saveUtiles({ list: [] });
+    store(STORAGE_ADMIN_KEY, '');
     $('publishBox').hidden = true;
     teamMsg('Tu as quitté l\'équipe : ton calendrier reste sur ce téléphone, il ne se met plus à jour tout seul.');
     renderTeam();
@@ -1488,6 +1490,10 @@
 
   // ── Panneau « Numéros utiles » (icône 📞 en haut à droite) ────────────────
   const ut = { unlocked: false, draft: null, newAdmin: null };
+  // Le cadenas n'est visible que sur le téléphone du responsable (après une 1re saisie réussie du code
+  // responsable) ; ailleurs, un appui long de 2 s sur le titre du panneau le fait apparaître.
+  const STORAGE_ADMIN_KEY = 'mh_admin';
+  const isAdminDevice = () => load(STORAGE_ADMIN_KEY) === '1';
   function telHref(v) { return String(v || '').replace(/[^\d+]/g, ''); }
   function utilesMsg(text, kind) {
     $('utilesMsg').hidden = !text;
@@ -1504,7 +1510,7 @@
   }
   function openUtiles() {
     ut.unlocked = false; ut.draft = null; ut.newAdmin = null;
-    $('utilesView').hidden = false; $('utilesEdit').hidden = true; $('utilesAdmin').hidden = false;
+    $('utilesView').hidden = false; $('utilesEdit').hidden = true; $('utilesAdmin').hidden = !isAdminDevice();
     utilesMsg('');
     renderUtilesView();
     $('utilesSheet').hidden = false;
@@ -1561,7 +1567,7 @@
       saveUtiles({ list, at: utiles.at, admin });
       if (state.plan && before && state.plan.teamAt === before.at) { state.plan.teamAt = res.at; savePlan(); renderTeam(); }
       ut.unlocked = false; ut.draft = null; ut.newAdmin = null;
-      $('utilesEdit').hidden = true; $('utilesView').hidden = false; $('utilesAdmin').hidden = false;
+      $('utilesEdit').hidden = true; $('utilesView').hidden = false; $('utilesAdmin').hidden = !isAdminDevice();
       renderUtilesView();
       utilesMsg('✓ Numéros enregistrés et envoyés à l\'équipe.', 'ok');
     } catch (e) {
@@ -1570,6 +1576,16 @@
     }
   }
   $('utilesBtn').addEventListener('click', openUtiles);
+  // appui long sur le titre : fait apparaître le cadenas (nouveau téléphone du responsable)
+  let lockTimer = null;
+  $('utilesTitle').addEventListener('pointerdown', () => {
+    clearTimeout(lockTimer);
+    lockTimer = setTimeout(() => {
+      if (!$('utilesView').hidden) { $('utilesAdmin').hidden = false; utilesMsg('🔒 Accès responsable affiché.', 'ok'); }
+    }, 2000);
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => $('utilesTitle').addEventListener(t, () => clearTimeout(lockTimer)));
+  $('utilesTitle').addEventListener('contextmenu', e => e.preventDefault());
   $('utilesSheet').addEventListener('click', async e => {
     if (e.target.closest('[data-close]')) { closeUtiles(); return; }
     const id = e.target.id;
@@ -1581,6 +1597,7 @@
       if (code === teamCode()) { utilesMsg('Choisis un code différent des 4 mots de l\'équipe.', 'err'); return; }
       if (code !== T.normCode(b)) { utilesMsg('Les deux saisies ne correspondent pas.', 'err'); return; }
       ut.newAdmin = await T.hashSecret(a);
+      store(STORAGE_ADMIN_KEY, '1');
       ut.unlocked = true; ut.draft = (loadUtiles().list || []).map(u => Object.assign({}, u));
       if (!ut.draft.length) ut.draft.push({ label: '', tel: '' });
       utilesMsg('Code responsable choisi : il sera enregistré avec la liste.', 'ok');
@@ -1590,6 +1607,7 @@
     if (id === 'uUnlock') {
       const ok = await T.checkSecret($('uSecret').value, loadUtiles().admin);
       if (!ok) { utilesMsg('Code responsable incorrect.', 'err'); return; }
+      store(STORAGE_ADMIN_KEY, '1');
       ut.unlocked = true; ut.draft = (loadUtiles().list || []).map(u => Object.assign({}, u));
       if (!ut.draft.length) ut.draft.push({ label: '', tel: '' });
       utilesMsg('');
