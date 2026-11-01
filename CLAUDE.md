@@ -46,6 +46,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   Synchro à l'ouverture et au retour sur l'appli (60 s min.) si `mh_team_code` ; jamais pendant un
   import. `plan.teamAt` = date de la publication reçue (seule info en clair de l'enveloppe), `teamBy`.
   Si le code ne déchiffre plus (code changé) : il est oublié et l'agent doit saisir le nouveau.
+  Lien « Renouveler la clé de publication » masqué (`#teamRenewRow`) sauf si GitHub refuse la clé (`errText` 'cle').
 - Format réel : deux blocs d'agents, en-têtes « lu ma … di » puis numéros de jour (05 … 31, 01),
   mois dans un titre « OCTOBRE 2026 » ou le nom de la feuille, colonnes code/remarque à droite.
   Les homonymes dans deux blocs aux mêmes dates deviennent « NOM (2) ».

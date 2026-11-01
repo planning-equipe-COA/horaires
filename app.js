@@ -350,7 +350,11 @@
     reseau: 'Pas de connexion à GitHub pour l\'instant. Réessaie plus tard.',
     format: 'Le fichier de l\'équipe est illisible.',
   };
-  const errText = e => ERRORS[e && e.message] || ERRORS.reseau;
+  // « Renouveler la clé » n'apparaît que si GitHub refuse vraiment la clé (sinon, inutile et inquiétant)
+  const errText = e => {
+    if (e && e.message === 'cle' && document.getElementById('teamRenewRow')) $('teamRenewRow').hidden = false;
+    return ERRORS[e && e.message] || ERRORS.reseau;
+  };
 
   function teamMsg(text, kind) {
     $('teamMsg').hidden = !text;
