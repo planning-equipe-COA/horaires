@@ -367,10 +367,7 @@
       if (!remote) { if (manual) teamMsg('Aucun planning publié pour l\'instant.'); return; }
       if (state.plan && state.plan.teamAt === remote.at) { if (manual) teamMsg('✓ Ton planning est à jour.', 'ok'); return; }
       const data = await T.decrypt(remote.text, code);
-      if (data.roles && newestRoles(loadRoles(), data.roles) === data.roles) {
-        saveRoles(data.roles);
-        if (![$('rolesRoa'), $('rolesNp')].includes(document.activeElement)) fillRoles();
-      }
+      if (data.roles && newestRoles(loadRoles(), data.roles) === data.roles) saveRoles(data.roles);
       const n = applyAgents(state.plan, planToAgents(data.agents, data.remarks),
         { at: remote.at, file: 'équipe', teamAt: remote.at, teamBy: data.by || null });
       openOnUsefulMonth();
@@ -644,8 +641,8 @@
       }
     }
     $('calGrid').innerHTML = html;
-    if (state.cal.view === 'team' && names.length < 2) state.cal.view = 'month';
-    const view = state.cal.view;
+    // sans équipe chargée, la vue Équipe s'affiche en Mois (sans oublier la préférence)
+    const view = state.cal.view === 'team' && names.length < 2 ? 'month' : state.cal.view;
     $('calGrid').hidden = view !== 'month';
     $('calList').hidden = view !== 'list';
     $('calTeam').hidden = view !== 'team';
@@ -818,17 +815,12 @@
   function renderTeamTable(plan, names, me, todayKey) {
     const { y, m } = state.cal;
     const dates = C.monthGrid(y, m).flat().filter(Boolean);
-    // ROA, COA, administratif (intitulé par groupe) ; toi en tête de ton groupe
+    // toi en premier, puis ordre alphabétique ; les agents placés « en fin de liste » à la fin
     const roles = loadRoles();
-    const rows = [];
-    const groups = C.GROUPS.map(g => {
-      const items = names.filter(n => C.groupOf(n, roles) === g.id);
-      return { g, items: items.includes(me) ? [me].concat(items.filter(n => n !== me)) : items };
-    }).filter(x => x.items.length);
-    for (const x of groups) {
-      if (groups.length > 1) rows.push({ header: x.g.label + ' (' + x.items.length + ')' });
-      x.items.forEach(n => rows.push({ name: n }));
-    }
+    const isEnd = n => C.groupOf(n, roles) === 'np';
+    const main = names.filter(n => !isEnd(n)), end = names.filter(isEnd);
+    const rows = (main.includes(me) ? [me].concat(main.filter(n => n !== me)) : main).map(n => ({ name: n }))
+      .concat(end.map((n, i) => ({ name: n, end: true, first: i === 0 })));
     let html = '<table class="team-table"><thead><tr><th class="tt-name"></th>';
     for (const d of dates) {
       const k = C.dateKey(d), wd = utc(d).getUTCDay();
@@ -840,7 +832,8 @@
       if (row.header) { html += `<tr class="tt-group"><th class="tt-name" scope="rowgroup">${esc(row.header)}</th><td colspan="${dates.length}"></td></tr>`; continue; }
       const n = row.name;
       const days = plan.agents[n] || {};
-      html += `<tr${n === me ? ' class="me"' : ''}><th class="tt-name" scope="row">${esc(n)}</th>`;
+      const trCls = [n === me ? 'me' : '', row.end ? 'tt-end' : '', row.first ? 'tt-end-first' : ''].filter(Boolean).join(' ');
+      html += `<tr${trCls ? ` class="${trCls}"` : ''}><th class="tt-name" scope="row" data-name="${esc(n)}">${esc(n)}</th>`;
       for (const d of dates) {
         const k = C.dateKey(d), wd = utc(d).getUTCDay();
         const cls = [wd === 0 || wd === 6 ? 'we' : '', k === todayKey ? 'today' : '', k === state.cal.selected ? 'sel' : ''].filter(Boolean).join(' ');
@@ -850,7 +843,8 @@
       html += '</tr>';
     }
     html += '</tbody></table>';
-    $('calTeam').innerHTML = `<div class="tt-wrap">${html}</div><p class="hint">Touche un jour pour voir le détail. Fais glisser le tableau pour voir tout le mois.</p>`;
+    $('calTeam').innerHTML = `<div class="tt-wrap">${html}</div><p id="endMsg" class="hint end-msg" hidden></p>` +
+      '<p class="hint">Touche un jour pour voir le détail, un nom pour le placer en fin de liste (ou l\'en sortir). Fais glisser le tableau pour voir tout le mois.</p>';
     const wrap = $('calTeam').querySelector('.tt-wrap');
     const target = wrap.querySelector('th.sel, th.today');
     if (target) wrap.scrollLeft = Math.max(0, target.offsetLeft - 140);
@@ -1052,6 +1046,8 @@
   }));
   $('calCompare').addEventListener('change', e => { state.cal.compare = e.target.value; renderCalendar(); });
   $('calTeam').addEventListener('click', e => {
+    const nameCell = e.target.closest('th[data-name]');
+    if (nameCell) { toggleEnd(nameCell.dataset.name); return; }
     const cell = e.target.closest('[data-key]');
     if (!cell) return;
     state.cal.selected = cell.dataset.key;
@@ -1306,59 +1302,34 @@
     }
   });
 
-  // ── Carte « Rôles des agents » ────────────────────────────────────────────
-  function rolesDraft() { return { roa: $('rolesRoa').value.trim(), np: $('rolesNp').value.trim() }; }
-  function renderRolesPreview() {
-    const names = Object.keys(planView().agents);
-    const draft = rolesDraft();
-    if (!names.length) { $('rolesPreview').innerHTML = '<p class="hint">Le classement apparaîtra ici une fois le planning chargé.</p>'; return; }
-    const ordered = C.orderAgents(names, draft);
-    const html = C.GROUPS.map(g => {
-      const items = ordered.filter(n => C.groupOf(n, draft) === g.id);
-      return items.length ? `<p><strong>${esc(g.label)} (${items.length})</strong> : ${items.map(esc).join(', ')}</p>` : '';
-    }).join('');
-    const missing = C.unmatchedRules(names, draft);
-    $('rolesPreview').innerHTML = html + (missing.length
-      ? `<p class="warn-text">Aucun agent trouvé pour : ${missing.map(esc).join(', ')} (vérifie l'orthographe).</p>` : '');
-  }
-  function fillRoles() {
-    const r = loadRoles() || {};
-    $('rolesRoa').value = r.roa || '';
-    $('rolesNp').value = r.np || '';
-    renderRolesPreview();
-  }
-  function rolesMsg(text, kind) {
-    $('rolesMsg').hidden = !text;
-    $('rolesMsg').textContent = text || '';
-    $('rolesMsg').className = 'team-msg ' + (kind || '');
-  }
-  // l'aperçu suit le planning ; les champs ne sont remplis qu'au démarrage ou à la réception des rôles
-  $('rolesDetails').addEventListener('toggle', () => { if ($('rolesDetails').open) renderRolesPreview(); });
-  ['rolesRoa', 'rolesNp'].forEach(id => $(id).addEventListener('input', renderRolesPreview));
-  $('rolesSave').addEventListener('click', async () => {
-    const roles = Object.assign(rolesDraft(), { at: new Date().toISOString() });
-    saveRoles(roles);
+  // ── Fin de liste (vue Équipe) : toucher un nom le place en fin de liste, ou l'en sort ──
+  // Gardé dans mh_roles.np (noms complets) et envoyé chiffré avec le planning d'équipe.
+  let endMsgTimer = null;
+  async function toggleEnd(name) {
+    const roles = loadRoles() || {};
+    const list = (roles.np || '').split(',').map(s => s.trim()).filter(Boolean);
+    const isEnd = C.groupOf(name, roles) === 'np';
+    const next = isEnd ? list.filter(n => C.groupOf(name, { np: n }) !== 'np') : list.concat(name);
+    const updated = { np: next.join(', '), at: new Date().toISOString() };
+    saveRoles(updated);
     renderCalendar();
-    if (state.result) refresh();
-    if (!teamCode()) { rolesMsg('✓ Rôles enregistrés sur ce téléphone.', 'ok'); return; }
-    $('rolesSave').disabled = true;
-    rolesMsg('✓ Rôles enregistrés. Envoi à l\'équipe…');
+    const say = text => {
+      $('endMsg').textContent = text; $('endMsg').hidden = false;
+      clearTimeout(endMsgTimer); endMsgTimer = setTimeout(() => { $('endMsg').hidden = true; }, 6000);
+    };
+    say(isEnd ? `${name} n'est plus en fin de liste.` : `${name} est placé(e) en fin de liste. Touche son nom à nouveau pour annuler.`);
+    if (!teamCode()) return;
     try {
       const before = await T.fetchPlan();
       const key = await T.checkCode(teamCode());
       if (key.status !== 'ok') throw new Error('cle');
-      const by = load(STORAGE_NAME_KEY) || '';
-      const res = await T.publishPlan(teamCode(), key.token, by, current => ({ plan: {
-        agents: (current && current.agents) || {}, remarks: (current && current.remarks) || {}, roles } }), undefined, 'Rôles mis à jour');
-      // si ce téléphone était à jour, il l'est toujours (seuls les rôles ont changé)
+      const res = await T.publishPlan(teamCode(), key.token, load(STORAGE_NAME_KEY) || '', current => ({ plan: {
+        agents: (current && current.agents) || {}, remarks: (current && current.remarks) || {}, roles: updated } }), undefined, 'Ordre mis à jour');
       if (state.plan && before && state.plan.teamAt === before.at) { state.plan.teamAt = res.at; savePlan(); renderTeam(); }
-      rolesMsg('✓ Rôles enregistrés et envoyés à l\'équipe : tes collègues auront le même tableau Équipe.', 'ok');
     } catch (e) {
-      rolesMsg('Rôles enregistrés sur ce téléphone, mais pas envoyés à l\'équipe : ' + errText(e), 'err');
-    } finally {
-      $('rolesSave').disabled = false;
+      say('Ordre changé sur ce téléphone, mais pas envoyé à l\'équipe : ' + errText(e));
     }
-  });
+  }
 
   $('teamRenew').addEventListener('click', e => {
     e.preventDefault();
@@ -1381,6 +1352,5 @@
   openOnUsefulMonth();
   renderCalendar();
   renderTeam();
-  fillRoles();
   syncTeam(false);
 })();

@@ -340,3 +340,9 @@ button.link { background: none; border: 0; color: var(--muted); text-decoration:
 .roles-preview p { margin: 4px 0; overflow-wrap: anywhere; }
 .team-table tr.tt-group th, .team-table tr.tt-group td { padding-top: 10px; border-bottom: 1px solid var(--line); font-size: .72rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .03em; background: var(--card); cursor: default; }
 .team-table tr.tt-group th.tt-name { max-width: none; overflow: visible; text-overflow: clip; }
+
+/* fin de liste (vue Équipe) */
+.team-table tbody th.tt-name { cursor: pointer; }
+.team-table tr.tt-end .tt-name { color: var(--muted); font-weight: 400; }
+.team-table tr.tt-end-first th, .team-table tr.tt-end-first td { border-top: 2px solid var(--line); }
+.end-msg { color: var(--accent); font-weight: 600; }

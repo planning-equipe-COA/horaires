@@ -89,7 +89,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   note perso (`mh_notes` = { AAAAMMJJ: texte }, jamais envoyée, même avec le planning d'équipe).
   Trois vues (`mh_view`) : « Mois » (grille), « Liste » (jours de haut en bas, toucher un jour déplie
   le détail) et « Équipe » (`renderTeamTable` : agents en lignes, jours en colonnes, noms figés,
-  « moi » en premier). Glisser à gauche/droite change de mois (Mois, Liste).
+  « moi » en premier, agents « en fin de liste » à la fin). Glisser à gauche/droite change de mois (Mois, Liste).
   « Comparer avec un collègue » (Mois, Liste ; non mémorisé) : 2e pastille sous la mienne, cadre vert
   pointillé = l'un travaille pendant que l'autre est en repos (échange possible).
   Heures théoriques (`codeMinutes`, `monthHours`) : durée des horaires du code (sans pause, nuit à
@@ -116,12 +116,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   a aucun planning et dès qu'un fichier est lu (aperçu + « Envoyer à l'équipe » y sont) ; replié à
   l'ouverture sinon. « Qui es-tu ? » ouvert, export (facultatif) replié. Le rappel de fin de mois
   ouvre l'import.
-- **Rôles des agents** (carte « Rôles des agents ») : COA par défaut ; l'utilisateur saisit les ROA et
-  les administratifs (noms séparés par des virgules, « Nom (2) » = homonyme ; `groupOf`, `orderAgents`,
-  `unmatchedRules`). **Ne jamais écrire de vrais noms ni de rôles dans ce code public** : les règles
-  vivent dans `mh_roles` { roa, np, at } et partent chiffrées avec le planning d'équipe (`roles`,
-  le plus récent l'emporte). **Seul le tableau Équipe** est groupé, dans l'ordre ROA (responsables des
-  opérations aériennes), COA (coordonnateurs), Administratif (id `np`), avec intitulés de groupe et
-  l'agent consulté en tête de son groupe ; les menus de noms restent alphabétiques.
+- **Fin de liste (vue Équipe)** : toucher un nom dans le tableau Équipe le place en fin de liste (ou
+  l'en sort) ; séparateur avant ces agents, menus de noms toujours alphabétiques. **Ne jamais écrire
+  de vrais noms dans ce code public** : la liste vit dans `mh_roles.np` (noms complets, `groupOf`) et
+  part chiffrée avec le planning d'équipe (`roles`, le plus récent l'emporte ; commit « Ordre mis à
+  jour »). La carte « Rôles des agents » (ROA/COA) a été retirée à la demande de l'utilisateur.
 - Écarté par l'utilisateur : « Partager → Planning COA » sur Android.
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.
