@@ -645,7 +645,7 @@
     const names = orderNames(Object.keys(plan.agents));
     const empty = !names.length;
     $('calCard').hidden = false;
-    $('importTitle').textContent = empty ? 'Le planning' : 'Nouveau planning';
+    $('importTitle').textContent = 'Importer un fichier Excel';
     // carte 1 ouverte tant qu'il n'y a aucun planning (ou pendant un import), repliée sinon
     if (!state.foldInit) { state.foldInit = true; $('importDetails').open = empty; }
     if (empty) $('importDetails').open = true;
