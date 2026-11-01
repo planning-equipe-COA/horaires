@@ -655,7 +655,6 @@
     $('calAgent').hidden = empty;
     $('calAgent').innerHTML = nameOptions(names);
     if (!empty) $('calAgent').value = name;
-    $('calPartial').hidden = empty || !!plan.at; // repris de l'ancien suivi des exports, pas encore d'import
     $('calEmpty').textContent = empty
       ? (teamCode() ? 'Pas encore de planning sur ce téléphone : il arrivera dès qu\'un collègue l\'aura envoyé à l\'équipe, ou importe le tableau de service ci-dessous.'
         : 'Pas encore de planning sur ce téléphone : importe le tableau de service ci-dessous pour remplir le calendrier.')

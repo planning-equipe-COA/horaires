@@ -26,7 +26,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - `exemple-planning.xls` — planning fictif pour essayer.
 
 ## Règles
-- **Confidentialité** : le fichier Excel est lu dans le navigateur et n'est jamais envoyé.
+- **Confidentialité** : le fichier Excel est lu dans le navigateur et n'est jamais envoyé (texte sous
+  l'import `#importHint` adapté selon que l'agent a rejoint l'équipe ou non).
   Ne jamais ajouter d'analytics ni de vrai planning dans ce dépôt (il est public).
   Seule exception, voulue par l'utilisateur : le **planning d'équipe** (noms + codes par jour, rien
   d'autre), chiffré sur le téléphone, publié dans le dépôt public séparé `planning-equipe-COA/donnees`
@@ -67,7 +68,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - Couleurs (`color` de chaque code, `COLORS` dans core.js) : marron Matin, jaune Soir, bleu Nuit,
   blanc pour tous les repos, vert pour les congés (CA, C). Apple et Google ignorent la couleur d'un
   événement importé : elle est donc rendue par une pastille emoji en tête du titre (« 🟤 Matin »),
-  plus la propriété COLOR. Réglable par code dans « Codes ».
+  plus la propriété COLOR. Réglable par code dans « Codes et couleurs ».
 - Si un changement des valeurs par défaut doit toucher les réglages déjà enregistrés sur les
   téléphones, incrémenter `CODES_VERSION` dans app.js et ajouter la migration dans `loadCodes`.
 - Case « Seulement à partir d'aujourd'hui » (cochée par défaut, `mh_from_today`) : n'exporte pas les jours passés.
@@ -118,7 +119,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - Export : case « Rappel la veille à 20 h » (`mh_alarm`, cochée par défaut) → VALARM sur les jours
   travaillés. Apple le garde à l'import ; Google Agenda ignore les alarmes importées.
   Pas de notifications web (iPhone : impossible sans serveur).
-- Cartes dépliantes (`<details class="fold">` : `importDetails`, `exportDetails`), comme « Planning d'équipe », « Partager », « Codes ». Import ouvert tant qu'il n'y
+- Cartes dépliantes (`<details class="fold">` : `importDetails`, `exportDetails`), comme « 🔑 Code d'équipe », « 📲 Installer l'appli chez un collègue », « 🎨 Codes et couleurs »
+  (renommées pour ne plus se confondre avec la vue Équipe et « Partager » mon numéro). Import ouvert tant qu'il n'y
   a aucun planning et dès qu'un fichier est lu (aperçu + « Envoyer à l'équipe » y sont) ; replié à
   l'ouverture sinon. Export (facultatif) replié. Titre de l'import : « Importer un fichier Excel » (« Nouveau planning »
   faisait croire qu'un planning attendait là). Carte « Qui es-tu ? » supprimée (doublon) : le nom se
