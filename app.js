@@ -815,12 +815,8 @@
   function renderTeamTable(plan, names, me, todayKey) {
     const { y, m } = state.cal;
     const dates = C.monthGrid(y, m).flat().filter(Boolean);
-    // toi en premier, puis ordre alphabétique ; les agents placés « en fin de liste » à la fin
-    const roles = loadRoles();
-    const isEnd = n => C.groupOf(n, roles) === 'np';
-    const main = names.filter(n => !isEnd(n)), end = names.filter(isEnd);
-    const rows = (main.includes(me) ? [me].concat(main.filter(n => n !== me)) : main).map(n => ({ name: n }))
-      .concat(end.map((n, i) => ({ name: n, end: true, first: i === 0 })));
+    if (state.reorder) { renderReorder(names, me); return; }
+    const rows = teamOrder(names, me).map(n => ({ name: n }));
     let html = '<table class="team-table"><thead><tr><th class="tt-name"></th>';
     for (const d of dates) {
       const k = C.dateKey(d), wd = utc(d).getUTCDay();
@@ -832,8 +828,7 @@
       if (row.header) { html += `<tr class="tt-group"><th class="tt-name" scope="rowgroup">${esc(row.header)}</th><td colspan="${dates.length}"></td></tr>`; continue; }
       const n = row.name;
       const days = plan.agents[n] || {};
-      const trCls = [n === me ? 'me' : '', row.end ? 'tt-end' : '', row.first ? 'tt-end-first' : ''].filter(Boolean).join(' ');
-      html += `<tr${trCls ? ` class="${trCls}"` : ''}><th class="tt-name" scope="row" data-name="${esc(n)}">${esc(n)}</th>`;
+      html += `<tr${n === me ? ' class="me"' : ''}><th class="tt-name" scope="row">${esc(n)}</th>`;
       for (const d of dates) {
         const k = C.dateKey(d), wd = utc(d).getUTCDay();
         const cls = [wd === 0 || wd === 6 ? 'we' : '', k === todayKey ? 'today' : '', k === state.cal.selected ? 'sel' : ''].filter(Boolean).join(' ');
@@ -843,8 +838,10 @@
       html += '</tr>';
     }
     html += '</tbody></table>';
-    $('calTeam').innerHTML = `<div class="tt-wrap">${html}</div><p id="endMsg" class="hint end-msg" hidden></p>` +
-      '<p class="hint">Touche un jour pour voir le détail, un nom pour le placer en fin de liste (ou l\'en sortir). Fais glisser le tableau pour voir tout le mois.</p>';
+    $('calTeam').innerHTML = `<div class="tt-wrap">${html}</div>` +
+      '<div class="tt-tools"><button id="ttReorder" type="button">↕︎ Réorganiser les noms</button></div>' +
+      `<p id="orderMsg" class="hint order-msg"${state.orderMsg ? '' : ' hidden'}>${esc(state.orderMsg || '')}</p>` +
+      '<p class="hint">Touche un jour pour voir le détail. Fais glisser le tableau pour voir tout le mois.</p>';
     const wrap = $('calTeam').querySelector('.tt-wrap');
     const target = wrap.querySelector('th.sel, th.today');
     if (target) wrap.scrollLeft = Math.max(0, target.offsetLeft - 140);
@@ -1046,8 +1043,19 @@
   }));
   $('calCompare').addEventListener('change', e => { state.cal.compare = e.target.value; renderCalendar(); });
   $('calTeam').addEventListener('click', e => {
-    const nameCell = e.target.closest('th[data-name]');
-    if (nameCell) { toggleEnd(nameCell.dataset.name); return; }
+    const id = e.target.id, mv = e.target.dataset && e.target.dataset.move;
+    if (id === 'ttReorder') { state.reorder = true; state.reorderList = null; state.orderMsg = ''; renderCalendar(); return; }
+    if (mv) {
+      const i = +e.target.dataset.i, j = i + +mv, l = state.reorderList;
+      if (j >= 0 && j < l.length) { [l[i], l[j]] = [l[j], l[i]]; }
+      renderCalendar();
+      const btn = $('calTeam').querySelector(`[data-i="${j}"][data-move="${mv}"]`) || $('calTeam').querySelector(`[data-i="${j}"]`);
+      if (btn) btn.focus();
+      return;
+    }
+    if (id === 'roDone') { saveOrder(state.reorderList.slice()); return; }
+    if (id === 'roReset') { saveOrder(null); return; }
+    if (id === 'roCancel') { state.reorder = false; state.reorderList = null; renderCalendar(); return; }
     const cell = e.target.closest('[data-key]');
     if (!cell) return;
     state.cal.selected = cell.dataset.key;
@@ -1302,22 +1310,38 @@
     }
   });
 
-  // ── Fin de liste (vue Équipe) : toucher un nom le place en fin de liste, ou l'en sort ──
-  // Gardé dans mh_roles.np (noms complets) et envoyé chiffré avec le planning d'équipe.
-  let endMsgTimer = null;
-  async function toggleEnd(name) {
+  // ── Ordre des noms dans la vue Équipe ─────────────────────────────────────
+  // Par défaut : toi en premier, puis ordre alphabétique (les anciens « fin de liste » restent à la fin).
+  // Ordre personnalisé : mh_roles.order (noms complets), envoyé chiffré avec le planning d'équipe ;
+  // les nouveaux agents s'ajoutent à la fin, par ordre alphabétique.
+  function teamOrder(names, me) {
     const roles = loadRoles() || {};
-    const list = (roles.np || '').split(',').map(s => s.trim()).filter(Boolean);
-    const isEnd = C.groupOf(name, roles) === 'np';
-    const next = isEnd ? list.filter(n => C.groupOf(name, { np: n }) !== 'np') : list.concat(name);
-    const updated = { np: next.join(', '), at: new Date().toISOString() };
+    if (Array.isArray(roles.order) && roles.order.length) {
+      const known = roles.order.filter(n => names.includes(n));
+      return known.concat(orderNames(names.filter(n => !known.includes(n))));
+    }
+    const isEnd = n => C.groupOf(n, { np: roles.np }) === 'np';
+    const main = orderNames(names.filter(n => !isEnd(n))), end = orderNames(names.filter(isEnd));
+    return (main.includes(me) ? [me].concat(main.filter(n => n !== me)) : main).concat(end);
+  }
+  function renderReorder(names, me) {
+    if (!state.reorderList) state.reorderList = teamOrder(names, me);
+    const list = state.reorderList;
+    $('calTeam').innerHTML = '<p class="hint">Monte ou descends les noms avec les flèches, puis touche « Terminé ».</p>' +
+      '<ol class="reorder">' + list.map((n, i) =>
+        `<li${n === me ? ' class="me"' : ''}><span class="ro-name">${esc(n)}</span>` +
+        `<button type="button" data-move="-1" data-i="${i}" aria-label="Monter ${esc(n)}"${i === 0 ? ' disabled' : ''}>▲</button>` +
+        `<button type="button" data-move="1" data-i="${i}" aria-label="Descendre ${esc(n)}"${i === list.length - 1 ? ' disabled' : ''}>▼</button></li>`).join('') +
+      '</ol><div class="actions"><button id="roDone" class="primary" type="button">Terminé</button>' +
+      '<button id="roReset" type="button">Par défaut</button><button id="roCancel" class="link" type="button">Annuler</button></div>';
+  }
+  async function saveOrder(order) {
+    const prev = loadRoles() || {};
+    const updated = { np: order ? '' : prev.np || '', order: order || [], at: new Date().toISOString() };
     saveRoles(updated);
+    state.reorder = false; state.reorderList = null;
+    state.orderMsg = order ? '✓ Ordre enregistré.' : '✓ Ordre par défaut rétabli.';
     renderCalendar();
-    const say = text => {
-      $('endMsg').textContent = text; $('endMsg').hidden = false;
-      clearTimeout(endMsgTimer); endMsgTimer = setTimeout(() => { $('endMsg').hidden = true; }, 6000);
-    };
-    say(isEnd ? `${name} n'est plus en fin de liste.` : `${name} est placé(e) en fin de liste. Touche son nom à nouveau pour annuler.`);
     if (!teamCode()) return;
     try {
       const before = await T.fetchPlan();
@@ -1326,9 +1350,12 @@
       const res = await T.publishPlan(teamCode(), key.token, load(STORAGE_NAME_KEY) || '', current => ({ plan: {
         agents: (current && current.agents) || {}, remarks: (current && current.remarks) || {}, roles: updated } }), undefined, 'Ordre mis à jour');
       if (state.plan && before && state.plan.teamAt === before.at) { state.plan.teamAt = res.at; savePlan(); renderTeam(); }
+      state.orderMsg += ' Envoyé à l\'équipe : tes collègues ont le même ordre.';
     } catch (e) {
-      say('Ordre changé sur ce téléphone, mais pas envoyé à l\'équipe : ' + errText(e));
+      state.orderMsg += ' Pas envoyé à l\'équipe : ' + errText(e);
     }
+    renderCalendar();
+    setTimeout(() => { state.orderMsg = ''; const m = document.getElementById('orderMsg'); if (m) m.hidden = true; }, 8000);
   }
 
   $('teamRenew').addEventListener('click', e => {
