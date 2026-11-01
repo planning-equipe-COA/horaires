@@ -373,3 +373,25 @@ test('swapOptions : écarte < 9 h et > 6 jours, classe 11 h et proximité en pre
   assert.equal(C.swapOptions(long, 'MOI', k(1), codes, { maxDays: 5 }).options.length, 0);
   assert.equal(C.swapOptions(long, 'MOI', k(1), codes).options.length, 1);
 });
+
+test('swapOptions : 3 nuits d’affilée au plus ; planStats', () => {
+  const codes = C.DEFAULT_CODES;
+  const k = d => '202611' + String(d).padStart(2, '0'); // lundi 2 nov. 2026 = k(2)
+  const row = s => Object.fromEntries(s.split(' ').map((c, i) => [k(i + 1), c]));
+  // MOI : N le 5. B en repos le 5 après N les 2, 3, 4 → 4 nuits d'affilée : écarté. A : N les 2, 3 puis repos le 4 → OK
+  const plan = { agents: {
+    MOI: row('R M M M N TN R R R R'),
+    A:   row('R N N R R R R N R R'),
+    B:   row('R N N N R R R N R R'),
+  } };
+  const r = C.swapOptions(plan, 'MOI', k(5), codes);
+  assert.ok(r.options.some(o => o.name === 'A'));
+  assert.ok(!r.options.some(o => o.name === 'B'));
+  // planStats sur un petit planning
+  const st = C.planStats({ agents: { X: row('S J R N N N TN R M M'), Y: row('ZZ R R R R R R R R R') } }, codes);
+  assert.equal(st.minGap, 570);           // S → J = 9 h 30
+  assert.deepEqual(st.shortPairs, { 'S→J': 1 });
+  assert.equal(st.maxNights, 3);
+  assert.equal(st.maxRun, 3);
+  assert.deepEqual(st.unknown, { ZZ: 1 });
+});

@@ -88,10 +88,16 @@
     return n >= 1 && n <= 31 ? n : null;
   }
 
+  // Abréviations (« DEC 2026 », « Fév. 2027 ») : seulement suivies d'une année, pour éviter les faux amis
+  const ABBR = ['janv?', 'fevr?', 'mars', 'avr', 'mai', 'juin', 'juil', 'aout', 'sept?', 'oct', 'nov', 'dec'];
+  const ABBR_RE = new RegExp('\\b(' + ABBR.join('|') + ')\\.?\\s+(20\\d{2})\\b');
   function monthFromText(s) {
-    const m = stripAccents(s).match(MONTH_RE);
-    if (!m) return null;
-    return { m: MONTHS.indexOf(m[1]) + 1, y: m[2] ? +m[2] : null };
+    const t = stripAccents(s);
+    const m = t.match(MONTH_RE);
+    if (m) return { m: MONTHS.indexOf(m[1]) + 1, y: m[2] ? +m[2] : null };
+    const a = t.match(ABBR_RE);
+    if (!a) return null;
+    return { m: ABBR.findIndex(x => new RegExp('^' + x + '$').test(a[1])) + 1, y: +a[2] };
   }
 
   // Une ligne est un en-tête de dates si elle contient ≥ 5 dates, ou ≥ 5 numéros de jour consécutifs
@@ -142,6 +148,17 @@
         if (row.some(v => typeof v === 'string' && EDIT_RE.test(stripAccents(v)))) continue;
         for (const v of row) if (isDateObj(v)) take({ m: v.m, y: v.y });
         if (m != null && y != null) break;
+      }
+    }
+    if (m == null || y == null) { // 3) titre de la feuille plus haut (2e bloc d'agents loin du titre)
+      for (let i = r - 9; i >= 0 && (m == null || y == null); i--) {
+        const row = matrix[i] || [];
+        if (row.some(v => typeof v === 'string' && EDIT_RE.test(stripAccents(v)))) continue;
+        for (const v of row) {
+          if (typeof v !== 'string') continue;
+          const found = monthFromText(v);
+          if (found) take(found);
+        }
       }
     }
     if ((m == null || y == null) && sheetName) {
@@ -633,11 +650,14 @@
     return Math.round(Math.abs(t(a) - t(b)) / 864e5);
   }
 
-  // Autour des jours changés : plus court repos entre deux services (minutes, Infinity si aucun)
-  // et plus longue série de jours travaillés d'affilée
+  // Autour des jours changés : plus court repos entre deux services (minutes, Infinity si aucun),
+  // plus longue série de jours travaillés d'affilée, plus longue série de nuits, et heures de la
+  // semaine (lundi → dimanche) la plus chargée parmi celles qui contiennent un jour changé
   function swapCheck(days, changed, map) {
     const span = k => shiftSpan(map.get(days[k]));
-    let minGap = Infinity, maxRun = 0;
+    const night = k => days[k] === 'N';
+    let minGap = Infinity, maxRun = 0, nights = 0, weekMin = 0;
+    const seenWeeks = new Set();
     for (const k of changed) {
       for (const [a, b] of [[shiftKey(k, -1), k], [k, shiftKey(k, 1)]]) {
         const sa = span(a), sb = span(b);
@@ -649,8 +669,21 @@
         for (let i = 1; span(shiftKey(k, i)); i++) run++;
         maxRun = Math.max(maxRun, run);
       }
+      if (night(k)) {
+        let run = 1;
+        for (let i = -1; night(shiftKey(k, i)); i--) run++;
+        for (let i = 1; night(shiftKey(k, i)); i++) run++;
+        nights = Math.max(nights, run);
+      }
+      const monday = isoWeek({ y: +k.slice(0, 4), m: +k.slice(4, 6), d: +k.slice(6, 8) }).monday;
+      if (!seenWeeks.has(monday)) {
+        seenWeeks.add(monday);
+        let min = 0;
+        for (let i = 0; i < 7; i++) min += codeMinutes(map.get(days[shiftKey(monday, i)]));
+        weekMin = Math.max(weekMin, min);
+      }
     }
-    return { minGap, maxRun };
+    return { minGap, maxRun, nights, weekMin };
   }
 
   // Permutations possibles pour `me` le jour `key` (où il travaille), classées de la meilleure à la
@@ -658,11 +691,12 @@
   //  - même jour : un collègue qui travaille ce jour-là sur un autre horaire échange avec moi ;
   //  - deux jours : un collègue en repos prend mon service, et je prends le sien un jour où il
   //    travaille et où je suis en repos (au plus `window` jours d'écart, pas avant `today`).
-  // Écarté : repos < `minRest` (9 h) ou plus de `maxDays` jours d'affilée, pour l'un ou l'autre.
-  // Moins bien classé : repos < `comfortRest` (11 h), série longue, jour rendu lointain, autre horaire.
-  // Rend { options: [{ type, name, code, back?, backCode?, gap, run, score }], free: [noms en repos sans solution] }
+  // Écarté (pour l'un ou l'autre) : repos < `minRest` (9 h), plus de `maxDays` jours d'affilée ou de
+  // `maxNights` nuits d'affilée. Moins bien classé : repos < `comfortRest` (11 h), semaine au-delà de
+  // `weekHours` heures, série de `maxDays` jours (« ATTENTION » sur le tableau), jour rendu lointain, autre horaire.
+  // Rend { options: [{ type, name, code, back?, backCode?, gap, run, nights, weekMin, score }], free: [...] }
   function swapOptions(plan, me, key, codes, opts) {
-    const o = Object.assign({ minRest: 540, comfortRest: 660, maxDays: 6, window: 31, perAgent: 3, today: '' }, opts);
+    const o = Object.assign({ minRest: 540, comfortRest: 660, maxDays: 6, maxNights: 3, weekHours: 48, window: 31, perAgent: 3, today: '' }, opts);
     const map = new Map(codes.map(c => [normCode(c.code), c]));
     const kind = c => dayKind(map.get(c));
     const agents = (plan && plan.agents) || {};
@@ -672,9 +706,11 @@
     if (!myCode || kind(myCode) !== 'travail') return out;
     const REST = 'R';
     const check = (days, changes) => swapCheck(Object.assign({}, days, changes), Object.keys(changes), map);
-    const both = (a, b) => ({ gap: Math.min(a.minGap, b.minGap), run: Math.max(a.maxRun, b.maxRun) });
-    const allowed = c => c.gap >= o.minRest && c.run <= o.maxDays;
-    const score = (c, extra) => (c.gap < o.comfortRest ? 100 : 0) + (c.run >= o.maxDays ? 10 : 0) + extra;
+    const both = (a, b) => ({ gap: Math.min(a.minGap, b.minGap), run: Math.max(a.maxRun, b.maxRun),
+      nights: Math.max(a.nights, b.nights), weekMin: Math.max(a.weekMin, b.weekMin) });
+    const allowed = c => c.gap >= o.minRest && c.run <= o.maxDays && c.nights <= o.maxNights;
+    const score = (c, extra) => (c.gap < o.comfortRest ? 100 : 0) + (c.weekMin > o.weekHours * 60 ? 50 : 0) +
+      (c.run >= o.maxDays ? 10 : 0) + extra;
     for (const name of Object.keys(agents)) {
       if (name === me) continue;
       const theirs = agents[name], their = theirs[key];
@@ -705,6 +741,56 @@
     out.options.sort((a, b) => a.score - b.score || (a.back ? keyDays(a.back, key) : 0) - (b.back ? keyDays(b.back, key) : 0) ||
       a.name.localeCompare(b.name, 'fr'));
     out.free.sort((a, b) => a.localeCompare(b, 'fr'));
+    return out;
+  }
+
+  // Ce que le planning chargé respecte en pratique (toute l'équipe) : sert à vérifier les règles
+  // utilisées pour les permutations. Calculé sur le téléphone, rien n'est envoyé.
+  function planStats(plan, codes) {
+    const map = new Map(codes.map(c => [normCode(c.code), c]));
+    const agents = (plan && plan.agents) || {};
+    const t = k => Date.UTC(+k.slice(0, 4), +k.slice(4, 6) - 1, +k.slice(6, 8)) / 6e4;
+    const out = { agents: 0, days: 0, from: '', to: '', minGap: Infinity, shortRests: 0, shortPairs: {},
+      maxRun: 0, runsAtMax: 0, maxNights: 0, maxWeekMin: 0, weeksOver48: 0, maxNightsMonth: 0, unknown: {} };
+    for (const name of Object.keys(agents)) {
+      const days = agents[name], keys = Object.keys(days).sort();
+      if (!keys.length) continue;
+      out.agents++; out.days += keys.length;
+      if (!out.from || keys[0] < out.from) out.from = keys[0];
+      if (keys[keys.length - 1] > out.to) out.to = keys[keys.length - 1];
+      let prevShift = null, prevKey = null, run = 0, nights = 0;
+      const runs = [], weeks = {}, months = {};
+      for (const k of keys) {
+        const c = days[k], def = map.get(c), sp = shiftSpan(def);
+        if (!def) out.unknown[c] = (out.unknown[c] || 0) + 1;
+        const next = prevKey && t(k) - t(prevKey) === 1440;
+        if (sp) {
+          if (prevShift && next) {
+            const gap = t(k) + sp[0] - prevShift.end;
+            if (gap < out.minGap) out.minGap = gap;
+            if (gap < 660) { out.shortRests++; const pk = prevShift.code + '→' + c; out.shortPairs[pk] = (out.shortPairs[pk] || 0) + 1; }
+          }
+          prevShift = { end: t(k) + sp[1], code: c };
+          run = next && run ? run + 1 : 1;
+        } else { if (run) runs.push(run); run = 0; prevShift = null; }
+        nights = c === 'N' ? (next && nights ? nights + 1 : 1) : 0;
+        out.maxNights = Math.max(out.maxNights, nights);
+        const wk = isoWeek({ y: +k.slice(0, 4), m: +k.slice(4, 6), d: +k.slice(6, 8) }).monday;
+        weeks[wk] = weeks[wk] || { n: 0, min: 0 };
+        weeks[wk].n++; weeks[wk].min += codeMinutes(def);
+        const mo = k.slice(0, 6);
+        months[mo] = months[mo] || { n: 0, nights: 0 };
+        months[mo].n++; if (c === 'N') months[mo].nights++;
+        prevKey = k;
+      }
+      if (run) runs.push(run);
+      for (const r of runs) { if (r > out.maxRun) { out.maxRun = r; out.runsAtMax = 0; } if (r === out.maxRun) out.runsAtMax++; }
+      for (const w of Object.values(weeks)) if (w.n === 7) {
+        out.maxWeekMin = Math.max(out.maxWeekMin, w.min);
+        if (w.min > 48 * 60) out.weeksOver48++;
+      }
+      for (const m of Object.values(months)) if (m.n >= 28) out.maxNightsMonth = Math.max(out.maxNightsMonth, m.nights);
+    }
     return out;
   }
 
@@ -777,5 +863,5 @@
     return lines.join('\r\n') + '\r\n';
   }
 
-  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, codeMinutes, isoWeek, monthHours, monthSummary, frenchHolidays, holidayName, teamOfDay, swapOptions, parseMatrix, combineResults, bestSheet, GROUPS, groupOf, orderAgents, unmatchedRules, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
+  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, codeMinutes, isoWeek, monthHours, monthSummary, frenchHolidays, holidayName, teamOfDay, swapOptions, planStats, parseMatrix, combineResults, bestSheet, GROUPS, groupOf, orderAgents, unmatchedRules, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
 });

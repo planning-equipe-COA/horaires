@@ -52,6 +52,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   (`bestSheet` prend PLANIFIE = planning réel) ; titre « MAI 2027 » en A1, « Tableau de service du
   03/05/2027 au 06/06/2027 », et une ligne « mise à jour » avec une date d'édition : `findContext`
   donne la priorité au mois écrit en lettres et ignore les dates des lignes « mise à jour ».
+- Mois : `monthFromText` lit aussi les abréviations suivies d'une année (« DEC 2026 », « NOV 2026 ») ;
+  `findContext` remonte jusqu'au titre de la feuille pour le 2e bloc d'agents (sinon rangé au mauvais mois).
+  Classeurs à 3 feuilles (« THEORIQUE », « PLANIFIE New TS ROA », « QUATRE Mi Temps ») : `bestSheet`
+  garde la plus complète (mi-temps inclus). Noms avec suffixes de contrat (« 32 », « 1/2 T (1) », « 80% »).
 - Format réel : deux blocs d'agents, en-têtes « lu ma … di » puis numéros de jour (05 … 31, 01),
   mois dans un titre « OCTOBRE 2026 » ou le nom de la feuille, colonnes code/remarque à droite.
   Les homonymes dans deux blocs aux mêmes dates deviennent « NOM (2) ».
@@ -99,7 +103,12 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   le sien un jour où il travaille et où je suis en repos, ±31 j, jamais avant aujourd'hui, 3 dates max par
   collègue). Règles de l'utilisateur : **9 h de repos minimum** (en dessous : écarté) mais « si on peut
   éviter » → repos < 11 h classé après, avec « ⚠️ repos de … seulement » ; 6 jours travaillés d'affilée
-  au plus (JS/FORM sans horaires = 8 h–17 h). Ensuite : même jour, jour rendu proche, même horaire.
+  au plus (« Série ATTENTION (6) » sur le vrai tableau : 6 classé après), 3 nuits d'affilée au plus,
+  semaine (lun.→dim.) > 48 h classée après (JS/FORM sans horaires = 8 h–17 h). Ensuite : même jour,
+  jour rendu proche, même horaire. Règles vérifiées sur 6 vrais mois (oct. 2026 → mai 2027) : repos
+  mini 9 h 30 (S→J), 6 jours max, 3 nuits max, après N toujours N ou TN, semaine max 52 h (10 > 48 h).
+  Carte « 📏 Règles du planning » (`planStats`, `renderRules`) : mêmes mesures sur le planning chargé,
+  calculées sur le téléphone, + codes inconnus.
   6 affichées + « Voir les N autres » ; pour les deux agents ; puis collègues en repos sans jour à rendre, et
   note perso (`mh_notes` = { AAAAMMJJ: texte }, jamais envoyée, même avec le planning d'équipe).
   Trois vues (`mh_view`) : « Mois » (grille), « Liste » (jours de haut en bas, toucher un jour déplie

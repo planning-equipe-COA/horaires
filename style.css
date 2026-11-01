@@ -404,3 +404,7 @@ body.sheet-open { overflow: hidden; }
 .rep-row { display: flex; flex-direction: column; gap: 1px; padding: 6px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .rep-row span { color: var(--muted); }
 .rep-row.warn span:last-child, .rep-row.bad span { color: var(--warn); font-weight: 600; }
+
+.rules { display: grid; gap: 0; }
+.rule-row { padding: 8px 0; border-top: 1px solid var(--line); font-size: .9rem; line-height: 1.45; }
+.rule-label { font-weight: 600; }
