@@ -115,18 +115,33 @@
   }
 
   // Mois/année d'un bloc : cherché au-dessus de l'en-tête, puis dans le nom de la feuille
+  // Mois/année d'un bloc. Priorité au mois écrit en toutes lettres (« MAI 2027 ») ; une date de cellule
+  // ne sert qu'à défaut, et jamais celle d'une ligne « mise à jour » / « édité le » (date d'édition du
+  // fichier, pas du planning).
+  const EDIT_RE = /mise\s*a\s*jour|\bmaj\b|edit|modifi|imprim|cree le|genere/;
   function findContext(matrix, r, sheetName, opts) {
     let y = null, m = null;
-    for (let i = r; i >= Math.max(0, r - 8) && (m == null || y == null); i--) {
-      const row = matrix[i] || [];
-      for (let c = 0; c < row.length; c++) {
-        const v = row[c];
-        let found = null;
-        if (isDateObj(v) && i !== r) found = { m: v.m, y: v.y };
-        else if (typeof v === 'string') found = monthFromText(v);
-        if (!found) continue;
-        if (m == null) m = found.m;
-        if (y == null && found.y != null) y = found.y;
+    const take = found => {
+      if (m == null) m = found.m;
+      if (y == null && found.y != null && found.m === m) y = found.y;
+    };
+    const rows = [];
+    for (let i = r; i >= Math.max(0, r - 8); i--) rows.push(i);
+    for (const i of rows) { // 1) mois écrits en toutes lettres
+      for (const v of matrix[i] || []) {
+        if (typeof v !== 'string') continue;
+        const found = monthFromText(v);
+        if (found) take(found);
+      }
+      if (m != null && y != null) break;
+    }
+    if (m == null || y == null) { // 2) dates de cellules, hors lignes de mise à jour
+      for (const i of rows) {
+        if (i === r) continue;
+        const row = matrix[i] || [];
+        if (row.some(v => typeof v === 'string' && EDIT_RE.test(stripAccents(v)))) continue;
+        for (const v of row) if (isDateObj(v)) take({ m: v.m, y: v.y });
+        if (m != null && y != null) break;
       }
     }
     if ((m == null || y == null) && sheetName) {
@@ -282,6 +297,20 @@
   function unmatchedRules(names, rules) {
     return ['roa', 'np'].flatMap(k => parseRuleList(rules && rules[k])
       .filter(r => !names.some(n => ruleMatches(r, n))).map(r => r.raw));
+  }
+
+  // Choix de la feuille d'un classeur : celle où l'on reconnaît le plus de cases ; à quantité proche
+  // (≥ 90 %), la feuille « PLANIFIE » (planning réel, avec les modifications) passe avant « THEORIQUE ».
+  function bestSheet(names, totals) {
+    const max = Math.max(0, ...totals);
+    const rank = n => { const s = stripAccents(n); return /planifi|reel|definitif/.test(s) ? 2 : /theori|previsionnel|cycle/.test(s) ? 0 : 1; };
+    let best = 0;
+    names.forEach((n, i) => {
+      if (!totals[i] || totals[i] < max * 0.9) return;
+      const better = rank(n) > rank(names[best]) || (rank(n) === rank(names[best]) && totals[i] > totals[best]);
+      if (!totals[best] || totals[best] < max * 0.9 || better) best = i;
+    });
+    return best;
   }
 
   // Plusieurs tableaux lus d'un coup (ex. novembre + décembre) → un seul résultat.
@@ -657,5 +686,5 @@
     return lines.join('\r\n') + '\r\n';
   }
 
-  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, codeMinutes, isoWeek, monthHours, monthSummary, frenchHolidays, holidayName, teamOfDay, parseMatrix, combineResults, GROUPS, groupOf, orderAgents, unmatchedRules, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
+  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, codeMinutes, isoWeek, monthHours, monthSummary, frenchHolidays, holidayName, teamOfDay, parseMatrix, combineResults, bestSheet, GROUPS, groupOf, orderAgents, unmatchedRules, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
 });

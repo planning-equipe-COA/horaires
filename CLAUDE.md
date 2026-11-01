@@ -47,6 +47,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   import. `plan.teamAt` = date de la publication reçue (seule info en clair de l'enveloppe), `teamBy`.
   Si le code ne déchiffre plus (code changé) : il est oublié et l'agent doit saisir le nouveau.
   Lien « Renouveler la clé de publication » masqué (`#teamRenewRow`) sauf si GitHub refuse la clé (`errText` 'cle').
+- Fichiers réels : classeurs **.xlsm** à deux feuilles « MOIS AAAA THEORIQUE » et « MOIS AAAA PLANIFIE »
+  (`bestSheet` prend PLANIFIE = planning réel) ; titre « MAI 2027 » en A1, « Tableau de service du
+  03/05/2027 au 06/06/2027 », et une ligne « mise à jour » avec une date d'édition : `findContext`
+  donne la priorité au mois écrit en lettres et ignore les dates des lignes « mise à jour ».
 - Format réel : deux blocs d'agents, en-têtes « lu ma … di » puis numéros de jour (05 … 31, 01),
   mois dans un titre « OCTOBRE 2026 » ou le nom de la feuille, colonnes code/remarque à droite.
   Les homonymes dans deux blocs aux mêmes dates deviennent « NOM (2) ».

@@ -169,15 +169,10 @@
       showError(files.length > 1 ? 'Aucun de ces fichiers n\'est un classeur Excel lisible.' : 'Ce fichier n\'est pas un classeur Excel lisible.');
       return;
     }
-    // feuille par défaut de chaque fichier : celle où l'on reconnaît le plus de cases
+    // feuille par défaut : la plus remplie, « PLANIFIE » avant « THEORIQUE » (C.bestSheet)
     $('month').value = '';
     for (const b of books) {
-      let best = 0, bestCount = -1;
-      b.wb.SheetNames.forEach((n, i) => {
-        const count = parseBook(b, i).total;
-        if (count > bestCount) { best = i; bestCount = count; }
-      });
-      b.sheet = best;
+      b.sheet = C.bestSheet(b.wb.SheetNames, b.wb.SheetNames.map((n, i) => parseBook(b, i).total));
     }
     // ordre chronologique (le plus récent l'emporte en cas de jours communs)
     const firstKey = b => { const r = parseBook(b, b.sheet); const k = r.agents.flatMap(a => a.entries.map(e => C.dateKey(e.date))).sort(); return k[0] || ''; };
@@ -217,6 +212,7 @@
       const alike = !found && me ? r.agents.filter(a => first(a.name) === first(me)).map(a => a.name) : [];
       return `<div class="rep-row${found ? '' : ' warn'}"><strong>${esc(b.name)}</strong>` +
         `<span>du ${esc(fmt(keys[0]))} au ${esc(fmt(keys[keys.length - 1]))} · ${r.agents.length} agents` +
+        (b.wb.SheetNames.length > 1 ? ` · feuille « ${esc(b.wb.SheetNames[b.sheet])} »` : '') +
         (r.monthAssumed ? ' · ⚠️ mois deviné' : '') + '</span>' +
         (me ? `<span>${found ? '✓ ' + esc(me) + ' trouvé' : alike.length
           ? '⚠️ ' + esc(me) + ' écrit ici « ' + alike.map(esc).join(' », « ') + ' »'

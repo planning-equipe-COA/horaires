@@ -314,3 +314,27 @@ test('rôles : COA par défaut, ROA et non postés saisis, homonyme (2), ordre d
   assert.strictEqual(C.groupOf('ÉVÊQUE Paul', { roa: 'eveque' }), 'roa');
   assert.strictEqual(C.groupOf('BELSUNCEAU Marc', { roa: 'Belsunce' }), 'coa');
 });
+
+test('mois du planning : le titre « MAI 2027 » l\'emporte sur la date de « mise à jour »', () => {
+  const days = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 1, 2];
+  const m = [
+    ['MAI 2027', null, 'Tableau de service du 03/05/2027 au 06/06/2027'],
+    ['mise a jour ', { y: 2026, m: 9, d: 17 }],
+    ['', ...days.map((_, i) => ['lu', 'ma', 'me', 'je', 've', 'sa', 'di'][i % 7])],
+    ['', ...days],
+    ['DUPONT', ...days.map((_, i) => ['M', 'S', 'N', 'R', 'RF', 'J', 'TN'][i % 7])],
+  ];
+  const r = C.parseMatrix(m, { codes: C.DEFAULT_CODES, sheetName: 'MAI 2027 PLANIFIE' });
+  assert.strictEqual(r.monthAssumed, false);
+  const keys = r.agents[0].entries.map(e => C.dateKey(e.date));
+  assert.strictEqual(keys[0], '20270503');
+  assert.strictEqual(keys[keys.length - 1], '20270602');
+});
+
+test('feuille par défaut : PLANIFIE avant THEORIQUE, sinon la plus remplie', () => {
+  assert.strictEqual(C.bestSheet(['MAI 2027 THEORIQUE', 'MAI 2027 PLANIFIE'], [805, 805]), 1);
+  assert.strictEqual(C.bestSheet(['MAI 2027 PLANIFIE', 'MAI 2027 THEORIQUE'], [790, 805]), 0);
+  assert.strictEqual(C.bestSheet(['Feuil1', 'Novembre'], [0, 600]), 1);
+  assert.strictEqual(C.bestSheet(['Récap', 'MAI PLANIFIE'], [900, 100]), 0); // trop vide : pas retenue
+  assert.strictEqual(C.bestSheet(['A'], [0]), 0);
+});
