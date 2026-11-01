@@ -298,3 +298,19 @@ test('combineResults : plusieurs tableaux (mois différents) fusionnés par agen
   assert.strictEqual(r.monthAssumed, true);
   assert.strictEqual(r.total, 5);
 });
+
+test('rôles : COA par défaut, ROA et non postés saisis, homonyme (2), ordre des listes', () => {
+  const names = ['BELSUNCE Marc', 'DUPONT Élise', 'SANCHEZ Ana', 'SANCHEZ Ana (2)', 'CRAUCHET Léo', 'ABEL Jo', 'COULMEAU Ève'];
+  const rules = { roa: 'Belsunce, Sanchez(2)', np: 'Crauchet, Coulmeau' };
+  assert.strictEqual(C.groupOf('BELSUNCE Marc', rules), 'roa');
+  assert.strictEqual(C.groupOf('SANCHEZ Ana', rules), 'coa');
+  assert.strictEqual(C.groupOf('SANCHEZ Ana (2)', rules), 'roa');
+  assert.strictEqual(C.groupOf('COULMEAU Ève', rules), 'np');
+  assert.strictEqual(C.groupOf('DUPONT Élise', null), 'coa');
+  assert.deepStrictEqual(C.orderAgents(names, rules),
+    ['ABEL Jo', 'DUPONT Élise', 'SANCHEZ Ana', 'BELSUNCE Marc', 'SANCHEZ Ana (2)', 'COULMEAU Ève', 'CRAUCHET Léo']);
+  assert.deepStrictEqual(C.unmatchedRules(names, { roa: 'Belsunce, Bernadin', np: '' }), ['Bernadin']);
+  // accents et majuscules ignorés, mot entier seulement
+  assert.strictEqual(C.groupOf('ÉVÊQUE Paul', { roa: 'eveque' }), 'roa');
+  assert.strictEqual(C.groupOf('BELSUNCEAU Marc', { roa: 'Belsunce' }), 'coa');
+});

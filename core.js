@@ -246,6 +246,43 @@
     return best;
   }
 
+  // ── Rôles des agents (COA par défaut, ROA, non postés) ──────────────────
+  // Les règles sont saisies dans l'appli (jamais dans ce code public) : listes de noms séparés par
+  // des virgules, « Sanchez (2) » vise l'homonyme « … (2) ». Un mot de la règle doit correspondre à
+  // un mot du nom (sans accents ni majuscules).
+  const GROUPS = [{ id: 'coa', label: 'COA' }, { id: 'roa', label: 'ROA' }, { id: 'np', label: 'Non postés' }];
+  function parseRuleList(text) {
+    return String(text || '').split(/[,;\n]+/).map(s => s.trim()).filter(Boolean).map(s => {
+      const m = s.match(/^(.*?)\s*\((\d+)\)\s*$/);
+      const base = stripAccents(m ? m[1] : s).replace(/[^a-z0-9' -]/g, ' ').trim();
+      return { base, n: m ? m[2] : null, raw: s };
+    }).filter(r => r.base);
+  }
+  function ruleMatches(rule, name) {
+    const norm = stripAccents(name);
+    const homonym = (norm.match(/\((\d+)\)\s*$/) || [])[1] || null;
+    if (rule.n && rule.n !== homonym) return false;
+    const words = norm.replace(/\(\d+\)\s*$/, '').split(/[^a-z0-9'-]+/).filter(Boolean);
+    const want = rule.base.split(/\s+/);
+    return want.every(w => words.includes(w));
+  }
+  function groupOf(name, rules) {
+    if (!rules) return 'coa';
+    if (parseRuleList(rules.np).some(r => ruleMatches(r, name))) return 'np';
+    if (parseRuleList(rules.roa).some(r => ruleMatches(r, name))) return 'roa';
+    return 'coa';
+  }
+  // Noms triés : COA, puis ROA, puis non postés ; ordre alphabétique dans chaque groupe
+  function orderAgents(names, rules) {
+    const rank = { coa: 0, roa: 1, np: 2 };
+    return names.slice().sort((a, b) => rank[groupOf(a, rules)] - rank[groupOf(b, rules)] || a.localeCompare(b, 'fr'));
+  }
+  // Règles saisies qui ne correspondent à aucun agent (fautes de frappe)
+  function unmatchedRules(names, rules) {
+    return ['roa', 'np'].flatMap(k => parseRuleList(rules && rules[k])
+      .filter(r => !names.some(n => ruleMatches(r, n))).map(r => r.raw));
+  }
+
   // Plusieurs tableaux lus d'un coup (ex. novembre + décembre) → un seul résultat.
   // Même nom d'agent = même personne ; pour un même jour, le dernier tableau de la liste l'emporte.
   function combineResults(results) {
@@ -619,5 +656,5 @@
     return lines.join('\r\n') + '\r\n';
   }
 
-  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, codeMinutes, isoWeek, monthHours, monthSummary, frenchHolidays, holidayName, teamOfDay, parseMatrix, combineResults, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
+  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, codeMinutes, isoWeek, monthHours, monthSummary, frenchHolidays, holidayName, teamOfDay, parseMatrix, combineResults, GROUPS, groupOf, orderAgents, unmatchedRules, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
 });

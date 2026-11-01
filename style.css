@@ -333,3 +333,10 @@ button.link { background: none; border: 0; color: var(--muted); text-decoration:
 .fold > summary h2 { display: inline-flex; margin: 0; }
 .fold[open] > summary { margin-bottom: 12px; }
 .remind { cursor: pointer; }
+
+/* ── Rôles des agents ───────────────────────────────────────────────────── */
+#rolesRoa, #rolesNp { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; resize: vertical; }
+.roles-preview { margin-top: 10px; font-size: .88rem; }
+.roles-preview p { margin: 4px 0; overflow-wrap: anywhere; }
+.team-table tr.tt-group th, .team-table tr.tt-group td { padding-top: 10px; border-bottom: 1px solid var(--line); font-size: .72rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .03em; background: var(--card); cursor: default; }
+.team-table tr.tt-group th.tt-name { max-width: none; overflow: visible; text-overflow: clip; }
