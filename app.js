@@ -1575,13 +1575,23 @@
       const b = document.getElementById('uSave'); if (b) b.disabled = false;
     }
   }
-  $('utilesBtn').addEventListener('click', openUtiles);
+  // appui court : ouvre le panneau ; appui long (2 s) sur l'icône : l'ouvre avec le cadenas
+  let btnTimer = null, btnLong = false;
+  function revealLock() { $('utilesAdmin').hidden = false; utilesMsg('🔒 Accès responsable affiché.', 'ok'); }
+  $('utilesBtn').addEventListener('pointerdown', () => {
+    btnLong = false;
+    clearTimeout(btnTimer);
+    btnTimer = setTimeout(() => { btnLong = true; openUtiles(); revealLock(); }, 2000);
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => $('utilesBtn').addEventListener(t, () => clearTimeout(btnTimer)));
+  $('utilesBtn').addEventListener('contextmenu', e => e.preventDefault());
+  $('utilesBtn').addEventListener('click', () => { if (btnLong) { btnLong = false; return; } openUtiles(); });
   // appui long sur le titre : fait apparaître le cadenas (nouveau téléphone du responsable)
   let lockTimer = null;
   $('utilesTitle').addEventListener('pointerdown', () => {
     clearTimeout(lockTimer);
     lockTimer = setTimeout(() => {
-      if (!$('utilesView').hidden) { $('utilesAdmin').hidden = false; utilesMsg('🔒 Accès responsable affiché.', 'ok'); }
+      if (!$('utilesView').hidden) revealLock();
     }, 2000);
   });
   ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => $('utilesTitle').addEventListener(t, () => clearTimeout(lockTimer)));
