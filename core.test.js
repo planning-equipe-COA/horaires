@@ -339,33 +339,37 @@ test('feuille par défaut : PLANIFIE avant THEORIQUE, sinon la plus remplie', ()
   assert.strictEqual(C.bestSheet(['A'], [0]), 0);
 });
 
-test('swapOptions : même jour, deux jours, repos 11 h et jours d’affilée', () => {
+test('swapOptions : écarte < 9 h et > 6 jours, classe 11 h et proximité en premier', () => {
   const codes = C.DEFAULT_CODES;
-  // 1er au 10 nov. 2026
   const k = d => '202611' + String(d).padStart(2, '0');
   const row = s => Object.fromEntries(s.split(' ').map((c, i) => [k(i + 1), c]));
+  const opt = (r, name) => r.options.filter(x => x.name === name);
+  // Nuit puis Matin = 0 h : jamais proposé ; Soir puis Matin = 8 h : écarté (< 9 h)
   const plan = { agents: {
     MOI:   row('R M M M R R S S R R'),
-    SOIR:  row('R S S S R R M R R R'), // le 3 : Soir → échange même jour possible ? M→S pour moi le 3 puis M le 4 : 8 h de repos → refusé
-    NUIT:  row('R N N R R R R R R R'), // le 3 : Nuit → moi N le 3 puis M le 4 = 0 h → refusé
-    LIBRE: row('R R R R S R R R R R'), // repos le 3 ; travaille le 5 (S) où je suis en repos
-    TN:    row('R N TN R R S R R R R'), // Tn le 3 : prendre mon M le 3 juste après sa nuit → refusé
+    LIBRE: row('R R R R S R R R R R'),
+    TN:    row('R N TN R R S R R R R'),
+    LOIN:  row('R R R R R R R R R M'),
   } };
   const r = C.swapOptions(plan, 'MOI', k(3), codes, { today: k(1) });
-  assert.deepEqual(r.sameDay, []);
-  assert.equal(r.twoDays[0].name, 'LIBRE');
-  assert.deepEqual(r.twoDays[0].backs[0], { key: k(5), code: 'S' });
-  assert.ok(!r.twoDays.some(x => x.name === 'TN'));
-  assert.ok(r.free.includes('TN') && r.free.includes('LIBRE'));
-  // le 4 : SOIR travaille en S, MOI en M → MOI prend S le 4 (repos le 5 ensuite) et SOIR prend M le 4 après S le 3 → 8 h : refusé
-  assert.deepEqual(C.swapOptions(plan, 'MOI', k(4), codes).sameDay, []);
-  // le 2 : MOI M → S, SOIR S → M ; MOI le 3 en M après S le 2 = 8 h → refusé
-  assert.deepEqual(C.swapOptions(plan, 'MOI', k(2), codes).sameDay, []);
-  // jours d'affilée : 6 jours avec la permutation, plus que le maximum de 5 → refusé
+  assert.equal(r.options[0].name, 'LIBRE');
+  assert.equal(r.options[0].back, k(5));
+  assert.equal(opt(r, 'TN').length, 0);
+  assert.ok(r.free.includes('TN'));
+  // LOIN rend le 10 (plus loin) → classé après LIBRE
+  assert.ok(r.options.findIndex(x => x.name === 'LOIN') > 0);
+  // Repos court (9 h 30 ≥ 9 h mais < 11 h) : proposé mais classé après un repos confortable
+  const codes2 = codes.concat([{ code: 'S2', label: 'Soir tard', allDay: false, start: '13:00', end: '20:30', include: true, color: '' }]);
+  const p2 = { agents: {
+    MOI: row('R R R R M R R R R R'),
+    A:   row('R R R R S2 R R R R R'),   // MOI : S2 le 5 → rien le 6 : confortable
+    B:   row('R R R S2 N R R R R R'),   // B : S2 le 4 puis M le 5 = 9 h 30 : court
+  } };
+  const r2 = C.swapOptions(p2, 'MOI', k(5), codes2);
+  assert.deepEqual(r2.options.map(x => x.name), ['A', 'B']);
+  assert.ok(r2.options[1].gap < 660 && r2.options[1].gap >= 540);
+  // 7 jours d'affilée : écarté
   const long = { agents: { MOI: row('M M M R M M M R R R'), AUTRE: row('R R R M R R R R R R') } };
-  const lr = C.swapOptions(long, 'MOI', k(1), codes, { maxDays: 5 }); // R M M M M M M = 6 d'affilée
-  assert.ok(!lr.twoDays.some(x => x.backs.some(b => b.key === k(4))));
-  // même jour valable : M contre M non (même code), M contre N le dernier jour avant repos
-  const ok = { agents: { MOI: row('R R R R M R R R R R'), A: row('R R R R N R R R R R') } };
-  assert.deepEqual(C.swapOptions(ok, 'MOI', k(5), codes).sameDay, [{ name: 'A', code: 'N' }]);
+  assert.equal(C.swapOptions(long, 'MOI', k(1), codes, { maxDays: 5 }).options.length, 0);
+  assert.equal(C.swapOptions(long, 'MOI', k(1), codes).options.length, 1);
 });

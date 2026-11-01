@@ -869,28 +869,33 @@
     return html;
   }
 
-  // Permutations possibles un jour travaillé (C.swapOptions : repos 11 h, 6 jours d'affilée au plus)
+  // Permutations possibles un jour travaillé, de la meilleure à la moins intéressante (C.swapOptions)
+  const SWAP_SHOWN = 6;
   function swapHTML(plan, name, k, code) {
     const r = C.swapOptions(plan, name, k, state.codes, { today: C.dateKey(todayDate()) });
-    const n = r.sameDay.length + r.twoDays.length;
+    const n = r.options.length;
     const fmt = key => utc(keyToDate(key)).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+    const hm = min => Math.floor(min / 60) + ' h' + (min % 60 ? ' ' + String(min % 60).padStart(2, '0') : '');
+    const item = (o, i) => {
+      const what = o.type === 'meme-jour'
+        ? `son ${chip(o.code)} ${esc(codeLabel(o.code))} contre ton ${chip(code)}, <span class="muted">le même jour</span>`
+        : `prend ton ${chip(code)} ; tu prends son ${chip(o.backCode)} le <strong>${esc(fmt(o.back))}</strong>`;
+      const tags = [];
+      if (i === 0 && o.gap >= 660) tags.push('<span class="swap-tag best">⭐ Meilleure option</span>');
+      if (o.gap < 660) tags.push(`<span class="swap-tag warn">⚠️ repos de ${hm(o.gap)} seulement</span>`);
+      if (o.run >= 6) tags.push(`<span class="swap-tag">${o.run} jours d'affilée</span>`);
+      return `<li${i >= SWAP_SHOWN ? ' class="swap-more" hidden' : ''}>${nameWithPhone(o.name)}${o.type === 'meme-jour' ? ' :' : ''} ${what}` +
+        (tags.length ? ' ' + tags.join(' ') : '') + '</li>';
+    };
     let html = `<details class="day-swap"><summary>🔁 <strong>Permutations possibles</strong> ` +
       `<span class="muted">(${n ? n + ' solution' + (n > 1 ? 's' : '') : 'aucune'})</span></summary>`;
-    if (r.sameDay.length) {
-      html += '<p class="day-sub">Le même jour</p><ul class="swap-list">' + r.sameDay.map(o =>
-        `<li>${nameWithPhone(o.name)} : son ${chip(o.code)} ${esc(codeLabel(o.code))} contre ton ${chip(code)}</li>`).join('') + '</ul>';
-    }
-    if (r.twoDays.length) {
-      html += '<p class="day-sub">Échange de deux jours</p><ul class="swap-list">' + r.twoDays.map(o => {
-        const [best, ...more] = o.backs;
-        return `<li>${nameWithPhone(o.name)} prend ton ${chip(code)} ; tu prends son ${chip(best.code)} le <strong>${esc(fmt(best.key))}</strong>` +
-          (more.length ? ` <span class="muted">(ou ${more.map(b => esc(fmt(b.key)) + ' ' + chip(b.code)).join(', ')})</span>` : '') + '</li>';
-      }).join('') + '</ul>';
-    }
-    if (!n) html += '<p class="muted">Aucune permutation qui respecte les règles ci-dessous.</p>';
-    const freeOnly = r.free.filter(f => !r.twoDays.some(o => o.name === f));
-    if (freeOnly.length) html += `<p class="muted">En repos ce jour-là, sans jour à rendre trouvé : ${freeOnly.map(f => nameWithPhone(f)).join(', ')}</p>`;
-    html += '<p class="hint">Règles : 11 h de repos entre deux services et 6 jours travaillés d\'affilée au plus, pour toi comme pour ton collègue. Jour rendu dans le mois qui précède ou qui suit.</p></details>';
+    if (n) {
+      html += '<ol class="swap-list">' + r.options.map(item).join('') + '</ol>';
+      if (n > SWAP_SHOWN) html += `<button class="link swap-all" type="button">Voir les ${n - SWAP_SHOWN} autres</button>`;
+    } else html += '<p class="muted">Aucune permutation qui respecte les règles ci-dessous.</p>';
+    if (r.free.length) html += `<p class="muted">En repos ce jour-là, sans jour à rendre trouvé : ${r.free.map(f => nameWithPhone(f)).join(', ')}</p>`;
+    html += '<p class="hint">Classement : 11 h de repos ou plus d\'abord, puis même jour, jour rendu proche, même horaire. ' +
+      'Jamais moins de 9 h de repos ni plus de 6 jours d\'affilée (toi et ton collègue). Jour rendu : jusqu\'à un mois avant ou après.</p></details>';
     return html;
   }
 
@@ -1226,6 +1231,13 @@
     $('calGrid').querySelectorAll('.selected').forEach(x => x.classList.remove('selected'));
     cell.classList.add('selected');
     renderDay();
+  });
+  // « Voir les N autres » permutations (détail du jour, vue Mois ou Liste)
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.swap-all');
+    if (!btn) return;
+    btn.closest('.day-swap').querySelectorAll('.swap-more').forEach(li => { li.hidden = false; });
+    btn.remove();
   });
   $('calChanges').addEventListener('click', e => {
     if (e.target.id !== 'calChangesOk') return;

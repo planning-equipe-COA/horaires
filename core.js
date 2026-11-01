@@ -628,73 +628,83 @@
     return [a, b > a ? b : b + 1440];
   }
   function shiftKey(k, n) { return dateKey(addDays({ y: +k.slice(0, 4), m: +k.slice(4, 6), d: +k.slice(6, 8) }, n)); }
+  function keyDays(a, b) {
+    const t = k => Date.UTC(+k.slice(0, 4), +k.slice(4, 6) - 1, +k.slice(6, 8));
+    return Math.round(Math.abs(t(a) - t(b)) / 864e5);
+  }
 
-  // Le planning `days` (avec les jours changés `changed`) respecte-t-il le repos minimum entre deux
-  // services et le nombre maximum de jours travaillés d'affilée, autour des jours changés ?
-  function swapOk(days, changed, map, rules) {
+  // Autour des jours changés : plus court repos entre deux services (minutes, Infinity si aucun)
+  // et plus longue série de jours travaillés d'affilée
+  function swapCheck(days, changed, map) {
     const span = k => shiftSpan(map.get(days[k]));
+    let minGap = Infinity, maxRun = 0;
     for (const k of changed) {
       for (const [a, b] of [[shiftKey(k, -1), k], [k, shiftKey(k, 1)]]) {
         const sa = span(a), sb = span(b);
-        if (sa && sb && sb[0] + 1440 - sa[1] < rules.minRest) return false;
+        if (sa && sb) minGap = Math.min(minGap, sb[0] + 1440 - sa[1]);
       }
       if (span(k)) {
         let run = 1;
         for (let i = -1; span(shiftKey(k, i)); i--) run++;
         for (let i = 1; span(shiftKey(k, i)); i++) run++;
-        if (run > rules.maxDays) return false;
+        maxRun = Math.max(maxRun, run);
       }
     }
-    return true;
+    return { minGap, maxRun };
   }
 
-  // Meilleures permutations pour `me` le jour `key` (où il travaille) :
-  //  - sameDay : un collègue qui travaille ce jour-là sur un autre horaire échange avec moi ;
-  //  - twoDays : un collègue en repos prend mon service, et je prends le sien un jour où il travaille
-  //    et où je suis en repos (jour rendu le plus proche d'abord, au plus `window` jours, pas avant `today`).
-  // Écarte ce qui casse le repos minimum (11 h) ou dépasse `maxDays` jours d'affilée, pour l'un ou l'autre.
+  // Permutations possibles pour `me` le jour `key` (où il travaille), classées de la meilleure à la
+  // moins intéressante. Deux sortes :
+  //  - même jour : un collègue qui travaille ce jour-là sur un autre horaire échange avec moi ;
+  //  - deux jours : un collègue en repos prend mon service, et je prends le sien un jour où il
+  //    travaille et où je suis en repos (au plus `window` jours d'écart, pas avant `today`).
+  // Écarté : repos < `minRest` (9 h) ou plus de `maxDays` jours d'affilée, pour l'un ou l'autre.
+  // Moins bien classé : repos < `comfortRest` (11 h), série longue, jour rendu lointain, autre horaire.
+  // Rend { options: [{ type, name, code, back?, backCode?, gap, run, score }], free: [noms en repos sans solution] }
   function swapOptions(plan, me, key, codes, opts) {
-    const o = Object.assign({ minRest: 660, maxDays: 6, window: 31, perAgent: 3, today: '' }, opts);
+    const o = Object.assign({ minRest: 540, comfortRest: 660, maxDays: 6, window: 31, perAgent: 3, today: '' }, opts);
     const map = new Map(codes.map(c => [normCode(c.code), c]));
     const kind = c => dayKind(map.get(c));
     const agents = (plan && plan.agents) || {};
     const mine = agents[me] || {};
     const myCode = mine[key];
-    const out = { sameDay: [], twoDays: [], free: [], rejected: 0 };
+    const out = { options: [], free: [] };
     if (!myCode || kind(myCode) !== 'travail') return out;
     const REST = 'R';
-    const tryDays = (days, changes) => {
-      const copy = Object.assign({}, days, changes);
-      return swapOk(copy, Object.keys(changes), map, o);
-    };
-    for (const name of Object.keys(agents).sort((a, b) => a.localeCompare(b, 'fr'))) {
+    const check = (days, changes) => swapCheck(Object.assign({}, days, changes), Object.keys(changes), map);
+    const both = (a, b) => ({ gap: Math.min(a.minGap, b.minGap), run: Math.max(a.maxRun, b.maxRun) });
+    const allowed = c => c.gap >= o.minRest && c.run <= o.maxDays;
+    const score = (c, extra) => (c.gap < o.comfortRest ? 100 : 0) + (c.run >= o.maxDays ? 10 : 0) + extra;
+    for (const name of Object.keys(agents)) {
       if (name === me) continue;
       const theirs = agents[name], their = theirs[key];
       if (!their) continue;
       if (kind(their) === 'travail') {
         if (their === myCode) continue;
-        if (tryDays(mine, { [key]: their }) && tryDays(theirs, { [key]: myCode })) out.sameDay.push({ name, code: their });
-        else out.rejected++;
+        const c = both(check(mine, { [key]: their }), check(theirs, { [key]: myCode }));
+        if (allowed(c)) out.options.push(Object.assign({ type: 'meme-jour', name, code: their, score: score(c, 0) }, c));
         continue;
       }
       if (kind(their) !== 'repos') continue;
-      out.free.push(name);
-      const backs = [];
-      for (let n = 1; n <= o.window && backs.length < o.perAgent; n++) {
-        for (const e of [shiftKey(key, -n), shiftKey(key, n)]) {
-          if (backs.length >= o.perAgent || (o.today && e < o.today)) continue;
+      let found = 0;
+      for (let n = 1; n <= o.window && found < o.perAgent; n++) {
+        for (const e of [shiftKey(key, n), shiftKey(key, -n)]) {
+          if (found >= o.perAgent || (o.today && e < o.today)) continue;
           const theirBack = theirs[e], myBack = mine[e];
           if (!theirBack || !myBack || kind(theirBack) !== 'travail' || kind(myBack) !== 'repos') continue;
-          const okMe = tryDays(mine, { [key]: REST, [e]: theirBack });
-          const okThem = tryDays(theirs, { [key]: myCode, [e]: REST });
-          if (okMe && okThem) backs.push({ key: e, code: theirBack });
-          else out.rejected++;
+          const c = both(check(mine, { [key]: REST, [e]: theirBack }), check(theirs, { [key]: myCode, [e]: REST }));
+          if (!allowed(c)) continue;
+          found++;
+          // jour rendu proche et même horaire = plus simple à faire accepter
+          const extra = 5 + n + (theirBack === myCode ? 0 : 3);
+          out.options.push(Object.assign({ type: 'deux-jours', name, code: myCode, back: e, backCode: theirBack, score: score(c, extra) }, c));
         }
       }
-      if (backs.length) out.twoDays.push({ name, backs });
+      if (!found) out.free.push(name);
     }
-    const dist = k => Math.abs(Date.UTC(+k.slice(0, 4), +k.slice(4, 6) - 1, +k.slice(6, 8)) - Date.UTC(+key.slice(0, 4), +key.slice(4, 6) - 1, +key.slice(6, 8)));
-    out.twoDays.sort((a, b) => dist(a.backs[0].key) - dist(b.backs[0].key) || a.name.localeCompare(b.name, 'fr'));
+    out.options.sort((a, b) => a.score - b.score || (a.back ? keyDays(a.back, key) : 0) - (b.back ? keyDays(b.back, key) : 0) ||
+      a.name.localeCompare(b.name, 'fr'));
+    out.free.sort((a, b) => a.localeCompare(b, 'fr'));
     return out;
   }
 

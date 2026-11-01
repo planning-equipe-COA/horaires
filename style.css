@@ -236,7 +236,11 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .day-swap { font-size: .88rem; overflow-wrap: anywhere; }
 .day-swap summary { cursor: pointer; padding: 4px 0; }
 .day-swap .day-sub { margin: 8px 0 2px; }
-.swap-list { margin: 0; padding-left: 18px; }
+.swap-list { margin: 0; padding-left: 22px; }
+.swap-tag { display: inline-block; font-size: .78rem; padding: 0 6px; border-radius: 6px; background: var(--chip-bg, rgba(127,127,127,.15)); white-space: nowrap; }
+.swap-tag.best { background: rgba(46, 160, 67, .18); }
+.swap-tag.warn { background: rgba(219, 154, 4, .22); }
+.swap-all { margin-top: 4px; }
 .swap-list li { margin: 4px 0; line-height: 1.5; }
 .day-swap .hint { margin-top: 8px; }
 .day-note { display: block; }
