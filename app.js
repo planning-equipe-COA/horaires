@@ -11,7 +11,7 @@
   const STORAGE_NOTES_KEY = 'mh_notes'; // notes perso par jour, sur ce téléphone uniquement
   const STORAGE_SUM_KEY = 'mh_sum';
   const PLAN_KEEP_DAYS = 400;
-  const CODES_VERSION = 8;
+  const CODES_VERSION = 9;
   const $ = id => document.getElementById(id);
 
   function esc(s) {
@@ -76,6 +76,10 @@
         // v8 : X affiché « X » tel quel (motif volontairement non affiché)
         if (version < 8) {
           saved.forEach(c => { if (C.normCode(c.code) === 'X' && c.label === 'Absence') c.label = 'X'; });
+        }
+        // v9 : ABJ = Absence justifiée (s'il avait été ajouté à la main depuis « codes non reconnus »)
+        if (version < 9) {
+          saved.forEach(c => { if (C.normCode(c.code) === 'ABJ' && (!c.label || C.normCode(c.label) === 'ABJ')) c.label = 'Absence justifiée'; });
         }
         if (version < CODES_VERSION) {
           store(STORAGE_CODES_VERSION_KEY, String(CODES_VERSION));
@@ -885,6 +889,7 @@
       if (i === 0 && o.gap >= 660) tags.push('<span class="swap-tag best">⭐ Meilleure option</span>');
       if (o.gap < 660) tags.push(`<span class="swap-tag warn">⚠️ repos de ${hm(o.gap)} seulement</span>`);
       if (o.weekMin > 48 * 60) tags.push(`<span class="swap-tag warn">semaine de ${hm(o.weekMin)}</span>`);
+      if (o.overHours) tags.push(`<span class="swap-tag warn">au-delà des ${o.overHours} h du contrat</span>`);
       if (o.run >= 6) tags.push(`<span class="swap-tag">${o.run} jours d'affilée</span>`);
       return `<li${i >= SWAP_SHOWN ? ' class="swap-more" hidden' : ''}>${nameWithPhone(o.name)}${o.type === 'meme-jour' ? ' :' : ''} ${what}` +
         (tags.length ? ' ' + tags.join(' ') : '') + '</li>';
@@ -897,7 +902,7 @@
     } else html += '<p class="muted">Aucune permutation qui respecte les règles ci-dessous.</p>';
     if (r.free.length) html += `<p class="muted">En repos ce jour-là, sans jour à rendre trouvé : ${r.free.map(f => nameWithPhone(f)).join(', ')}</p>`;
     html += '<p class="hint">Classement : 11 h de repos ou plus d\'abord, puis même jour, jour rendu proche, même horaire. ' +
-      'Semaine de plus de 48 h classée après. Jamais moins de 9 h de repos, plus de 6 jours ni plus de 3 nuits d\'affilée (toi et ton collègue). Détails dans « 📏 Règles du planning ». Jour rendu : jusqu\'à un mois avant ou après.</p></details>';
+      'Semaine de plus de 48 h classée après. Jamais moins de 9 h de repos, plus de 6 jours ni plus de 3 nuits d\'affilée, ni plus de 3 jours par semaine pour un mi-temps (toi et ton collègue). Détails dans « 📏 Règles du planning ». Jour rendu : jusqu\'à un mois avant ou après.</p></details>';
     return html;
   }
 
@@ -919,6 +924,8 @@
       row('Nuits d\'affilée', `${st.maxNights} au plus`, '3 maximum') +
       row('Semaine la plus chargée', hm(st.maxWeekMin) + (st.weeksOver48 ? ` <span class="muted">· ${st.weeksOver48} semaine${st.weeksOver48 > 1 ? 's' : ''} au-delà de 48 h</span>` : ''), 'au-delà de 48 h : classée après') +
       row('Nuits dans un mois', `${st.maxNightsMonth} au plus`, '') +
+      (st.half ? row(`Mi-temps (${st.half} agent${st.half > 1 ? 's' : ''} « 1/2 T »)`, `${st.halfMaxDays} jours travaillés par semaine au plus`, '3 jours par semaine maximum') : '') +
+      (st.h32 ? row(`Agents à 32 h (${st.h32})`, `semaine la plus chargée : ${hm(st.h32MaxWeekMin)}`, 'au-delà de 32 h dans la semaine : classée après') : '') +
       '</div>';
     const unk = Object.entries(st.unknown);
     if (unk.length) html += `<p class="muted">Codes inconnus de l'appli : ${unk.map(([c, n]) => `${esc(c)} ×${n}`).join(', ')}. ` +

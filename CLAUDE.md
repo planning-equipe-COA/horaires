@@ -55,14 +55,18 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - Mois : `monthFromText` lit aussi les abréviations suivies d'une année (« DEC 2026 », « NOV 2026 ») ;
   `findContext` remonte jusqu'au titre de la feuille pour le 2e bloc d'agents (sinon rangé au mauvais mois).
   Classeurs à 3 feuilles (« THEORIQUE », « PLANIFIE New TS ROA », « QUATRE Mi Temps ») : `bestSheet`
-  garde la plus complète (mi-temps inclus). Noms avec suffixes de contrat (« 32 », « 1/2 T (1) », « 80% »).
+  garde la plus complète (« QUATRE Mi Temps », confirmé par l'utilisateur). Noms avec suffixes de contrat
+  **gardés tels quels** (ils portent le contrat, `contractOf`) : « 1/2 T » = mi-temps, 3 jours travaillés
+  par semaine au plus (permutation écartée au-delà) ; « 32 » = 32 h par semaine (au-delà : classée après,
+  « au-delà des 32 h du contrat ») ; « 80% » ignoré.
 - Format réel : deux blocs d'agents, en-têtes « lu ma … di » puis numéros de jour (05 … 31, 01),
   mois dans un titre « OCTOBRE 2026 » ou le nom de la feuille, colonnes code/remarque à droite.
   Les homonymes dans deux blocs aux mêmes dates deviennent « NOM (2) ».
 - Codes : M Matin 6h-14h, S Soir 14h-22h, N Nuit 22h-6h (finit le lendemain), J Journée 7h30-16h30,
   JS Journée de solidarité (libellé « JS », toujours sans horaires), FORM Formation (pastille
   « Form » violette, jour travaillé ; absent du vrai planning, présent dans l'exemple),
-  R Repos, Tn Tombée de nuit, RF, RC, RCN, ATT Repos, RECUP Récupération,
+  R Repos, Tn Tombée de nuit, RF, RC, RCN, ATT Repos, RECUP Récupération, ABJ Absence justifiée (Autres,
+  CODES_VERSION 9), TTV / DEL / F encore inconnus (l'utilisateur se renseigne),
   RECU « Recup » (pastille « Recup » via `abbr`, blanc ; « RECU » se lisait « reçu »), CA/C Congé, EM Enfant malade,
   X affiché « X » tel quel (choix de l'utilisateur : ne pas afficher de motif), rangé dans « Autres ».
 - **Tous les codes** vont dans l'agenda, en **journée entière sans horaires** (tout le monde

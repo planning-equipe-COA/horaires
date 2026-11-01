@@ -23,6 +23,7 @@
     { code: 'RECU', label: 'Recup', abbr: 'Recup', allDay: true, start: '', end: '', include: true, color: 'blanc' },
     { code: 'CA', label: 'Congé', allDay: true, start: '', end: '', include: true, color: 'vert' },
     { code: 'C', label: 'Congé', allDay: true, start: '', end: '', include: true, color: 'vert' },
+    { code: 'ABJ', label: 'Absence justifiée', abbr: 'ABJ', allDay: true, start: '', end: '', include: true, color: '' },
     { code: 'EM', label: 'Enfant malade', allDay: true, start: '', end: '', include: true, color: '' },
     { code: 'X', label: 'X', allDay: true, start: '', end: '', include: true, color: '' },
     { code: 'ATT', label: 'Repos', allDay: true, start: '', end: '', include: true, color: 'blanc' },
@@ -656,7 +657,7 @@
   function swapCheck(days, changed, map) {
     const span = k => shiftSpan(map.get(days[k]));
     const night = k => days[k] === 'N';
-    let minGap = Infinity, maxRun = 0, nights = 0, weekMin = 0;
+    let minGap = Infinity, maxRun = 0, nights = 0, weekMin = 0, weekDays = 0;
     const seenWeeks = new Set();
     for (const k of changed) {
       for (const [a, b] of [[shiftKey(k, -1), k], [k, shiftKey(k, 1)]]) {
@@ -678,12 +679,24 @@
       const monday = isoWeek({ y: +k.slice(0, 4), m: +k.slice(4, 6), d: +k.slice(6, 8) }).monday;
       if (!seenWeeks.has(monday)) {
         seenWeeks.add(monday);
-        let min = 0;
-        for (let i = 0; i < 7; i++) min += codeMinutes(map.get(days[shiftKey(monday, i)]));
+        let min = 0, n = 0;
+        for (let i = 0; i < 7; i++) {
+          const k2 = shiftKey(monday, i);
+          min += codeMinutes(map.get(days[k2]));
+          if (span(k2)) n++;
+        }
         weekMin = Math.max(weekMin, min);
+        weekDays = Math.max(weekDays, n);
       }
     }
-    return { minGap, maxRun, nights, weekMin };
+    return { minGap, maxRun, nights, weekMin, weekDays };
+  }
+
+  // Contrat lu dans le nom du tableau : « NOM 1/2 T (1) » = mi-temps (3 jours travaillés par semaine au
+  // plus), « NOM 32 » = 32 h par semaine
+  function contractOf(name) {
+    const n = String(name || '');
+    return { half: /\b1\s*\/\s*2\s*t\b/i.test(n), hours: /(^|\s)32(\s|$)/.test(n) ? 32 : null };
   }
 
   // Permutations possibles pour `me` le jour `key` (où il travaille), classées de la meilleure à la
@@ -692,8 +705,8 @@
   //  - deux jours : un collègue en repos prend mon service, et je prends le sien un jour où il
   //    travaille et où je suis en repos (au plus `window` jours d'écart, pas avant `today`).
   // Écarté (pour l'un ou l'autre) : repos < `minRest` (9 h), plus de `maxDays` jours d'affilée ou de
-  // `maxNights` nuits d'affilée. Moins bien classé : repos < `comfortRest` (11 h), semaine au-delà de
-  // `weekHours` heures, série de `maxDays` jours (« ATTENTION » sur le tableau), jour rendu lointain, autre horaire.
+  // `maxNights` nuits d'affilée, plus de 3 jours dans la semaine pour un mi-temps. Moins bien classé : repos < `comfortRest` (11 h), semaine au-delà de
+  // `weekHours` heures (ou des 32 h d'un agent à 32 h), série de `maxDays` jours (« ATTENTION » sur le tableau), jour rendu lointain, autre horaire.
   // Rend { options: [{ type, name, code, back?, backCode?, gap, run, nights, weekMin, score }], free: [...] }
   function swapOptions(plan, me, key, codes, opts) {
     const o = Object.assign({ minRest: 540, comfortRest: 660, maxDays: 6, maxNights: 3, weekHours: 48, window: 31, perAgent: 3, today: '' }, opts);
@@ -705,19 +718,26 @@
     const out = { options: [], free: [] };
     if (!myCode || kind(myCode) !== 'travail') return out;
     const REST = 'R';
-    const check = (days, changes) => swapCheck(Object.assign({}, days, changes), Object.keys(changes), map);
+    // vérifie un agent, avec son contrat (mi-temps : 3 jours par semaine au plus ; 32 h : au-delà = classé après)
+    const check = (name, days, changes) => {
+      const c = swapCheck(Object.assign({}, days, changes), Object.keys(changes), map), ct = contractOf(name);
+      c.halfOver = ct.half && c.weekDays > 3;
+      c.overHours = ct.hours && c.weekMin > ct.hours * 60 ? ct.hours : 0;
+      return c;
+    };
     const both = (a, b) => ({ gap: Math.min(a.minGap, b.minGap), run: Math.max(a.maxRun, b.maxRun),
-      nights: Math.max(a.nights, b.nights), weekMin: Math.max(a.weekMin, b.weekMin) });
-    const allowed = c => c.gap >= o.minRest && c.run <= o.maxDays && c.nights <= o.maxNights;
+      nights: Math.max(a.nights, b.nights), weekMin: Math.max(a.weekMin, b.weekMin),
+      halfOver: a.halfOver || b.halfOver, overHours: a.overHours || b.overHours });
+    const allowed = c => c.gap >= o.minRest && c.run <= o.maxDays && c.nights <= o.maxNights && !c.halfOver;
     const score = (c, extra) => (c.gap < o.comfortRest ? 100 : 0) + (c.weekMin > o.weekHours * 60 ? 50 : 0) +
-      (c.run >= o.maxDays ? 10 : 0) + extra;
+      (c.overHours ? 30 : 0) + (c.run >= o.maxDays ? 10 : 0) + extra;
     for (const name of Object.keys(agents)) {
       if (name === me) continue;
       const theirs = agents[name], their = theirs[key];
       if (!their) continue;
       if (kind(their) === 'travail') {
         if (their === myCode) continue;
-        const c = both(check(mine, { [key]: their }), check(theirs, { [key]: myCode }));
+        const c = both(check(me, mine, { [key]: their }), check(name, theirs, { [key]: myCode }));
         if (allowed(c)) out.options.push(Object.assign({ type: 'meme-jour', name, code: their, score: score(c, 0) }, c));
         continue;
       }
@@ -728,7 +748,7 @@
           if (found >= o.perAgent || (o.today && e < o.today)) continue;
           const theirBack = theirs[e], myBack = mine[e];
           if (!theirBack || !myBack || kind(theirBack) !== 'travail' || kind(myBack) !== 'repos') continue;
-          const c = both(check(mine, { [key]: REST, [e]: theirBack }), check(theirs, { [key]: myCode, [e]: REST }));
+          const c = both(check(me, mine, { [key]: REST, [e]: theirBack }), check(name, theirs, { [key]: myCode, [e]: REST }));
           if (!allowed(c)) continue;
           found++;
           // jour rendu proche et même horaire = plus simple à faire accepter
@@ -751,7 +771,8 @@
     const agents = (plan && plan.agents) || {};
     const t = k => Date.UTC(+k.slice(0, 4), +k.slice(4, 6) - 1, +k.slice(6, 8)) / 6e4;
     const out = { agents: 0, days: 0, from: '', to: '', minGap: Infinity, shortRests: 0, shortPairs: {},
-      maxRun: 0, runsAtMax: 0, maxNights: 0, maxWeekMin: 0, weeksOver48: 0, maxNightsMonth: 0, unknown: {} };
+      maxRun: 0, runsAtMax: 0, maxNights: 0, maxWeekMin: 0, weeksOver48: 0, maxNightsMonth: 0, unknown: {},
+      half: 0, halfMaxDays: 0, h32: 0, h32MaxWeekMin: 0 };
     for (const name of Object.keys(agents)) {
       const days = agents[name], keys = Object.keys(days).sort();
       if (!keys.length) continue;
@@ -776,8 +797,8 @@
         nights = c === 'N' ? (next && nights ? nights + 1 : 1) : 0;
         out.maxNights = Math.max(out.maxNights, nights);
         const wk = isoWeek({ y: +k.slice(0, 4), m: +k.slice(4, 6), d: +k.slice(6, 8) }).monday;
-        weeks[wk] = weeks[wk] || { n: 0, min: 0 };
-        weeks[wk].n++; weeks[wk].min += codeMinutes(def);
+        weeks[wk] = weeks[wk] || { n: 0, min: 0, work: 0 };
+        weeks[wk].n++; weeks[wk].min += codeMinutes(def); if (sp) weeks[wk].work++;
         const mo = k.slice(0, 6);
         months[mo] = months[mo] || { n: 0, nights: 0 };
         months[mo].n++; if (c === 'N') months[mo].nights++;
@@ -785,8 +806,13 @@
       }
       if (run) runs.push(run);
       for (const r of runs) { if (r > out.maxRun) { out.maxRun = r; out.runsAtMax = 0; } if (r === out.maxRun) out.runsAtMax++; }
+      const ct = contractOf(name);
+      if (ct.half) out.half++;
+      if (ct.hours) out.h32++;
       for (const w of Object.values(weeks)) if (w.n === 7) {
         out.maxWeekMin = Math.max(out.maxWeekMin, w.min);
+        if (ct.half) out.halfMaxDays = Math.max(out.halfMaxDays, w.work);
+        if (ct.hours) out.h32MaxWeekMin = Math.max(out.h32MaxWeekMin, w.min);
         if (w.min > 48 * 60) out.weeksOver48++;
       }
       for (const m of Object.values(months)) if (m.n >= 28) out.maxNightsMonth = Math.max(out.maxNightsMonth, m.nights);
@@ -863,5 +889,5 @@
     return lines.join('\r\n') + '\r\n';
   }
 
-  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, codeMinutes, isoWeek, monthHours, monthSummary, frenchHolidays, holidayName, teamOfDay, swapOptions, planStats, parseMatrix, combineResults, bestSheet, GROUPS, groupOf, orderAgents, unmatchedRules, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
+  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, codeMinutes, isoWeek, monthHours, monthSummary, frenchHolidays, holidayName, teamOfDay, swapOptions, planStats, contractOf, parseMatrix, combineResults, bestSheet, GROUPS, groupOf, orderAgents, unmatchedRules, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
 });

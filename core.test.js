@@ -395,3 +395,29 @@ test('swapOptions : 3 nuits d’affilée au plus ; planStats', () => {
   assert.equal(st.maxRun, 3);
   assert.deepEqual(st.unknown, { ZZ: 1 });
 });
+
+test('contrats : mi-temps 3 jours par semaine au plus, 32 h classé après ; ABJ connu', () => {
+  const codes = C.DEFAULT_CODES;
+  assert.deepEqual(C.contractOf('DUPONT 1/2 T (1)'), { half: true, hours: null });
+  assert.deepEqual(C.contractOf('DUPONT 32'), { half: false, hours: 32 });
+  assert.deepEqual(C.contractOf('DUPONT 32 80%'), { half: false, hours: 32 });
+  assert.deepEqual(C.contractOf('DUPONT (2)'), { half: false, hours: null });
+  assert.ok(codes.some(c => c.code === 'ABJ' && c.label === 'Absence justifiée'));
+  const k = d => '202611' + String(d).padStart(2, '0'); // semaines du lundi 2 et du lundi 9
+  const row = s => Object.fromEntries(s.split(' ').map((c, i) => [k(i + 2), c]));
+  // MOI : J le mercredi 4. Les collègues ont 3 J cette semaine et rendent le dimanche 15 (semaine suivante).
+  const plan = { agents: {
+    'MOI':               row('R R J R R R R R R R R R R R'),
+    'MITEMPS 1/2 T (1)': row('J J R J R R R R R R R R R J'),
+    'A 32':              row('J J R J R R R R R R R R R J'),
+    'PLEIN':             row('J J R J R R R R R R R R R J'),
+  } };
+  const r = C.swapOptions(plan, 'MOI', k(4), codes, { perAgent: 10 });
+  // rendre un jour de la même semaine ne change rien ; rendre le 15 ajoute un 4e jour à la semaine du 2
+  const on15 = n => r.options.find(o => o.name === n && o.back === k(15));
+  assert.ok(r.options.some(o => o.name.startsWith('MITEMPS') && o.back === k(5)));
+  assert.ok(!on15('MITEMPS 1/2 T (1)'));                            // 4 jours dans la semaine : écarté
+  const a = on15('A 32'), p = on15('PLEIN');
+  assert.equal(a.overHours, 32);                                   // 36 h > 32 h : proposé, marqué
+  assert.ok(r.options.indexOf(p) < r.options.indexOf(a));          // et classé après
+});
