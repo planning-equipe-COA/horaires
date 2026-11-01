@@ -75,6 +75,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   meilleure feuille de chaque fichier, triés par date, combinés par `combineResults` (même nom =
   même agent, le plus récent l'emporte sur un jour commun). Pas de choix de feuille ni de mois en
   multi : avertissement `#multiWarn` si un mois a été deviné (importer ce fichier seul pour régler).
+  Compte rendu par fichier (`renderImportReport`, `#importReport`) : période lue, nb d'agents, mois
+  deviné, nom de l'utilisateur trouvé / écrit autrement / absent, fichiers non reconnus.
   Tous les codes s'affichent dans le calendrier, même décochés (la case ne vaut que pour l'export).
   À l'ouverture : mois en cours s'il a des jours, sinon le prochain mois rempli.
   Sans planning sur le téléphone, le calendrier s'affiche quand même, vide (`EMPTY_PLAN` via

@@ -199,6 +199,31 @@
     refresh();
   }
 
+  // Compte rendu fichier par fichier (plusieurs fichiers) : période lue, agents, ton nom retrouvé ou non
+  function renderImportReport(multi, results) {
+    const box = $('importReport');
+    box.hidden = !multi;
+    if (!multi) { box.innerHTML = ''; return; }
+    const me = load(STORAGE_NAME_KEY) || '';
+    const first = s => C.normCode(String(s).split(/\s+/)[0]);
+    const fmt = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+    box.innerHTML = '<p class="day-sub">Lecture des fichiers</p>' + state.books.map((b, i) => {
+      const r = results[i];
+      const keys = r.agents.flatMap(a => a.entries.map(e => C.dateKey(e.date))).sort();
+      if (!r.agents.length || !keys.length) {
+        return `<div class="rep-row bad"><strong>${esc(b.name)}</strong><span>⚠️ aucun planning reconnu (feuille « ${esc(b.wb.SheetNames[b.sheet])} »)</span></div>`;
+      }
+      const found = r.agents.some(a => a.name === me);
+      const alike = !found && me ? r.agents.filter(a => first(a.name) === first(me)).map(a => a.name) : [];
+      return `<div class="rep-row${found ? '' : ' warn'}"><strong>${esc(b.name)}</strong>` +
+        `<span>du ${esc(fmt(keys[0]))} au ${esc(fmt(keys[keys.length - 1]))} · ${r.agents.length} agents` +
+        (r.monthAssumed ? ' · ⚠️ mois deviné' : '') + '</span>' +
+        (me ? `<span>${found ? '✓ ' + esc(me) + ' trouvé' : alike.length
+          ? '⚠️ ' + esc(me) + ' écrit ici « ' + alike.map(esc).join(' », « ') + ' »'
+          : '⚠️ ' + esc(me) + ' absent de ce fichier'}</span>` : '') + '</div>';
+    }).join('');
+  }
+
   function parseBook(book, index) {
     const name = book.wb.SheetNames[index];
     const matrix = C.sheetToMatrix(XLSX, book.wb.Sheets[name]);
@@ -221,6 +246,7 @@
     $('multiWarn').hidden = !guessed.length;
     $('multiWarn').textContent = guessed.length
       ? `Le mois n'est pas écrit dans ${guessed.map(b => '« ' + b.name + ' »').join(', ')} : l'appli a supposé le mois en cours. Si c'est faux, importe ce fichier seul pour régler le mois.` : '';
+    renderImportReport(multi, results);
     $('monthRow').hidden = multi || !res.monthAssumed;
     if (!multi && res.monthAssumed && !$('month').value && res.ctx) {
       $('month').value = res.ctx.y + '-' + String(res.ctx.m).padStart(2, '0');

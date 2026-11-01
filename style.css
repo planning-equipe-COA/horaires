@@ -389,3 +389,9 @@ body.sheet-open { overflow: hidden; }
 #utilesTitle { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 /* pas de sélection de texte ni de menu iPhone sur l'appui long */
 .hdr-btn, .app-head h1 { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+
+/* compte rendu d'import (plusieurs fichiers) */
+.import-report { margin-top: 10px; font-size: .85rem; }
+.rep-row { display: flex; flex-direction: column; gap: 1px; padding: 6px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.rep-row span { color: var(--muted); }
+.rep-row.warn span:last-child, .rep-row.bad span { color: var(--warn); font-weight: 600; }
