@@ -617,6 +617,87 @@
     return out;
   }
 
+  // ── Permutations ───────────────────────────────────────────────────────────
+  // Plage horaire d'un service en minutes depuis minuit du jour (fin > 1440 pour la nuit) ;
+  // null si ce n'est pas un jour travaillé. JS / Formation sans horaires : 8 h – 17 h par prudence.
+  function shiftSpan(def) {
+    if (!def || dayKind(def) !== 'travail') return null;
+    const t = s => /^\d{2}:\d{2}$/.test(s || '') ? +s.slice(0, 2) * 60 + +s.slice(3) : null;
+    const a = t(def.start), b = t(def.end);
+    if (a == null || b == null) return [480, 1020];
+    return [a, b > a ? b : b + 1440];
+  }
+  function shiftKey(k, n) { return dateKey(addDays({ y: +k.slice(0, 4), m: +k.slice(4, 6), d: +k.slice(6, 8) }, n)); }
+
+  // Le planning `days` (avec les jours changés `changed`) respecte-t-il le repos minimum entre deux
+  // services et le nombre maximum de jours travaillés d'affilée, autour des jours changés ?
+  function swapOk(days, changed, map, rules) {
+    const span = k => shiftSpan(map.get(days[k]));
+    for (const k of changed) {
+      for (const [a, b] of [[shiftKey(k, -1), k], [k, shiftKey(k, 1)]]) {
+        const sa = span(a), sb = span(b);
+        if (sa && sb && sb[0] + 1440 - sa[1] < rules.minRest) return false;
+      }
+      if (span(k)) {
+        let run = 1;
+        for (let i = -1; span(shiftKey(k, i)); i--) run++;
+        for (let i = 1; span(shiftKey(k, i)); i++) run++;
+        if (run > rules.maxDays) return false;
+      }
+    }
+    return true;
+  }
+
+  // Meilleures permutations pour `me` le jour `key` (où il travaille) :
+  //  - sameDay : un collègue qui travaille ce jour-là sur un autre horaire échange avec moi ;
+  //  - twoDays : un collègue en repos prend mon service, et je prends le sien un jour où il travaille
+  //    et où je suis en repos (jour rendu le plus proche d'abord, au plus `window` jours, pas avant `today`).
+  // Écarte ce qui casse le repos minimum (11 h) ou dépasse `maxDays` jours d'affilée, pour l'un ou l'autre.
+  function swapOptions(plan, me, key, codes, opts) {
+    const o = Object.assign({ minRest: 660, maxDays: 6, window: 31, perAgent: 3, today: '' }, opts);
+    const map = new Map(codes.map(c => [normCode(c.code), c]));
+    const kind = c => dayKind(map.get(c));
+    const agents = (plan && plan.agents) || {};
+    const mine = agents[me] || {};
+    const myCode = mine[key];
+    const out = { sameDay: [], twoDays: [], free: [], rejected: 0 };
+    if (!myCode || kind(myCode) !== 'travail') return out;
+    const REST = 'R';
+    const tryDays = (days, changes) => {
+      const copy = Object.assign({}, days, changes);
+      return swapOk(copy, Object.keys(changes), map, o);
+    };
+    for (const name of Object.keys(agents).sort((a, b) => a.localeCompare(b, 'fr'))) {
+      if (name === me) continue;
+      const theirs = agents[name], their = theirs[key];
+      if (!their) continue;
+      if (kind(their) === 'travail') {
+        if (their === myCode) continue;
+        if (tryDays(mine, { [key]: their }) && tryDays(theirs, { [key]: myCode })) out.sameDay.push({ name, code: their });
+        else out.rejected++;
+        continue;
+      }
+      if (kind(their) !== 'repos') continue;
+      out.free.push(name);
+      const backs = [];
+      for (let n = 1; n <= o.window && backs.length < o.perAgent; n++) {
+        for (const e of [shiftKey(key, -n), shiftKey(key, n)]) {
+          if (backs.length >= o.perAgent || (o.today && e < o.today)) continue;
+          const theirBack = theirs[e], myBack = mine[e];
+          if (!theirBack || !myBack || kind(theirBack) !== 'travail' || kind(myBack) !== 'repos') continue;
+          const okMe = tryDays(mine, { [key]: REST, [e]: theirBack });
+          const okThem = tryDays(theirs, { [key]: myCode, [e]: REST });
+          if (okMe && okThem) backs.push({ key: e, code: theirBack });
+          else out.rejected++;
+        }
+      }
+      if (backs.length) out.twoDays.push({ name, backs });
+    }
+    const dist = k => Math.abs(Date.UTC(+k.slice(0, 4), +k.slice(4, 6) - 1, +k.slice(6, 8)) - Date.UTC(+key.slice(0, 4), +key.slice(4, 6) - 1, +key.slice(6, 8)));
+    out.twoDays.sort((a, b) => dist(a.backs[0].key) - dist(b.backs[0].key) || a.name.localeCompare(b.name, 'fr'));
+    return out;
+  }
+
   // Toute l'équipe un jour donné, regroupée par code dans l'ordre des codes (M, S, N… puis repos…)
   function teamOfDay(plan, key, codes) {
     const map = new Map(codes.map(c => [normCode(c.code), c]));
@@ -686,5 +767,5 @@
     return lines.join('\r\n') + '\r\n';
   }
 
-  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, codeMinutes, isoWeek, monthHours, monthSummary, frenchHolidays, holidayName, teamOfDay, parseMatrix, combineResults, bestSheet, GROUPS, groupOf, orderAgents, unmatchedRules, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
+  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, codeMinutes, isoWeek, monthHours, monthSummary, frenchHolidays, holidayName, teamOfDay, swapOptions, parseMatrix, combineResults, bestSheet, GROUPS, groupOf, orderAgents, unmatchedRules, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
 });

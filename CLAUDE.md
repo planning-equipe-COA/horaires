@@ -93,7 +93,12 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   (`frenchHolidays`, Pâques calculée) et nuits travaillés, comptés le jour où le service commence.
   En haut : « Aujourd'hui / Demain » pour `mh_name` (toucher = aller au jour). Rappel à partir du 20
   si le mois suivant manque. Détail d'un jour (grille ou liste dépliée) : férié, équipe du jour
-  groupée par code (`teamOfDay`), collègues en repos « pour un échange » si l'agent travaille, et
+  groupée par code (`teamOfDay`), « 🔁 Permutations possibles » si l'agent travaille ce jour (pas pour les
+  jours passés) : `swapOptions` → même jour (collègue sur un autre horaire) et échange de deux jours
+  (collègue en repos prend mon service, je prends le sien un jour où il travaille et où je suis en
+  repos, ±31 j, jamais avant aujourd'hui, 3 dates max par collègue, la plus proche d'abord). Règles
+  choisies par l'utilisateur : 11 h de repos entre deux services (JS/FORM sans horaires = 8 h–17 h) et
+  6 jours travaillés d'affilée au plus, pour les deux agents ; puis collègues en repos sans jour à rendre, et
   note perso (`mh_notes` = { AAAAMMJJ: texte }, jamais envoyée, même avec le planning d'équipe).
   Trois vues (`mh_view`) : « Mois » (grille), « Liste » (jours de haut en bas, toucher un jour déplie
   le détail) et « Équipe » (`renderTeamTable` : agents en lignes, jours en colonnes, noms figés,

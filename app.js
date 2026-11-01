@@ -863,14 +863,34 @@
         `<div class="team-row${g.code === code ? ' mine' : ''}"><span class="team-code">${chip(g.code)} ${esc(codeLabel(g.code))} <span class="muted">(${g.names.length})</span></span>` +
         `<span class="team-names">${g.names.map(n => nameWithPhone(n, n === name)).join(', ')}</span></div>`).join('') + '</div>';
     }
-    if (code && C.dayKind(defOf(code)) === 'travail') {
-      const free = team.filter(g => g.kind === 'repos').flatMap(g => g.names).filter(n => n !== name)
-        .sort((a, b) => a.localeCompare(b, 'fr'));
-      html += `<p class="day-swap">🔁 <span class="muted">Pour un échange, en repos ce jour-là :</span> ` +
-        (free.length ? free.map(n => nameWithPhone(n)).join(', ') : '<span class="muted">personne</span>') + '</p>';
-    }
+    if (code && C.dayKind(defOf(code)) === 'travail' && k >= C.dateKey(todayDate())) html += swapHTML(plan, name, k, code);
     html += `<label class="day-note"><span class="day-sub">📝 Ma note <span class="muted">(gardée sur ce téléphone)</span></span>` +
       `<textarea data-note="${k}" rows="2" maxlength="500" placeholder="ex. échangé avec Paul, RDV…">${esc(notes[k] || '')}</textarea></label>`;
+    return html;
+  }
+
+  // Permutations possibles un jour travaillé (C.swapOptions : repos 11 h, 6 jours d'affilée au plus)
+  function swapHTML(plan, name, k, code) {
+    const r = C.swapOptions(plan, name, k, state.codes, { today: C.dateKey(todayDate()) });
+    const n = r.sameDay.length + r.twoDays.length;
+    const fmt = key => utc(keyToDate(key)).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+    let html = `<details class="day-swap"><summary>🔁 <strong>Permutations possibles</strong> ` +
+      `<span class="muted">(${n ? n + ' solution' + (n > 1 ? 's' : '') : 'aucune'})</span></summary>`;
+    if (r.sameDay.length) {
+      html += '<p class="day-sub">Le même jour</p><ul class="swap-list">' + r.sameDay.map(o =>
+        `<li>${nameWithPhone(o.name)} : son ${chip(o.code)} ${esc(codeLabel(o.code))} contre ton ${chip(code)}</li>`).join('') + '</ul>';
+    }
+    if (r.twoDays.length) {
+      html += '<p class="day-sub">Échange de deux jours</p><ul class="swap-list">' + r.twoDays.map(o => {
+        const [best, ...more] = o.backs;
+        return `<li>${nameWithPhone(o.name)} prend ton ${chip(code)} ; tu prends son ${chip(best.code)} le <strong>${esc(fmt(best.key))}</strong>` +
+          (more.length ? ` <span class="muted">(ou ${more.map(b => esc(fmt(b.key)) + ' ' + chip(b.code)).join(', ')})</span>` : '') + '</li>';
+      }).join('') + '</ul>';
+    }
+    if (!n) html += '<p class="muted">Aucune permutation qui respecte les règles ci-dessous.</p>';
+    const freeOnly = r.free.filter(f => !r.twoDays.some(o => o.name === f));
+    if (freeOnly.length) html += `<p class="muted">En repos ce jour-là, sans jour à rendre trouvé : ${freeOnly.map(f => nameWithPhone(f)).join(', ')}</p>`;
+    html += '<p class="hint">Règles : 11 h de repos entre deux services et 6 jours travaillés d\'affilée au plus, pour toi comme pour ton collègue. Jour rendu dans le mois qui précède ou qui suit.</p></details>';
     return html;
   }
 

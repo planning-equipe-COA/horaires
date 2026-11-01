@@ -234,6 +234,11 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .team-code .chip { font-size: .68rem; }
 .team-names { overflow-wrap: anywhere; }
 .day-swap { font-size: .88rem; overflow-wrap: anywhere; }
+.day-swap summary { cursor: pointer; padding: 4px 0; }
+.day-swap .day-sub { margin: 8px 0 2px; }
+.swap-list { margin: 0; padding-left: 18px; }
+.swap-list li { margin: 4px 0; line-height: 1.5; }
+.day-swap .hint { margin-top: 8px; }
 .day-note { display: block; }
 .day-note textarea {
   width: 100%; font: inherit; font-size: .92rem; color: var(--text); background: var(--card);
