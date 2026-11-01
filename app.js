@@ -1041,18 +1041,50 @@
     renderCalendar();
     if (state.cal.view === 'list') scrollToSelected();
   }));
+  // Glisser-déposer des noms (poignée ☰), au doigt comme à la souris
+  let drag = null;
+  $('calTeam').addEventListener('pointerdown', e => {
+    const handle = e.target.closest('.ro-handle');
+    if (!handle) return;
+    e.preventDefault();
+    const li = handle.closest('li');
+    const rect = li.getBoundingClientRect();
+    drag = { li, id: e.pointerId, offset: e.clientY - rect.top, dy: 0 };
+    li.classList.add('dragging');
+    handle.setPointerCapture(e.pointerId);
+  });
+  $('calTeam').addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    e.preventDefault();
+    const li = drag.li;
+    const place = () => {
+      const natural = li.getBoundingClientRect().top - drag.dy;
+      drag.dy = e.clientY - drag.offset - natural;
+      li.style.transform = `translateY(${drag.dy}px)`;
+    };
+    place();
+    // échange avec le voisin dès que le doigt passe sa moitié
+    const prev = li.previousElementSibling, next = li.nextElementSibling;
+    if (prev && e.clientY < prev.getBoundingClientRect().top + prev.offsetHeight / 2) { li.parentNode.insertBefore(li, prev); place(); }
+    else if (next && e.clientY > next.getBoundingClientRect().top + next.offsetHeight / 2) { li.parentNode.insertBefore(next, li); place(); }
+    // défilement automatique près des bords de l'écran
+    if (e.clientY < 70) window.scrollBy(0, -12);
+    else if (e.clientY > window.innerHeight - 70) window.scrollBy(0, 12);
+  });
+  const endDrag = e => {
+    if (!drag || (e && e.pointerId !== drag.id)) return;
+    drag.li.classList.remove('dragging');
+    drag.li.style.transform = '';
+    state.reorderList = [...$('roList').children].map(li => li.dataset.name);
+    drag = null;
+  };
+  $('calTeam').addEventListener('pointerup', endDrag);
+  $('calTeam').addEventListener('pointercancel', endDrag);
+
   $('calCompare').addEventListener('change', e => { state.cal.compare = e.target.value; renderCalendar(); });
   $('calTeam').addEventListener('click', e => {
-    const id = e.target.id, mv = e.target.dataset && e.target.dataset.move;
+    const id = e.target.id;
     if (id === 'ttReorder') { state.reorder = true; state.reorderList = null; state.orderMsg = ''; renderCalendar(); return; }
-    if (mv) {
-      const i = +e.target.dataset.i, j = i + +mv, l = state.reorderList;
-      if (j >= 0 && j < l.length) { [l[i], l[j]] = [l[j], l[i]]; }
-      renderCalendar();
-      const btn = $('calTeam').querySelector(`[data-i="${j}"][data-move="${mv}"]`) || $('calTeam').querySelector(`[data-i="${j}"]`);
-      if (btn) btn.focus();
-      return;
-    }
     if (id === 'roDone') { saveOrder(state.reorderList.slice()); return; }
     if (id === 'roReset') { saveOrder(null); return; }
     if (id === 'roCancel') { state.reorder = false; state.reorderList = null; renderCalendar(); return; }
@@ -1327,11 +1359,12 @@
   function renderReorder(names, me) {
     if (!state.reorderList) state.reorderList = teamOrder(names, me);
     const list = state.reorderList;
-    $('calTeam').innerHTML = '<p class="hint">Monte ou descends les noms avec les flèches, puis touche « Terminé ».</p>' +
-      '<ol class="reorder">' + list.map((n, i) =>
-        `<li${n === me ? ' class="me"' : ''}><span class="ro-name">${esc(n)}</span>` +
-        `<button type="button" data-move="-1" data-i="${i}" aria-label="Monter ${esc(n)}"${i === 0 ? ' disabled' : ''}>▲</button>` +
-        `<button type="button" data-move="1" data-i="${i}" aria-label="Descendre ${esc(n)}"${i === list.length - 1 ? ' disabled' : ''}>▼</button></li>`).join('') +
+    $('calTeam').innerHTML = '<p class="hint">Maintiens la poignée ☰ et fais glisser le nom à sa place, puis touche « Terminé ».</p>' +
+      '<ol class="reorder" id="roList">' + list.map(n =>
+        `<li data-name="${esc(n)}"${n === me ? ' class="me"' : ''}>` +
+        `<span class="ro-handle" role="button" aria-label="Déplacer ${esc(n)}">` +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>' +
+        `<span class="ro-name">${esc(n)}</span></li>`).join('') +
       '</ol><div class="actions"><button id="roDone" class="primary" type="button">Terminé</button>' +
       '<button id="roReset" type="button">Par défaut</button><button id="roCancel" class="link" type="button">Annuler</button></div>';
   }

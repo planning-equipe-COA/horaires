@@ -116,7 +116,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   a aucun planning et dès qu'un fichier est lu (aperçu + « Envoyer à l'équipe » y sont) ; replié à
   l'ouverture sinon. « Qui es-tu ? » ouvert, export (facultatif) replié. Le rappel de fin de mois
   ouvre l'import.
-- **Ordre des noms (vue Équipe)** : bouton « ↕︎ Réorganiser les noms » → liste avec ▲ ▼, « Terminé »
+- **Ordre des noms (vue Équipe)** : bouton « ↕︎ Réorganiser les noms » → liste avec poignée ☰ à gauche
+  (glisser-déposer au doigt, Pointer Events, défilement auto près des bords), « Terminé »
   (enregistre), « Par défaut » (toi en premier puis alphabétique), « Annuler ». `teamOrder`,
   `renderReorder`, `saveOrder`. **Ne jamais écrire de vrais noms dans ce code public** : l'ordre vit
   dans `mh_roles.order` (noms complets) et part chiffré avec le planning d'équipe (`roles`, le plus

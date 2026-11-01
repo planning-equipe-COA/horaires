@@ -348,4 +348,8 @@ button.link { background: none; border: 0; color: var(--muted); text-decoration:
 .reorder li { display: flex; align-items: center; gap: 6px; padding: 5px 0; border-bottom: 1px solid var(--line); }
 .reorder li.me .ro-name { color: var(--accent); font-weight: 700; }
 .reorder .ro-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.reorder button { width: 40px; height: 36px; padding: 0; font-size: .95rem; }
+.reorder li { background: var(--card); position: relative; }
+.reorder li.dragging { z-index: 2; box-shadow: 0 6px 18px rgba(0, 0, 0, .25); border-radius: 8px; background: var(--bg); }
+.ro-handle { display: inline-grid; place-items: center; width: 44px; height: 40px; cursor: grab; touch-action: none; color: var(--muted); user-select: none; -webkit-user-select: none; }
+.ro-handle svg { width: 22px; height: 22px; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; fill: none; }
+.reorder li.dragging .ro-handle { cursor: grabbing; color: var(--accent); }
