@@ -13,16 +13,25 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - `core.js` — logique pure, module UMD : lecture de la grille (`parseMatrix`, `sheetToMatrix`),
   codes par défaut (`DEFAULT_CODES`), événements (`buildEvents`), export (`buildICS`).
 - `app.js` — interface (IIFE), réglages dans localStorage (`mh_codes`, `mh_codes_v`, `mh_name`,
-  `mh_plan`). `mh_name` = dernier agent consulté (l'appli rouvre dessus).
+  `mh_plan`, `mh_tab`). **`mh_name` = l'utilisateur (« Je suis »)** : choisi seulement à l'accueil ou dans
+  Réglages → « 👤 Je suis » (`#meName`). Regarder le planning d'un collègue (`#calAgent`) ne le change JAMAIS
+  (avant nov. 2026 il suivait le dernier planning consulté : numéro ou envois risquaient de partir au nom
+  d'un collègue). Aucun nom n'est choisi tout seul à l'import.
 - `index.html`, `style.css` — UI mobile d'abord, mode sombre.
 - `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` — ajout à l'écran d'accueil.
-- `sw.js` — hors connexion (`team.js` est dans `FILES`), **réseau d'abord** (`cache: 'no-cache'`, délai 4 s) : en ligne on sert
-  toujours la dernière version, la copie n'est utilisée que sans réseau. Tout nouveau fichier de l'appli
-  (ou changement du `?v=` des icônes) doit être ajouté à `FILES` ; changer `CACHE` purge l'ancienne copie.
-- `xlsx.full.min.js` — SheetJS 0.20.3 embarqué (pas de CDN).
+- `sw.js` — **ouverture depuis la copie du téléphone** (instantané, même sans réseau). À chaque ouverture
+  (et au retour sur l'appli, message `check` envoyé par la page, 60 s mini) il retélécharge tous les `FILES`
+  en arrière-plan ; si un seul a changé, toute la copie est remplacée d'un coup et la page affiche le bandeau
+  « ✨ Nouvelle version de l'appli · Afficher » (`#updateBar`, recharge). Donc une mise en ligne apparaît à
+  l'ouverture suivante (ou en touchant « Afficher »). Tout nouveau fichier de l'appli (ou changement du `?v=`
+  des icônes) doit être ajouté à `FILES` ; changer `CACHE` purge l'ancienne copie. Testé en vrai (Chrome +
+  serveur local) : copie servie, bandeau après publication, nouvelle version à l'ouverture suivante, hors ligne OK.
+- `xlsx.full.min.js` — SheetJS 0.20.3 embarqué (pas de CDN), **chargé seulement au moment d'importer**
+  (`ensureXLSX`, préchargé à l'ouverture de la carte d'import) : plus de 1 Mo à analyser à chaque ouverture.
 - `team.js` — planning d'équipe partagé (module UMD `TeamSync`) : chiffrement WebCrypto
   (PBKDF2-SHA256 600 000 itérations → AES-GCM) avec le code d'équipe, lecture/écriture GitHub.
 - `core.test.js`, `team.test.js` — tests : `node --test core.test.js team.test.js` (avant chaque push).
+  Pour l'interface : capturer l'appli à 390 px de large (iframe dans une page d'essai, Chrome sans affichage).
 - `exemple-planning.xls` — planning fictif pour essayer.
 
 ## Règles
@@ -77,6 +86,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   blanc pour tous les repos, vert pour les congés (CA, C). Apple et Google ignorent la couleur d'un
   événement importé : elle est donc rendue par une pastille emoji en tête du titre (« 🟤 Matin »),
   plus la propriété COLOR. Réglable par code dans « Codes et couleurs ».
+  Pastilles sans couleur (J, JS, EM, X, ABJ…) : gris `--chip` éclairci en mode sombre (#4a5a6f) pour rester lisibles.
 - Si un changement des valeurs par défaut doit toucher les réglages déjà enregistrés sur les
   téléphones, incrémenter `CODES_VERSION` dans app.js et ajouter la migration dans `loadCodes`.
 - Case « Seulement à partir d'aujourd'hui » (cochée par défaut, `mh_from_today`) : n'exporte pas les jours passés.
@@ -115,11 +125,26 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   reste dans core.js (testé) pour une analyse ponctuelle.
   6 affichées + « Voir les N autres » ; pour les deux agents ; puis collègues en repos sans jour à rendre, et
   note perso (`mh_notes` = { AAAAMMJJ: texte }, jamais envoyée, même avec le planning d'équipe).
-  Trois vues (`mh_view`) : « Mois » (grille), « Liste » (jours de haut en bas, toucher un jour déplie
-  le détail) et « Équipe » (`renderTeamTable` : agents en lignes, jours en colonnes, noms figés,
-  ordre personnalisable, sinon « moi » en premier puis alphabétique). Glisser à gauche/droite change de mois (Mois, Liste).
-  « Comparer avec un collègue » (Mois, Liste ; non mémorisé) : 2e pastille sous la mienne, cadre vert
-  pointillé = l'un travaille pendant que l'autre est en repos (échange possible).
+  **Onglets en bas** (nov. 2026) : « Planning » (Aujourd'hui/Demain, calendrier Mois ou Liste `mh_view`,
+  détail du jour, résumé), « Équipe » (`renderTeamTable` : agents en lignes, jours en colonnes, noms figés,
+  ordre personnalisable, sinon « moi » en premier puis alphabétique ; détail du jour avec toute l'équipe) et
+  « Réglages » (Je suis, import, export agenda, partage, code d'équipe, mes notes, codes et couleurs).
+  Visibilité 100 % CSS : `body[data-tab]` + attribut `data-tab` des cartes (`data-tab="planning equipe"` pour le
+  calendrier) + classes `only-planning` / `only-equipe` dans la carte calendrier. `setTab()`, `goTo('import'|'export')`
+  (rappel de fin de mois, accueil, calendrier vide, bandeau des changements). `mh_tab` mémorise Planning ou
+  Équipe (jamais Réglages). Pastille `#settingsDot` sur Réglages tant qu'un « Envoyer à l'équipe » attend.
+  Barre masquée pendant une saisie (`body:has(…:focus)`). Glisser à gauche/droite change de mois (Mois, Liste).
+  Haut du calendrier : titre, « Aujourd'hui » (seulement si on regarde un autre mois/jour), ‹ › ; puis une ligne
+  [planning affiché (« · moi »)] [⇄ Comparer…]. « Comparer » (Planning ; non mémorisé) : 2e pastille sous la
+  mienne, cadre vert pointillé = l'un travaille pendant que l'autre est en repos (échange possible).
+  Vue Équipe : « Surligner : » + pastilles des codes du mois (`state.cal.hl`) → les autres cases s'estompent et
+  une ligne « Total » compte ce code par jour.
+  Détail du jour compact (onglet Planning, grille ou liste) : « Avec toi : … » (même service), « 👥 Toute l'équipe
+  ce jour-là (N) » replié, permutations repliées, « 📝 Ajouter une note » (le champ n'apparaît qu'au toucher ou
+  s'il y a déjà une note). Onglet Équipe : toute l'équipe dépliée, pas de note.
+  Permutations : bouton « ✉️ Proposer » (seulement sur mon propre planning) → message déjà rédigé
+  (`swapMessage`) : SMS au numéro partagé (`sms:NUM?&body=`, iPhone et Android), sinon feuille de partage,
+  sinon copie.
   Heures théoriques (`codeMinutes`, `monthHours`) : durée des horaires du code (sans pause, nuit à
   cheval), `hours` pour JS et Formation (7 h) ; total du mois + semaines ISO, total de l'année.
   Commentaires de cases Excel (`cell.c` → `matrix.notes` → `entry.note`) gardés dans
@@ -139,23 +164,34 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - Export : case « Rappel la veille à 20 h » (`mh_alarm`, cochée par défaut) → VALARM sur les jours
   travaillés. Apple le garde à l'import ; Google Agenda ignore les alarmes importées.
   Pas de notifications web (iPhone : impossible sans serveur).
-- Cartes dépliantes (`<details class="fold">` : `importDetails`, `exportDetails`), comme « 📲 Partager l'application », puis « 🔑 Code d'équipe » (ordre voulu), « 🎨 Codes et couleurs »
-  (renommées pour ne plus se confondre avec la vue Équipe et « Partager » mon numéro). Import ouvert tant qu'il n'y
-  a aucun planning et dès qu'un fichier est lu (aperçu + « Envoyer à l'équipe » y sont) ; replié à
-  l'ouverture sinon. Export (facultatif) replié. Titre de l'import : « Importer un nouveau planning » (verbe voulu : « Nouveau planning » seul
-  faisait croire qu'un planning attendait là). Carte « Qui es-tu ? » supprimée (doublon) : le nom se
-  choisit dans le menu sous la date (`#calAgent`) ou à l'accueil ; `#agent` reste caché et synchronisé,
-  l'export .ics prend `state.exportName`. Le rappel de fin de mois
-  ouvre l'import.
+- Onglet Réglages, dans l'ordre : « 👤 Je suis », import, export, « 📲 Partager l'application », « 🔑 Code d'équipe »
+  (ordre voulu), « 📝 Mes notes », « 🎨 Codes et couleurs ». Cartes dépliantes `<details class="fold">` avec une
+  flèche à droite (`summary::after`, marqueur natif masqué). Import ouvert tant qu'il n'y a aucun planning et dès
+  qu'un fichier est lu (aperçu + « Envoyer à l'équipe » y sont) ; replié à l'ouverture sinon ; après l'import,
+  « 📅 Voir le planning » (et retour automatique sur Planning si l'accueil attend « Qui es-tu ? »). Titre de
+  l'import : « Importer un nouveau planning » (verbe voulu : « Nouveau planning » seul faisait croire qu'un
+  planning attendait là).
+- **Export agenda** (`renderPreview`, appelé par `renderCalendar`) : toujours disponible dès qu'un planning est
+  sur le téléphone (importé OU reçu de l'équipe), pour `mh_name` (sinon le planning affiché). Avant nov. 2026 il
+  n'existait qu'après un import dans la même session et pouvait prendre le premier agent de la liste.
+- **Mes notes** : sauvegarde dans un fichier JSON (`{ app: 'planning-coa', type: 'notes', v: 1, notes }`, feuille
+  de partage sur téléphone, sinon téléchargement) et restauration (fusion : les jours sans note sont remplis, une
+  note différente déjà présente est gardée). `navigator.storage.persist()` demandé à la 1re note (pas au
+  lancement : Firefox afficherait une question).
 - **Ordre des noms (vue Équipe)** : bouton « ↕︎ Réorganiser les noms » → liste avec poignée ☰ à gauche
   (glisser-déposer au doigt, Pointer Events, défilement auto près des bords), « Terminé »
   (enregistre), « Par défaut » (toi en premier puis alphabétique), « Annuler ». `teamOrder`,
   `renderReorder`, `saveOrder`. **Ne jamais écrire de vrais noms dans ce code public** : l'ordre vit
   dans `mh_roles.order` (noms complets) et part chiffré avec le planning d'équipe (`roles`, le plus
   récent l'emporte ; commit « Ordre mis à jour »). Nouveaux agents ajoutés à la fin (alphabétique).
-  **Noms affichés** : ✏️ dans « Réorganiser les noms » (`shown`, `aliasDraft`) → `mh_roles.alias`
-  { nom du tableau: nom affiché }, envoyé chiffré avec `roles` ; les clés du planning restent les noms du
-  tableau (« NOM (2) ») ; vide ou nom d'origine = retiré. Demandé pour distinguer deux homonymes.
+  **Noms affichés** : sans surnom, la mention de contrat quitte le nom et devient un badge (`C.splitName` :
+  « NOEL 1/2 T (1) » → NOEL ½, « TESSIER 32 80% » → TESSIER 32h ; `nameTable`, `shown`, `nameHTML`, `tagsHTML`,
+  `nameText` pour les menus) ; si deux agents ont alors le même nom (ex. « ANDRIEU 32 » / « ANDRIEU 1/2 T (1) »),
+  leurs noms complets sont gardés. Le contrat des règles (`contractOf`) lit toujours le nom complet.
+  Surnom : ✏️ dans « Réorganiser les noms » (`aliasDraft`, champ prérempli avec le surnom ou le nom complet) →
+  `mh_roles.alias` { nom du tableau: nom affiché }, envoyé chiffré avec `roles` ; les clés du planning restent les
+  noms du tableau (« NOM (2) ») ; vide, nom d'origine ou nom court automatique = retiré. Demandé pour distinguer
+  deux homonymes. `loadRoles` est mis en mémoire (`rolesCache`, mis à jour par `saveRoles`).
   Menus de noms toujours alphabétiques (sur le nom affiché). Retirés à la demande de l'utilisateur : carte « Rôles des
   agents » (ROA/COA) puis « toucher un nom = fin de liste » (`mh_roles.np` encore lu par défaut).
 - **Numéros de téléphone (volontaires)** : carte équipe → « 📞 Mon numéro » (pour `mh_name`), Partager /

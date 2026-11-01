@@ -5,7 +5,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #10151b; --card: #1a222c; --text: #e8edf3; --muted: #94a3b5; --line: #2c3846;
-    --accent: #5aa7f5; --accent-text: #08121d; --warn: #f2c063; --warn-bg: #3a2e12; --error: #ff8a80; --ok: #6fd28d; --chip: #2c3846;
+    --accent: #5aa7f5; --accent-text: #08121d; --warn: #f2c063; --warn-bg: #3a2e12; --error: #ff8a80; --ok: #6fd28d; --chip: #4a5a6f;
   }
 }
 * { box-sizing: border-box; }
@@ -16,7 +16,7 @@ body {
 }
 main {
   max-width: 640px; margin: 0 auto;
-  padding: 20px 16px calc(32px + env(safe-area-inset-bottom));
+  padding: 20px 16px calc(96px + env(safe-area-inset-bottom));
 }
 header { margin-bottom: 16px; }
 .app-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -75,18 +75,19 @@ th, td { text-align: left; padding: 7px 8px 7px 0; border-bottom: 1px solid var(
 th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 #preview tr.month td { font-weight: 600; padding-top: 14px; text-transform: capitalize; }
 #preview td.muted { color: var(--muted); }
-#codes input[type="text"] { padding: 6px 8px; }
-#codes input.code { width: 4.2em; }
-#codes input.label { width: 9em; }
+/* tableau des codes : tient dans la largeur d'un téléphone (plus de colonne coupée) */
+#codes { table-layout: fixed; width: 100%; }
+#codes th, #codes td { padding-right: 5px; }
+#codes tr > :nth-child(1) { width: 30px; }
+#codes tr > :nth-child(2) { width: 4.8em; }
+#codes tr > :nth-child(4) { width: 5.9em; }
+#codes tr > :nth-child(5) { width: 34px; padding-right: 0; }
+#codes input[type="text"], #codes select { width: 100%; padding: 6px 5px; }
 #codes input[type="time"] { padding: 5px 6px; }
 #codes button { padding: 4px 9px; }
-#codesDetails > summary { cursor: pointer; list-style-position: inside; }
-#codesDetails > summary h2 { display: inline-flex; margin: 0; }
 .actions { display: flex; gap: 8px; margin-top: 12px; }
 .check { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: .92rem; }
 .check input { width: 18px; height: 18px; }
-#shareDetails > summary { cursor: pointer; list-style-position: inside; }
-#shareDetails > summary h2 { display: inline-flex; margin: 0; }
 /* le QR reste noir sur blanc, même en mode sombre, pour être lisible par les appareils photo */
 .qr { background: #fff; padding: 14px; border-radius: 12px; width: min(240px, 100%); margin: 12px auto 8px; }
 .qr svg { display: block; width: 100%; height: auto; fill: #000; }
@@ -105,11 +106,16 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 /* ── Calendrier ─────────────────────────────────────────────────────────── */
 .opt { font-size: .75rem; font-weight: 500; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
 .saved { margin: 10px 0 0; color: var(--ok); font-weight: 600; font-size: .92rem; }
-.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
-.cal-head h2 { margin: 0; font-size: 1.2rem; text-transform: capitalize; }
-.cal-nav { width: 40px; height: 40px; padding: 0; font-size: 1.4rem; line-height: 1; border-radius: 50%; }
+.cal-head { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.cal-head h2 { flex: 1; min-width: 0; margin: 0; font-size: 1.2rem; text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.cal-nav { width: 40px; height: 40px; flex: none; padding: 0; font-size: 1.4rem; line-height: 1; border-radius: 50%; }
+.today-pill { flex: none; padding: 5px 10px; font-size: .8rem; font-weight: 600; border-radius: 999px; color: var(--accent); }
+.today-pill.ghost { display: none; }
 .cal-tools { display: flex; gap: 8px; margin-bottom: 12px; }
-.cal-tools select { flex: 1; min-width: 0; }
+.cal-tools select { min-width: 0; font-size: .92rem; padding: 7px 9px; }
+#calAgent { flex: 1.3; font-weight: 600; }
+.cmp-select { flex: 1; color: var(--muted); }
+.cmp-select.on { color: var(--text); border-color: var(--ok); }
 .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; touch-action: pan-y; }
 .cal-wd { text-align: center; font-size: .72rem; color: var(--muted); text-transform: uppercase; padding-bottom: 2px; }
 .cal-cell {
@@ -174,8 +180,6 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .cal-row-mates { grid-column: 2; font-size: .85rem; color: var(--muted); overflow-wrap: anywhere; }
 
 /* ── Planning d'équipe ──────────────────────────────────────────────────── */
-#teamDetails > summary { cursor: pointer; list-style-position: inside; }
-#teamDetails > summary h2 { display: inline-flex; margin: 0; }
 #teamCode, #teamToken { width: 100%; }
 .team-status { margin: -4px 0 12px; font-size: .85rem; color: var(--muted); }
 .team-msg { margin: 10px 0 0; font-size: .92rem; font-weight: 600; }
@@ -257,7 +261,6 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .cal-sum { margin-top: 4px; border-top: 0; }
 .sum-maj .sum-n { font-size: 1.2rem; }
 .sum-maj .sum-detail { color: var(--text); }
-#calAgent[hidden] + #calToday { margin-left: auto; }
 .cal-sum.empty .sum-n { color: var(--muted); }
 
 /* ── Accueil (premier lancement) ────────────────────────────────────────── */
@@ -274,8 +277,6 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 #wName { width: 100%; }
 button.link { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 9px 6px; }
 /* ── Comparaison ─────────────────────────────────────────────────────────── */
-.cal-compare { display: flex; align-items: center; gap: 8px; margin: -4px 0 12px; color: var(--muted); }
-.cal-compare select { flex: 1; min-width: 0; font-size: .9rem; padding: 6px 8px; }
 .cal-grid.comparing .cal-cell { min-height: 70px; }
 .cmp-chip .chip { opacity: .85; font-size: .64rem; box-shadow: inset 0 0 0 1px var(--line); }
 .cmp-none { background: transparent !important; color: var(--muted); }
@@ -292,7 +293,7 @@ button.link { background: none; border: 0; color: var(--muted); text-decoration:
 .team-table thead th span { display: block; font-weight: 400; }
 .team-table .tt-name {
   position: sticky; left: 0; z-index: 1; background: var(--card); text-align: left; padding: 3px 8px 3px 2px;
-  max-width: 7.5em; overflow: hidden; text-overflow: ellipsis; font-weight: 500; color: var(--text); font-size: .78rem;
+  max-width: 8.6em; overflow: hidden; text-overflow: ellipsis; font-weight: 500; color: var(--text); font-size: .78rem;
 }
 .team-table tr.me .tt-name { font-weight: 700; color: var(--accent); }
 .team-table tr.me td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
@@ -339,8 +340,14 @@ button.link { background: none; border: 0; color: var(--muted); text-decoration:
 .welcome-steps li.done > .w-code, .welcome-steps li.done > .w-msg { display: none; }
 
 /* cartes 1 à 3 dépliantes, comme « Partager » et « Codes » */
-.fold > summary { cursor: pointer; list-style-position: inside; }
-.fold > summary h2 { display: inline-flex; margin: 0; }
+.fold > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary h2 { flex: 1; min-width: 0; margin: 0; flex-wrap: wrap; row-gap: 4px; }
+.fold > summary::after {
+  content: ''; flex: none; width: 9px; height: 9px; margin: 0 4px 3px 0;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .2s;
+}
+.fold[open] > summary::after { transform: rotate(-135deg); margin-bottom: -3px; }
 .fold[open] > summary { margin-bottom: 12px; }
 .remind { cursor: pointer; }
 
@@ -408,3 +415,71 @@ body.sheet-open { overflow: hidden; }
 
 .ro-edit { margin-left: auto; padding: 4px 8px; font-size: 1rem; }
 .ro-input { flex: 1; min-width: 0; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); }
+
+/* ── Onglets (Planning · Équipe · Réglages) ─────────────────────────────── */
+body[data-tab="planning"] [data-tab]:not([data-tab~="planning"]),
+body[data-tab="equipe"] [data-tab]:not([data-tab~="equipe"]),
+body[data-tab="reglages"] [data-tab]:not([data-tab~="reglages"]),
+body[data-tab="equipe"] .only-planning, body[data-tab="planning"] .only-equipe { display: none !important; }
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: flex; justify-content: center;
+  background: color-mix(in srgb, var(--card) 90%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border-top: 1px solid var(--line); padding: 5px 8px calc(5px + env(safe-area-inset-bottom));
+}
+.tabbar-in { display: flex; width: 100%; max-width: 640px; }
+.tab {
+  position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  border: 0; background: none; color: var(--muted); font-size: .72rem; font-weight: 600; padding: 5px 0 3px; border-radius: 10px;
+  -webkit-tap-highlight-color: transparent;
+}
+.tab svg { width: 25px; height: 25px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tab[aria-selected="true"] { color: var(--accent); }
+.tab[aria-selected="true"] svg { stroke-width: 2.2; }
+.tab-dot { position: absolute; top: 3px; left: calc(50% + 8px); width: 9px; height: 9px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 2px var(--card); }
+.update-bar {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(70px + env(safe-area-inset-bottom)); z-index: 45;
+  display: flex; align-items: center; gap: 10px; width: max-content; max-width: calc(100% - 32px);
+  padding: 8px 8px 8px 14px; border-radius: 999px; background: var(--text); color: var(--card); font-size: .9rem; font-weight: 600;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .25);
+}
+.update-bar button { padding: 6px 14px; border-radius: 999px; border: 0; background: var(--accent); color: var(--accent-text); font-weight: 700; }
+
+/* « Je suis » (Réglages) */
+.me-row { display: flex; align-items: center; gap: 10px; }
+.me-label { font-weight: 600; white-space: nowrap; }
+.me-row select { flex: 1; min-width: 0; font-weight: 600; }
+.me-card .hint { margin-top: 8px; }
+
+/* badge de contrat à côté du nom (½, 32h) */
+.ctr { display: inline-block; margin-left: 3px; padding: 0 4px; border-radius: 5px; font-size: .68em; font-weight: 700; line-height: 1.5;
+  vertical-align: 1px; color: var(--muted); border: 1px solid var(--line); white-space: nowrap; }
+.team-table .ctr { margin-left: 2px; padding: 0 3px; font-size: .62rem; }
+
+/* calendrier vide */
+.cal-empty { margin-top: 12px; }
+.cal-empty .hint { margin-top: 0; }
+.cal-empty button { margin-top: 8px; }
+
+/* détail du jour, version compacte */
+.day-mates { font-size: .92rem; overflow-wrap: anywhere; }
+.day-team-fold { margin-top: 8px; font-size: .9rem; }
+.day-team-fold > summary { cursor: pointer; padding: 4px 0; }
+.day-team-fold[open] > summary { margin-bottom: 4px; }
+button.note-add { padding: 8px 0 2px; text-decoration: none; color: var(--accent); font-size: .9rem; }
+.swap-ask { margin-left: 4px; padding: 2px 9px; font-size: .8rem; border-radius: 999px; color: var(--accent); vertical-align: 1px; }
+.changes .link { padding: 4px 0; margin-left: 10px; color: var(--accent); }
+
+/* vue Équipe : toucher un code pour le surligner */
+.tt-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 0 0 10px; font-size: .82rem; color: var(--muted); }
+.hl-btn { padding: 3px 4px; border-radius: 8px; border: 1px solid transparent; background: transparent; line-height: 1; }
+.hl-btn[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.hl-btn .chip { font-size: .72rem; }
+.team-table.hl-on td:not(.hl) .chip { opacity: .16; }
+.team-table td.hl { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.team-table tfoot th, .team-table tfoot td { font-weight: 700; color: var(--accent); border-bottom: 0; padding-top: 5px; }
+
+#notesDetails .actions button { flex: 1; white-space: nowrap; }
+/* pendant une saisie (note, code, numéro…) la barre d'onglets ne doit pas recouvrir le clavier */
+body:has(textarea:focus, input[type="text"]:focus, input[type="tel"]:focus, input[type="password"]:focus) .tabbar,
+body:has(textarea:focus, input[type="text"]:focus, input[type="tel"]:focus, input[type="password"]:focus) .update-bar { display: none; }
+.saved-go { margin-top: 8px; }

@@ -10,6 +10,7 @@
   const STORAGE_VIEW_KEY = 'mh_view';
   const STORAGE_NOTES_KEY = 'mh_notes'; // notes perso par jour, sur ce téléphone uniquement
   const STORAGE_SUM_KEY = 'mh_sum';
+  const STORAGE_TAB_KEY = 'mh_tab'; // dernier onglet consulté : Planning ou Équipe (jamais Réglages)
   const PLAN_KEEP_DAYS = 400;
   const CODES_VERSION = 9;
   const $ = id => document.getElementById(id);
@@ -129,10 +130,10 @@
   const today = todayDate();
   const state = { workbook: null, fileName: '', result: null, codes: loadCodes(), events: [],
     plan: loadPlan(), planBefore: undefined,
+    tab: load(STORAGE_TAB_KEY) === 'equipe' || load(STORAGE_VIEW_KEY) === 'team' ? 'equipe' : 'planning',
     cal: { y: today.y, m: today.m, agent: load(STORAGE_NAME_KEY) || '', selected: C.dateKey(today),
-      view: load(STORAGE_VIEW_KEY) === 'list' ? 'list' : 'month',
-      sum: load(STORAGE_SUM_KEY) === 'year' ? 'year' : 'month', compare: '' } };
-  state.cal.view = ['month', 'list', 'team'].includes(load(STORAGE_VIEW_KEY)) ? load(STORAGE_VIEW_KEY) : 'month';
+      view: load(STORAGE_VIEW_KEY) === 'list' ? 'list' : 'month', // onglet Planning : Mois ou Liste
+      sum: load(STORAGE_SUM_KEY) === 'year' ? 'year' : 'month', compare: '', hl: '' } };
 
   function loadNotes() { try { return JSON.parse(load(STORAGE_NOTES_KEY)) || {}; } catch (e) { return {}; } }
   const notes = loadNotes();
@@ -140,12 +141,29 @@
     const t = text.trim();
     if (t) notes[key] = t.slice(0, 500); else delete notes[key];
     store(STORAGE_NOTES_KEY, JSON.stringify(notes));
+    if (t) askPersist();
   }
 
   // ── Fichier ───────────────────────────────────────────────────────────────
   function showError(msg) {
     $('error').textContent = msg || '';
     $('error').hidden = !msg;
+  }
+
+  // Le lecteur Excel (xlsx.full.min.js, près de 1 Mo) n'est chargé qu'au moment d'importer : l'appli s'ouvre plus vite
+  let xlsxPromise = null;
+  function ensureXLSX() {
+    if (window.XLSX) return Promise.resolve();
+    if (!xlsxPromise) {
+      xlsxPromise = new Promise((resolve, reject) => {
+        const tag = document.createElement('script');
+        tag.src = 'xlsx.full.min.js';
+        tag.onload = () => resolve();
+        tag.onerror = () => { xlsxPromise = null; tag.remove(); reject(new Error('xlsx')); };
+        document.head.appendChild(tag);
+      });
+    }
+    return xlsxPromise;
   }
 
   // Un ou plusieurs fichiers Excel (ex. novembre + décembre) : combinés en un seul planning
@@ -165,6 +183,10 @@
     const files = [...(fileList || [])];
     if (!files.length) return;
     showError('');
+    try { await ensureXLSX(); } catch (e) {
+      showError('Le lecteur Excel n\'a pas pu être chargé : vérifie la connexion puis réessaie.');
+      return;
+    }
     const read = await Promise.all(files.map(readOne));
     const bad = read.filter(b => b.error).map(b => b.name);
     const books = read.filter(b => !b.error);
@@ -214,13 +236,13 @@
       }
       const found = r.agents.some(a => a.name === me);
       const alike = !found && me ? r.agents.filter(a => first(a.name) === first(me)).map(a => a.name) : [];
-      return `<div class="rep-row${found ? '' : ' warn'}"><strong>${esc(b.name)}</strong>` +
+      return `<div class="rep-row${found || !me ? '' : ' warn'}"><strong>${esc(b.name)}</strong>` +
         `<span>du ${esc(fmt(keys[0]))} au ${esc(fmt(keys[keys.length - 1]))} · ${r.agents.length} agents` +
         (b.wb.SheetNames.length > 1 ? ` · feuille « ${esc(b.wb.SheetNames[b.sheet])} »` : '') +
         (r.monthAssumed ? ' · ⚠️ mois deviné' : '') + '</span>' +
-        (me ? `<span>${found ? '✓ ' + esc(me) + ' trouvé' : alike.length
-          ? '⚠️ ' + esc(me) + ' écrit ici « ' + alike.map(esc).join(' », « ') + ' »'
-          : '⚠️ ' + esc(me) + ' absent de ce fichier'}</span>` : '') + '</div>';
+        (me ? `<span>${found ? '✓ ' + esc(shown(me)) + ' trouvé' : alike.length
+          ? '⚠️ ' + esc(shown(me)) + ' écrit ici « ' + alike.map(esc).join(' », « ') + ' »'
+          : '⚠️ ' + esc(shown(me)) + ' absent de ce fichier'}</span>` : '') + '</div>';
     }).join('');
   }
 
@@ -252,17 +274,12 @@
       $('month').value = res.ctx.y + '-' + String(res.ctx.m).padStart(2, '0');
     }
     if (!res.agents.length) {
-      $('previewCard').hidden = true;
       showError(multi ? 'Aucun planning reconnu dans ces fichiers. Vérifie les codes ci-dessous.'
         : 'Aucun planning reconnu dans cette feuille. Vérifie les codes ci-dessous ou essaie une autre feuille.');
       return;
     }
     showError('');
-    const previous = $('agent').value || load(STORAGE_NAME_KEY);
-    $('agent').innerHTML = nameOptions(res.agents.map(a => a.name));
-    if (res.agents.some(a => a.name === previous)) $('agent').value = previous;
     savePlanFromImport(res);
-    renderPreview();
   }
 
   // Range le tableau lu dans le planning du téléphone (recalculé à chaque réglage du fichier)
@@ -274,16 +291,47 @@
   // ── Rôles des agents : règles saisies dans l'appli, gardées sur le téléphone (mh_roles)
   // et transmises chiffrées avec le planning d'équipe ({ roa, np, at })
   const STORAGE_ROLES_KEY = 'mh_roles';
-  function loadRoles() { try { return JSON.parse(load(STORAGE_ROLES_KEY)) || null; } catch (e) { return null; } }
-  function saveRoles(r) { store(STORAGE_ROLES_KEY, JSON.stringify(r)); }
+  let rolesCache;
+  function loadRoles() {
+    if (rolesCache === undefined) { try { rolesCache = JSON.parse(load(STORAGE_ROLES_KEY)) || null; } catch (e) { rolesCache = null; } }
+    return rolesCache;
+  }
+  function saveRoles(r) { rolesCache = r || null; store(STORAGE_ROLES_KEY, JSON.stringify(r)); }
   function newestRoles(a, b) { if (!a) return b || null; if (!b) return a; return (a.at || '') >= (b.at || '') ? a : b; }
   // menus de noms : ordre alphabétique simple (les rôles ne regroupent que le tableau Équipe)
   // Nom affiché : le nom du tableau, ou celui choisi dans « Réorganiser les noms » (✏️), envoyé chiffré
   // avec le planning d'équipe (mh_roles.alias { NOM du tableau: nom affiché }). Les clés restent les noms du tableau.
-  function shown(n) { const a = (loadRoles() || {}).alias; return (a && a[n]) || n; }
+  // Sans surnom, la mention de contrat du tableau (« 1/2 T (1) », « 32 », « 80% ») quitte le nom et devient un
+  // badge (C.splitName) ; si deux agents ont alors le même nom, on garde leurs noms complets pour les distinguer.
+  let nameCache = { key: null, map: new Map() };
+  function nameTable() {
+    const names = Object.keys(planView().agents);
+    const alias = (loadRoles() || {}).alias || {};
+    const key = names.join('\u0001') + '\u0002' + JSON.stringify(alias);
+    if (nameCache.key === key) return nameCache.map;
+    const parts = new Map(names.map(n => [n, C.splitName(n)]));
+    const count = new Map();
+    for (const n of names) if (!alias[n]) { const b = parts.get(n).base.toUpperCase(); count.set(b, (count.get(b) || 0) + 1); }
+    const map = new Map();
+    for (const n of names) {
+      const p = parts.get(n);
+      if (alias[n]) map.set(n, { text: alias[n], tags: p.tags });
+      else map.set(n, count.get(p.base.toUpperCase()) > 1 ? { text: n, tags: [] } : { text: p.base, tags: p.tags });
+    }
+    nameCache = { key, map };
+    return map;
+  }
+  function shown(n) { const i = nameTable().get(n); return i ? i.text : C.splitName(n).base; }
+  function nameTags(n) { const i = nameTable().get(n); return i ? i.tags : C.splitName(n).tags; }
+  function tagsHTML(n) { const t = nameTags(n); return t.length ? ` <span class="ctr">${t.map(esc).join(' ')}</span>` : ''; }
+  function nameHTML(n, bold) { const t = esc(shown(n)); return (bold ? `<strong>${t}</strong>` : t) + tagsHTML(n); }
+  function nameText(n) { const t = nameTags(n); return shown(n) + (t.length ? ' (' + t.join(' ') + ')' : ''); }
   function orderNames(names) { return names.slice().sort((a, b) => shown(a).localeCompare(shown(b), 'fr')); }
-  function nameOptions(names, exclude) {
-    return orderNames(names).filter(n => n !== exclude).map(n => `<option value="${esc(n)}">${esc(shown(n))}</option>`).join('');
+  // markMe : « · moi » après le nom de l'utilisateur (menu du planning affiché)
+  function nameOptions(names, exclude, prefix, markMe) {
+    const me = load(STORAGE_NAME_KEY);
+    return orderNames(names).filter(n => n !== exclude).map(n =>
+      `<option value="${esc(n)}">${esc((prefix || '') + nameText(n))}${markMe && n === me ? ' · moi' : ''}</option>`).join('');
   }
 
   // ── Numéros de téléphone (volontaires) : chacun ajoute le sien, transmis chiffré avec le planning
@@ -303,7 +351,7 @@
   // nom + liens Appeler / SMS si l'agent a partagé son numéro
   function nameWithPhone(n, bold) {
     const c = loadContacts()[n];
-    const label = bold ? `<strong>${esc(shown(n))}</strong>` : esc(shown(n));
+    const label = nameHTML(n, bold);
     if (!c || !c.tel || !teamCode()) return label;
     const raw = c.tel.replace(/\s/g, '');
     return `<span class="with-tel">${label} <a class="tel-link" href="tel:${esc(raw)}" aria-label="Appeler ${esc(shown(n))}">📞</a>` +
@@ -360,8 +408,10 @@
       const target = todayKey >= keys[0] && todayKey <= keys[keys.length - 1] ? todayDate() : keyToDate(keys[0]);
       state.cal.y = target.y; state.cal.m = target.m;
     }
-    state.cal.agent = $('agent').value;
-    if (!load(STORAGE_NAME_KEY) && state.cal.agent) store(STORAGE_NAME_KEY, state.cal.agent);
+    // on garde le planning affiché s'il est dans le tableau, sinon le mien, sinon le premier nom
+    // (le nom de l'utilisateur ne se choisit jamais tout seul : accueil ou « Je suis »)
+    const names = res.agents.map(a => a.name), me = load(STORAGE_NAME_KEY);
+    if (!names.includes(state.cal.agent)) state.cal.agent = names.includes(me) ? me : orderNames(names)[0];
     const fmt = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', timeZone: 'UTC' });
     const nRemarks = res.agents.reduce((n, a) => n + a.entries.filter(e => e.note).length, 0);
     const mine = (res.agents.find(a => a.name === state.cal.agent) || { entries: [] }).entries.filter(e => e.note).length;
@@ -370,9 +420,12 @@
       ? `✓ Planning enregistré sur ce téléphone, du ${esc(fmt(keys[0]))} au ${esc(fmt(keys[keys.length - 1]))}` +
         (state.books && state.books.length > 1 ? ` (${state.books.length} fichiers combinés).` : '.') +
         (nRemarks ? `<br><span class="saved-remarks">💬 ${nRemarks} commentaire${nRemarks > 1 ? 's' : ''} de case${nRemarks > 1 ? 's' : ''} lu${nRemarks > 1 ? 's' : ''} dans le fichier` +
-          (mine ? ` (dont ${mine} sur ton planning)` : '') + ' : repère le 💬 dans le calendrier.</span>' : '') : '';
+          (mine ? ` (dont ${mine} sur ton planning)` : '') + ' : repère le 💬 dans le calendrier.</span>' : '') +
+        '<br><button type="button" class="saved-go" data-go-tab="planning">📅 Voir le planning</button>' : '';
     renderCalendar();
     schedulePublish();
+    // premier lancement : « Qui es-tu ? » attend dans l'onglet Planning
+    if (!$('welcome').hidden && state.tab !== 'planning') setTab('planning');
   }
 
   // ── Planning d'équipe (voir team.js) ──────────────────────────────────────
@@ -542,11 +595,12 @@
     $('publish').hidden = !send;
     $('publishSkip').hidden = !skip;
     $('publishUndo').hidden = !undo;
+    $('settingsDot').hidden = !send;
   }
   function schedulePublish() {
     clearTimeout(publishTimer);
     previewRun++;
-    if (!teamCode() || !state.importAgents || !state.importAgents.length) { $('publishBox').hidden = true; return; }
+    if (!teamCode() || !state.importAgents || !state.importAgents.length) { $('publishBox').hidden = true; $('settingsDot').hidden = true; return; }
     $('publishBox').hidden = false;
     publishButtons(false, false, false);
     publishMsg('Comparaison avec le planning de l\'équipe…');
@@ -587,7 +641,7 @@
     publishButtons(false, false, false);
     publishMsg('Envoi à l\'équipe…');
     const agents = state.importAgents;
-    const by = $('agent').value || load(STORAGE_NAME_KEY) || '';
+    const by = load(STORAGE_NAME_KEY) || '';
     let previous = null, n = 0;
     try {
       const token = await publishKey();
@@ -651,6 +705,7 @@
     const plan = planView();
     const names = orderNames(Object.keys(plan.agents));
     const empty = !names.length;
+    state.lastRenderDay = C.dateKey(todayDate());
     $('calCard').hidden = false;
     $('importTitle').textContent = 'Importer un nouveau planning';
     // carte 1 ouverte tant qu'il n'y a aucun planning (ou pendant un import), repliée sinon
@@ -659,13 +714,14 @@
     const me = load(STORAGE_NAME_KEY);
     if (!empty && !names.includes(state.cal.agent)) state.cal.agent = names.includes(me) ? me : names[0];
     const name = empty ? '' : state.cal.agent;
+    const teamTab = state.tab === 'equipe';
     $('calAgent').hidden = empty;
-    $('calAgent').innerHTML = nameOptions(names);
+    $('calAgent').innerHTML = nameOptions(names, null, '', true);
     if (!empty) $('calAgent').value = name;
-    $('calEmpty').textContent = empty
-      ? (teamCode() ? 'Pas encore de planning sur ce téléphone : il arrivera dès qu\'un collègue l\'aura envoyé à l\'équipe, ou importe le tableau de service ci-dessous.'
-        : 'Pas encore de planning sur ce téléphone : importe le tableau de service ci-dessous pour remplir le calendrier.')
-      : 'Pas de planning pour ce mois : importe le tableau de service ci-dessous.';
+    $('calEmptyText').textContent = empty
+      ? (teamCode() ? 'Pas encore de planning sur ce téléphone : il arrivera dès qu\'un collègue l\'aura envoyé à l\'équipe. Tu peux aussi importer le tableau de service.'
+        : 'Pas encore de planning sur ce téléphone : importe le tableau de service pour remplir le calendrier.')
+      : 'Pas de planning pour ce mois.';
 
     const { y, m } = state.cal;
     $('calTitle').textContent = new Date(Date.UTC(y, m - 1, 1))
@@ -674,14 +730,16 @@
     const changes = new Map(((plan.changes || {})[name] || []).map(ch => [ch.key, ch]));
     const todayKey = C.dateKey(todayDate());
     const remarks = (plan.remarks || {})[name] || {};
+    updateTodayPill();
 
     // comparaison avec un collègue (préparer un échange de poste)
-    if (state.cal.compare === name || !plan.agents[state.cal.compare]) state.cal.compare = '';
-    $('calCompare').innerHTML = '<option value="">Comparer avec un collègue…</option>' + nameOptions(names, name);
+    if (state.cal.compare === name || !plan.agents[state.cal.compare] || teamTab) state.cal.compare = '';
+    $('calCompare').innerHTML = `<option value="">${state.cal.compare ? '✕ Arrêter de comparer' : '⇄ Comparer…'}</option>` + nameOptions(names, name, '⇄ ');
     $('calCompare').value = state.cal.compare;
-    $('compareRow').hidden = empty || names.length < 2 || state.cal.view === 'team';
+    $('calCompare').classList.toggle('on', !!state.cal.compare);
+    $('calCompare').hidden = empty || names.length < 2;
     const cmp = state.cal.compare ? plan.agents[state.cal.compare] : null;
-    $('compareLegend').hidden = !cmp || state.cal.view === 'team';
+    $('compareLegend').hidden = !cmp;
     if (cmp) $('compareLegend').innerHTML = `En haut <strong>${esc(shown(name))}</strong>, en bas <strong>${esc(shown(state.cal.compare))}</strong>. ` +
       '<span class="legend-swap">Cadre vert</span> : l\'un travaille pendant que l\'autre est en repos (échange possible).';
     const swapDay = k => {
@@ -711,23 +769,23 @@
       }
     }
     $('calGrid').innerHTML = html;
-    // sans équipe chargée, la vue Équipe s'affiche en Mois (sans oublier la préférence)
-    const view = state.cal.view === 'team' && names.length < 2 ? 'month' : state.cal.view;
+    // onglet Équipe : le tableau de toute l'équipe ; onglet Planning : Mois ou Liste
+    const view = teamTab ? 'team' : state.cal.view;
     $('calGrid').hidden = view !== 'month';
     $('calList').hidden = view !== 'list';
-    $('calTeam').hidden = view !== 'team';
+    $('calTeam').hidden = view !== 'team' || empty;
     $('calGrid').classList.toggle('comparing', !!cmp);
     $('viewMonth').setAttribute('aria-selected', String(view === 'month'));
     $('viewList').setAttribute('aria-selected', String(view === 'list'));
-    $('viewTeam').setAttribute('aria-selected', String(view === 'team'));
-    $('viewTeam').hidden = names.length < 2;
     if (view === 'list') renderList(days, changes, todayKey, cmp, swapDay, remarks);
-    if (view === 'team') renderTeamTable(plan, names, name, todayKey);
-    $('calEmpty').hidden = inMonth > 0;
+    if (view === 'team' && !empty) renderTeamTable(plan, names, me && names.includes(me) ? me : name, todayKey);
+    $('calEmpty').hidden = teamTab ? !empty : inMonth > 0;
     renderWelcome(names);
     renderSummary(days);
     renderNextDays();
     renderRemind();
+    renderMeCard(names);
+    renderPreview();
 
     // changements apportés par le dernier tableau importé
     const list = [...changes.values()].filter(ch => ch.key >= todayKey);
@@ -738,7 +796,8 @@
       box.innerHTML = `<strong>🔔 ${list.length} jour${list.length > 1 ? 's ont' : ' a'} changé dans le nouveau planning :</strong><ul>` +
         list.slice(0, 8).map(ch => `<li>${esc(fmt(ch.key))} : ${esc(codeTitle(ch.before))} → <strong>${esc(codeTitle(ch.after))}</strong></li>`).join('') +
         (list.length > 8 ? `<li>… et ${list.length - 8} autre${list.length - 8 > 1 ? 's' : ''} (marqués d'un point)</li>` : '') +
-        '</ul><button id="calChangesOk">J\'ai vu</button>';
+        '</ul><button id="calChangesOk">J\'ai vu</button>' +
+        '<button id="calChangesExport" class="link" type="button">📅 Mettre à jour l\'agenda du téléphone</button>';
     }
     renderDay();
   }
@@ -803,7 +862,7 @@
       $('wName').innerHTML = '<option value="">Choisis ton nom…</option>' + nameOptions(names);
       $('wName').value = known ? me : '';
     }
-    $('wNameDone').textContent = known ? me : '';
+    $('wNameDone').textContent = known ? shown(me) : '';
     $('wOk').hidden = !known;
   }
   function closeWelcome() { store(STORAGE_WELCOME_KEY, 'done'); $('welcome').hidden = true; }
@@ -843,14 +902,20 @@
     box.hidden = t.d < 20 || Object.keys(days).some(k => k.slice(0, 6) === prefix);
     if (box.hidden) return;
     const month = new Date(Date.UTC(next.y, next.m - 1, 1)).toLocaleDateString('fr-FR', { month: 'long', timeZone: 'UTC' });
-    box.textContent = `📅 Le planning de ${month} n'est pas encore là. Dès qu'il sort, importe-le ci-dessous` +
+    box.textContent = `📅 Le planning de ${month} n'est pas encore là. Dès qu'il sort, touche ici pour l'importer` +
       (teamCode() ? ' : l\'appli te proposera de l\'envoyer à toute l\'équipe.' : '.');
   }
 
   // ── Détail d'un jour : férié, changement, équipe du jour, échanges, note perso ──
-  function dayDetailHTML(k, withHead) {
+  function noteFieldHTML(k) {
+    return `<label class="day-note"><span class="day-sub">📝 Ma note <span class="muted">(gardée sur ce téléphone)</span></span>` +
+      `<textarea data-note="${k}" rows="2" maxlength="500" placeholder="ex. échangé avec Paul, RDV…">${esc(notes[k] || '')}</textarea></label>`;
+  }
+  function dayDetailHTML(k, withHead, mode) {
     const plan = planView(), name = state.cal.agent, d = keyToDate(k);
     const code = (plan.agents[name] || {})[k];
+    const teamMode = mode === 'equipe', isMe = name === load(STORAGE_NAME_KEY);
+    const working = !!code && C.dayKind(defOf(code)) === 'travail';
     let html = '';
     if (withHead) {
       const title = utc(d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
@@ -864,23 +929,33 @@
     const ch = ((plan.changes || {})[name] || []).find(c => c.key === k);
     if (ch && !plan.changesSeen) html += `<p class="was">Avant le nouveau planning : ${esc(codeTitle(ch.before))}</p>`;
 
+    if (!teamMode && working) {
+      const mates = C.sameShift(plan, k, code, name);
+      html += `<p class="day-mates">${mates.length
+        ? `<span class="muted">Avec ${isMe ? 'toi' : esc(shown(name))} :</span> ${mates.map(n => nameWithPhone(n)).join(', ')}`
+        : `<span class="muted">Seul(e) en ${esc(codeLabel(code))}</span>`}</p>`;
+    }
     const team = C.teamOfDay(plan, k, state.codes);
     if (team.length > 1 || (team.length === 1 && team[0].names.length > 1)) {
-      html += '<div class="day-team"><p class="day-sub">Équipe du jour</p>' + team.map(g =>
+      const rows = team.map(g =>
         `<div class="team-row${g.code === code ? ' mine' : ''}"><span class="team-code">${chip(g.code)} ${esc(codeLabel(g.code))} <span class="muted">(${g.names.length})</span></span>` +
-        `<span class="team-names">${g.names.map(n => nameWithPhone(n, n === name)).join(', ')}</span></div>`).join('') + '</div>';
+        `<span class="team-names">${g.names.map(n => nameWithPhone(n, n === name)).join(', ')}</span></div>`).join('');
+      const total = team.reduce((n, g) => n + g.names.length, 0);
+      html += teamMode
+        ? `<div class="day-team"><p class="day-sub">Équipe du jour</p>${rows}</div>`
+        : `<details class="day-team day-team-fold"><summary>👥 <strong>Toute l'équipe ce jour-là</strong> <span class="muted">(${total})</span></summary>${rows}</details>`;
     }
-    if (code && C.dayKind(defOf(code)) === 'travail' && k >= C.dateKey(todayDate())) html += swapHTML(plan, name, k, code);
-    html += `<label class="day-note"><span class="day-sub">📝 Ma note <span class="muted">(gardée sur ce téléphone)</span></span>` +
-      `<textarea data-note="${k}" rows="2" maxlength="500" placeholder="ex. échangé avec Paul, RDV…">${esc(notes[k] || '')}</textarea></label>`;
+    if (working && k >= C.dateKey(todayDate())) html += swapHTML(plan, name, k, code, isMe);
+    if (!teamMode) html += notes[k] ? noteFieldHTML(k) : `<button class="link note-add" type="button" data-note-add="${k}">📝 Ajouter une note</button>`;
     return html;
   }
 
   // Permutations possibles un jour travaillé, de la meilleure à la moins intéressante (C.swapOptions)
   const SWAP_SHOWN = 6;
-  function swapHTML(plan, name, k, code) {
+  function swapHTML(plan, name, k, code, isMe) {
     const r = C.swapOptions(plan, name, k, state.codes, { today: C.dateKey(todayDate()) });
     const n = r.options.length;
+    if (isMe) state.swapCtx = { k, code, options: r.options };
     const fmt = key => utc(keyToDate(key)).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
     const hm = min => Math.floor(min / 60) + ' h' + (min % 60 ? ' ' + String(min % 60).padStart(2, '0') : '');
     const item = (o, i) => {
@@ -894,7 +969,8 @@
       if (o.overHours) tags.push(`<span class="swap-tag warn">au-delà des ${o.overHours} h du contrat</span>`);
       if (o.run >= 6) tags.push(`<span class="swap-tag">${o.run} jours d'affilée</span>`);
       return `<li${i >= SWAP_SHOWN ? ' class="swap-more" hidden' : ''}>${nameWithPhone(o.name)}${o.type === 'meme-jour' ? ' :' : ''} ${what}` +
-        (tags.length ? ' ' + tags.join(' ') : '') + '</li>';
+        (tags.length ? ' ' + tags.join(' ') : '') +
+        (isMe ? ` <button class="swap-ask" type="button" data-swap="${i}">✉️ Proposer</button>` : '') + '</li>';
     };
     let html = `<details class="day-swap"><summary>🔁 <strong>Permutations possibles</strong> ` +
       `<span class="muted">(${n ? n + ' solution' + (n > 1 ? 's' : '') : 'aucune'})</span></summary>`;
@@ -914,7 +990,13 @@
     const dates = C.monthGrid(y, m).flat().filter(Boolean);
     if (state.reorder) { renderReorder(names, me); return; }
     const rows = teamOrder(names, me).map(n => ({ name: n }));
-    let html = '<table class="team-table"><thead><tr><th class="tt-name"></th>';
+    // codes présents ce mois-ci (dans l'ordre des codes) : touchés, ils sont surlignés dans le tableau
+    const present = new Set();
+    for (const n of names) for (const d of dates) { const c = (plan.agents[n] || {})[C.dateKey(d)]; if (c) present.add(c); }
+    const order = state.codes.map(c => C.normCode(c.code));
+    const legend = [...present].sort((a, b) => ((order.indexOf(a) + 1) || 999) - ((order.indexOf(b) + 1) || 999) || a.localeCompare(b));
+    const hl = present.has(state.cal.hl) ? state.cal.hl : '';
+    let html = `<table class="team-table${hl ? ' hl-on' : ''}"><thead><tr><th class="tt-name"></th>`;
     for (const d of dates) {
       const k = C.dateKey(d), wd = utc(d).getUTCDay();
       const cls = [wd === 0 || wd === 6 ? 'we' : '', k === todayKey ? 'today' : '', k === state.cal.selected ? 'sel' : '', C.holidayName(k) ? 'hol' : ''].filter(Boolean).join(' ');
@@ -925,20 +1007,30 @@
       if (row.header) { html += `<tr class="tt-group"><th class="tt-name" scope="rowgroup">${esc(row.header)}</th><td colspan="${dates.length}"></td></tr>`; continue; }
       const n = row.name;
       const days = plan.agents[n] || {};
-      html += `<tr${n === me ? ' class="me"' : ''}><th class="tt-name" scope="row">${esc(shown(n))}</th>`;
+      html += `<tr${n === me ? ' class="me"' : ''}><th class="tt-name" scope="row">${esc(shown(n))}${tagsHTML(n)}</th>`;
       for (const d of dates) {
         const k = C.dateKey(d), wd = utc(d).getUTCDay();
-        const cls = [wd === 0 || wd === 6 ? 'we' : '', k === todayKey ? 'today' : '', k === state.cal.selected ? 'sel' : ''].filter(Boolean).join(' ');
+        const cls = [wd === 0 || wd === 6 ? 'we' : '', k === todayKey ? 'today' : '', k === state.cal.selected ? 'sel' : '',
+          hl && days[k] === hl ? 'hl' : ''].filter(Boolean).join(' ');
         const rk = ((plan.remarks || {})[n] || {})[k];
         html += `<td class="${cls}${rk ? ' remark' : ''}" data-key="${k}"${rk ? ` title="${esc(rk)}"` : ''}>${days[k] ? chip(days[k]) : ''}${rk ? '<span class="tt-remark">💬</span>' : ''}</td>`;
       }
       html += '</tr>';
     }
-    html += '</tbody></table>';
-    $('calTeam').innerHTML = `<div class="tt-wrap">${html}</div>` +
+    html += '</tbody>';
+    if (hl) {
+      html += `<tfoot><tr><th class="tt-name" scope="row">Total ${chip(hl)}</th>` + dates.map(d => {
+        const k = C.dateKey(d), n = names.filter(x => (plan.agents[x] || {})[k] === hl).length;
+        return `<td data-key="${k}">${n || ''}</td>`;
+      }).join('') + '</tr></tfoot>';
+    }
+    html += '</table>';
+    const legendHTML = legend.length > 1 ? '<div class="tt-legend"><span>Surligner :</span>' + legend.map(c =>
+      `<button class="hl-btn" type="button" data-hl="${esc(c)}" aria-pressed="${c === hl}" aria-label="Surligner ${esc(codeLabel(c))}">${chip(c)}</button>`).join('') + '</div>' : '';
+    $('calTeam').innerHTML = legendHTML + `<div class="tt-wrap">${html}</div>` +
       '<div class="tt-tools"><button id="ttReorder" type="button">↕︎ Réorganiser les noms</button></div>' +
       `<p id="orderMsg" class="hint order-msg"${state.orderMsg ? '' : ' hidden'}>${esc(state.orderMsg || '')}</p>` +
-      '<p class="hint">Touche un jour pour voir le détail. Fais glisser le tableau pour voir tout le mois.</p>';
+      '<p class="hint">Touche un jour pour voir l\'équipe de ce jour-là, ou un code pour le surligner. Fais glisser le tableau pour voir tout le mois.</p>';
     const wrap = $('calTeam').querySelector('.tt-wrap');
     const target = wrap.querySelector('th.sel, th.today');
     if (target) wrap.scrollLeft = Math.max(0, target.offsetLeft - 140);
@@ -970,17 +1062,17 @@
         (cmp ? `<span class="cmp-inline">⇄ ${cmp[k] ? chip(cmp[k]) + ' ' + esc(codeLabel(cmp[k])) : '<span class="muted">—</span>'}</span>` : '') +
         '</span>' +
         (remarks[k] ? `<span class="row-remark">💬 ${esc(remarks[k])}</span>` : '') + '</button>';
-      if (k === state.cal.selected) html += `<div class="cal-row-detail">${dayDetailHTML(k, false)}</div>`;
+      if (k === state.cal.selected) html += `<div class="cal-row-detail">${dayDetailHTML(k, false, 'planning')}</div>`;
     }
     $('calList').innerHTML = html;
   }
 
   function renderDay() {
     const k = state.cal.selected, box = $('calDay');
-    if (state.cal.view === 'list') { box.hidden = true; return; }
+    if (state.tab !== 'equipe' && state.cal.view === 'list') { box.hidden = true; return; }
     const d = k && keyToDate(k);
     if (!d || d.y !== state.cal.y || d.m !== state.cal.m) { box.hidden = true; return; }
-    const html = dayDetailHTML(k, true);
+    const html = dayDetailHTML(k, true, state.tab === 'equipe' ? 'equipe' : 'planning');
     box.innerHTML = html;
     box.hidden = false;
   }
@@ -1000,6 +1092,12 @@
     state.cal.y = d.y; state.cal.m = d.m;
   }
 
+  // « Aujourd'hui » n'apparaît que si on regarde un autre mois ou un autre jour
+  function updateTodayPill() {
+    const t = todayDate();
+    $('calToday').classList.toggle('ghost', state.cal.y === t.y && state.cal.m === t.m && state.cal.selected === C.dateKey(t));
+  }
+
   function moveMonth(delta) {
     let { y, m } = state.cal;
     m += delta;
@@ -1008,8 +1106,16 @@
     renderCalendar();
   }
 
+  // Toujours disponible dès qu'un planning est sur le téléphone (importé ou reçu de l'équipe), pas seulement
+  // juste après un import. Planning exporté : celui de l'utilisateur, sinon celui affiché.
   function renderPreview() {
-    const agent = state.result.agents.find(a => a.name === $('agent').value) || state.result.agents[0];
+    const plan = state.plan;
+    const names = plan ? Object.keys(plan.agents) : [];
+    $('previewCard').hidden = !names.length;
+    if (!names.length) { state.events = []; state.exportName = ''; return; }
+    const me = load(STORAGE_NAME_KEY);
+    const name = names.includes(me) ? me : names.includes(state.cal.agent) ? state.cal.agent : orderNames(names)[0];
+    const agent = planToAgents({ [name]: plan.agents[name] }, plan.remarks)[0];
     state.exportName = agent.name;
     const built = C.buildEvents(agent.entries, state.codes);
     const unknown = built.unknown;
@@ -1022,7 +1128,8 @@
     $('previewCard').hidden = false;
 
     const dayFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', timeZone: 'UTC' });
-    const changes = ((state.plan && state.plan.changes || {})[agent.name] || []).filter(ch => !fromToday || ch.key >= today);
+    // (même après « J'ai vu » dans le calendrier : l'agenda du téléphone, lui, n'est pas encore à jour)
+    const changes = ((plan.changes || {})[agent.name] || []).filter(ch => !fromToday || ch.key >= today);
     const changed = new Map(changes.map(ch => [ch.key, ch]));
     $('changes').hidden = !changes.length;
     $('changes').innerHTML = changes.length
@@ -1062,7 +1169,7 @@
   function renderCodes() {
     const colorOptions = sel => '<option value="">Aucune</option>' + Object.keys(C.COLORS).map(k =>
       `<option value="${k}" ${sel === k ? 'selected' : ''}>${C.COLORS[k].emoji} ${k}</option>`).join('');
-    let html = '<tr><th>Agenda</th><th>Code</th><th>Libellé</th><th>Couleur</th><th></th></tr>';
+    let html = '<tr><th title="Mettre dans l\'agenda du téléphone" aria-label="Agenda">📅</th><th>Code</th><th>Libellé</th><th>Couleur</th><th></th></tr>';
     state.codes.forEach((c, i) => {
       html += `<tr data-i="${i}">` +
         `<td><input type="checkbox" data-f="include" ${c.include ? 'checked' : ''}></td>` +
@@ -1085,7 +1192,7 @@
   // ── Export ────────────────────────────────────────────────────────────────
   function download() {
     if (!state.events.length) return;
-    const name = state.exportName || $('agent').value;
+    const name = state.exportName;
     const ics = C.buildICS(state.events, { name, alarm: $('alarm').checked });
     const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }));
     const a = document.createElement('a');
@@ -1109,13 +1216,6 @@
   drop.addEventListener('drop', e => readFiles(e.dataTransfer.files));
   $('sheet').addEventListener('change', () => { $('month').value = ''; refresh(); });
   $('month').addEventListener('change', refresh);
-  $('agent').addEventListener('change', () => {
-    store(STORAGE_NAME_KEY, $('agent').value);
-    store('mh_name_ok', '1');
-    state.cal.agent = $('agent').value;
-    renderPreview();
-    renderCalendar();
-  });
 
   $('calPrev').addEventListener('click', () => moveMonth(-1));
   $('calNext').addEventListener('click', () => moveMonth(1));
@@ -1124,16 +1224,12 @@
     state.cal.y = t.y; state.cal.m = t.m; state.cal.selected = C.dateKey(t);
     renderCalendar();
   });
+  // regarder le planning d'un collègue ne change pas « Je suis » (sinon ton numéro ou tes envois partiraient à son nom)
   $('calAgent').addEventListener('change', e => {
     state.cal.agent = e.target.value;
-    store(STORAGE_NAME_KEY, e.target.value); // l'appli rouvre sur le dernier planning consulté
-    if (state.result && state.result.agents.some(a => a.name === e.target.value)) {
-      $('agent').value = e.target.value;
-      renderPreview();
-    }
     renderCalendar();
   });
-  ['viewMonth', 'viewList', 'viewTeam'].forEach(id => $(id).addEventListener('click', e => {
+  ['viewMonth', 'viewList'].forEach(id => $(id).addEventListener('click', e => {
     state.cal.view = e.currentTarget.dataset.view;
     store(STORAGE_VIEW_KEY, state.cal.view);
     renderCalendar();
@@ -1181,13 +1277,16 @@
 
   $('calCompare').addEventListener('change', e => { state.cal.compare = e.target.value; renderCalendar(); });
   $('calTeam').addEventListener('click', e => {
+    const hlBtn = e.target.closest('.hl-btn');
+    if (hlBtn) { state.cal.hl = state.cal.hl === hlBtn.dataset.hl ? '' : hlBtn.dataset.hl; renderCalendar(); return; }
     const id = e.target.id;
     if (id === 'ttReorder') { state.reorder = true; state.reorderList = null; state.orderMsg = ''; renderCalendar(); return; }
     if (e.target.closest('.ro-edit')) {
       const li = e.target.closest('li'), span = li.querySelector('.ro-name');
       if (!span) return;
       const input = document.createElement('input');
-      input.type = 'text'; input.className = 'ro-input'; input.maxLength = 40; input.value = span.textContent;
+      input.type = 'text'; input.className = 'ro-input'; input.maxLength = 40;
+      input.value = ((loadRoles() || {}).alias || {})[li.dataset.name] || li.dataset.name;
       input.setAttribute('aria-label', 'Nom affiché');
       span.replaceWith(input); e.target.closest('.ro-edit').remove(); input.focus(); input.select();
       return;
@@ -1248,6 +1347,7 @@
     state.cal.selected = cell.dataset.key;
     $('calGrid').querySelectorAll('.selected').forEach(x => x.classList.remove('selected'));
     cell.classList.add('selected');
+    updateTodayPill();
     renderDay();
   });
   // « Voir les N autres » permutations (détail du jour, vue Mois ou Liste)
@@ -1258,6 +1358,7 @@
     btn.remove();
   });
   $('calChanges').addEventListener('click', e => {
+    if (e.target.id === 'calChangesExport') { goTo('export'); return; }
     if (e.target.id !== 'calChangesOk') return;
     if (!state.plan) return;
     state.plan.changesSeen = true;
@@ -1281,7 +1382,7 @@
   $('fromToday').checked = load(STORAGE_FROM_TODAY_KEY) !== '0';
   $('fromToday').addEventListener('change', e => {
     store(STORAGE_FROM_TODAY_KEY, e.target.checked ? '1' : '0');
-    if (state.result) renderPreview();
+    renderPreview();
   });
 
   const SHARE_URL = 'https://planning-equipe-coa.github.io/horaires/';
@@ -1331,11 +1432,18 @@
   });
 
   // hors connexion : l'appli s'ouvre même sans réseau (voir sw.js)
-  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  // L'appli s'ouvre depuis la copie du téléphone (instantané, même sans réseau) ; sw.js vérifie en arrière-plan
+  // s'il y a une nouvelle version et prévient : bandeau « Nouvelle version de l'appli · Afficher ».
+  const swOK = 'serviceWorker' in navigator && location.protocol !== 'file:';
+  if (swOK) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js').catch(() => { /* pas de hors connexion, l'appli marche quand même */ });
     });
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (e.data && e.data.type === 'update') $('updateBar').hidden = false;
+    });
   }
+  $('updateGo').addEventListener('click', () => location.reload());
 
   $('teamJoin').addEventListener('click', () => joinTeam(false));
   $('teamCode').addEventListener('keydown', e => { if (e.key === 'Enter') joinTeam(false); });
@@ -1372,14 +1480,9 @@
     renderTeam();
   });
   // le rappel de fin de mois mène directement à l'import
-  $('calRemind').addEventListener('click', () => {
-    $('importDetails').open = true;
-    $('drop').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  });
-  $('wImport').addEventListener('click', () => {
-    $('importDetails').open = true;
-    $('drop').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  });
+  $('calRemind').addEventListener('click', () => goTo('import'));
+  $('wImport').addEventListener('click', () => goTo('import'));
+  $('calEmptyGo').addEventListener('click', () => goTo('import'));
   $('wName').addEventListener('change', e => {
     if (!e.target.value) return;
     store(STORAGE_NAME_KEY, e.target.value);
@@ -1483,7 +1586,7 @@
         `<li data-name="${esc(n)}"${n === me ? ' class="me"' : ''}>` +
         `<span class="ro-handle" role="button" aria-label="Déplacer ${esc(n)}">` +
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>' +
-        `<span class="ro-name">${esc(shown(n))}</span>` +
+        `<span class="ro-name">${nameHTML(n)}</span>` +
         `<button class="ro-edit link" type="button" aria-label="Renommer ${esc(shown(n))}">✏️</button></li>`).join('') +
       '</ol><div class="actions"><button id="roDone" class="primary" type="button">Terminé</button>' +
       '<button id="roReset" type="button">Par défaut</button><button id="roCancel" class="link" type="button">Annuler</button></div>';
@@ -1496,7 +1599,7 @@
       const input = li.querySelector('.ro-input');
       if (!input) return;
       const v = input.value.trim().replace(/\s+/g, ' '), n = li.dataset.name;
-      if (!v || v === n) delete alias[n]; else alias[n] = v;
+      if (!v || v === n || v === C.splitName(n).base) delete alias[n]; else alias[n] = v; // nom du tableau = pas de surnom
     });
     return alias;
   }
@@ -1737,10 +1840,171 @@
   $('publishUndo').addEventListener('click', undoPublish);
   // au retour sur l'appli (elle reste souvent ouverte en arrière-plan), on revérifie
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && Date.now() - lastSync > 60000) syncTeam(false);
+    if (document.visibilityState !== 'visible') return;
+    if (Date.now() - lastSync > 60000) syncTeam(false);
+    if (swOK && navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ type: 'check' });
+    // l'appli peut rester ouverte en arrière-plan d'un jour sur l'autre : « Aujourd'hui » doit suivre
+    if (C.dateKey(todayDate()) !== state.lastRenderDay) renderCalendar();
+  });
+
+  // ── Onglets : Planning · Équipe · Réglages ────────────────────────────────
+  // Visibilité gérée par le CSS (body[data-tab] + attributs data-tab des cartes, classes only-planning / only-equipe)
+  function setTab(t) {
+    if (!['planning', 'equipe', 'reglages'].includes(t)) t = 'planning';
+    const changed = state.tab !== t;
+    state.tab = t;
+    document.body.dataset.tab = t;
+    document.querySelectorAll('.tab[data-tab-btn]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tabBtn === t)));
+    if (t === 'reglages') {
+      renderNotesCard();
+      if ($('importDetails').open) ensureXLSX().catch(() => {});
+    } else {
+      store(STORAGE_TAB_KEY, t);
+      renderCalendar();
+    }
+    window.scrollTo({ top: 0, behavior: changed ? 'auto' : 'smooth' }); // onglet déjà ouvert : remonte en haut
+  }
+  // vers l'import ou l'export (onglet Réglages), carte ouverte
+  function goTo(target) {
+    setTab('reglages');
+    const det = target === 'export' ? $('exportDetails') : $('importDetails');
+    det.open = true;
+    if (target === 'import') ensureXLSX().catch(() => {});
+    requestAnimationFrame(() => (target === 'import' ? $('drop') : det).scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  }
+  document.querySelector('.tabbar').addEventListener('click', e => {
+    const b = e.target.closest('[data-tab-btn]');
+    if (b) setTab(b.dataset.tabBtn);
+  });
+  $('importDetails').addEventListener('toggle', () => { if ($('importDetails').open) ensureXLSX().catch(() => {}); });
+
+  // « Je suis » (Réglages) : le seul endroit, avec l'accueil, où l'on choisit son nom
+  function renderMeCard(names) {
+    $('meCard').hidden = !names.length;
+    if (!names.length) return;
+    const me = load(STORAGE_NAME_KEY);
+    const known = names.includes(me);
+    $('meName').innerHTML = (known ? '' : '<option value="">Choisis ton nom…</option>') + nameOptions(names);
+    $('meName').value = known ? me : '';
+  }
+  $('meName').addEventListener('change', e => {
+    if (!e.target.value) return;
+    store(STORAGE_NAME_KEY, e.target.value);
+    store('mh_name_ok', '1');
+    state.cal.agent = e.target.value;
+    renderCalendar();
+    renderMyPhone();
+  });
+
+  // ── Notes : gardées sur ce téléphone uniquement → sauvegarde / restauration par fichier ──
+  let persistAsked = false;
+  function askPersist() { // demande au navigateur de ne pas effacer les données de l'appli (une fois)
+    if (persistAsked || !navigator.storage || !navigator.storage.persist) return;
+    persistAsked = true;
+    navigator.storage.persisted().then(p => p || navigator.storage.persist()).catch(() => {});
+  }
+  function notesMsg(text, kind) {
+    $('notesMsg').hidden = !text;
+    $('notesMsg').textContent = text || '';
+    $('notesMsg').className = 'team-msg ' + (kind || '');
+  }
+  function renderNotesCard() {
+    const n = Object.keys(notes).length;
+    $('notesInfo').textContent = n
+      ? `${n} note${n > 1 ? 's' : ''} sur ce téléphone, jamais envoyée${n > 1 ? 's' : ''}.`
+      : 'Aucune note pour l\'instant : ajoute-en depuis le détail d\'un jour.';
+    $('notesSave').disabled = !n;
+  }
+  $('notesSave').addEventListener('click', async () => {
+    const data = JSON.stringify({ app: 'planning-coa', type: 'notes', v: 1, at: new Date().toISOString(), notes }, null, 1);
+    const fname = `notes-planning-coa-${C.dateKey(todayDate())}.json`;
+    const file = new File([data], fname, { type: 'application/json' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'Mes notes Planning COA' });
+        notesMsg('✓ Sauvegarde envoyée : garde le fichier (Fichiers, Drive, e-mail…).', 'ok');
+      } catch (e) { /* partage annulé */ }
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    notesMsg('✓ Fichier téléchargé : ' + fname, 'ok');
+  });
+  $('notesRestore').addEventListener('click', () => $('notesFile').click());
+  $('notesFile').addEventListener('change', e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onerror = () => notesMsg('Fichier illisible.', 'err');
+    reader.onload = () => {
+      let data;
+      try { data = JSON.parse(reader.result); } catch (err) { data = null; }
+      if (!data || data.type !== 'notes' || !data.notes || typeof data.notes !== 'object') {
+        notesMsg('Ce fichier n\'est pas une sauvegarde de notes Planning COA.', 'err');
+        return;
+      }
+      let added = 0, kept = 0;
+      for (const [k, v] of Object.entries(data.notes)) {
+        const text = String(v || '').trim().slice(0, 500);
+        if (!/^\d{8}$/.test(k) || !text) continue;
+        if (!notes[k]) { notes[k] = text; added++; } else if (notes[k] !== text) kept++;
+      }
+      store(STORAGE_NOTES_KEY, JSON.stringify(notes));
+      askPersist();
+      renderNotesCard();
+      renderCalendar();
+      notesMsg(`✓ ${added} note${added > 1 ? 's' : ''} restaurée${added > 1 ? 's' : ''}` +
+        (kept ? ` ; ${kept} jour${kept > 1 ? 's' : ''} avai${kept > 1 ? 'ent' : 't'} déjà une autre note, gardée telle quelle.` : '.'), 'ok');
+    };
+    reader.readAsText(file);
+  });
+
+  // ── Proposer une permutation : message déjà rédigé (SMS si le numéro est partagé, sinon partage / copie)
+  function swapMessage(o, ctx) {
+    const day = key => utc(keyToDate(key)).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+    if (o.type === 'meme-jour') {
+      return `Salut ! Je te propose un échange le ${day(ctx.k)} : je prends ton poste (${codeLabel(o.code)}) et tu prends le mien (${codeLabel(ctx.code)}). Ça te dit ?`;
+    }
+    return `Salut ! Je te propose un échange : tu prends mon poste du ${day(ctx.k)} (${codeLabel(ctx.code)}) ` +
+      `et je prends le tien du ${day(o.back)} (${codeLabel(o.backCode)}). Ça te dit ?`;
+  }
+  async function askSwap(btn) {
+    const ctx = state.swapCtx, o = ctx && ctx.options[+btn.dataset.swap];
+    if (!o) return;
+    const text = swapMessage(o, ctx);
+    const c = teamCode() && loadContacts()[o.name];
+    if (c && c.tel) { window.location.href = 'sms:' + c.tel.replace(/\s/g, '') + '?&body=' + encodeURIComponent(text); return; }
+    if (navigator.share) { try { await navigator.share({ text }); } catch (e) { /* annulé */ } return; }
+    try {
+      await navigator.clipboard.writeText(text);
+      btn.textContent = '✓ Message copié';
+    } catch (e) {
+      window.prompt('Copie ce message :', text);
+    }
+  }
+  document.addEventListener('click', e => {
+    const ask = e.target.closest('.swap-ask');
+    if (ask) { askSwap(ask); return; }
+    const add = e.target.closest('.note-add');
+    if (add) {
+      const k = add.dataset.noteAdd;
+      add.insertAdjacentHTML('afterend', noteFieldHTML(k));
+      const field = add.nextElementSibling.querySelector('textarea');
+      add.remove();
+      field.focus();
+      return;
+    }
+    const go = e.target.closest('[data-go-tab]');
+    if (go) setTab(go.dataset.goTab);
   });
 
   renderCodes();
+  document.body.dataset.tab = state.tab;
+  document.querySelectorAll('.tab[data-tab-btn]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tabBtn === state.tab)));
   if (state.plan && !load(STORAGE_PLAN_KEY)) savePlan(); // reprise de l'ancien suivi des exports
   openOnUsefulMonth();
   renderCalendar();

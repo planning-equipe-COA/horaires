@@ -421,3 +421,15 @@ test('contrats : mi-temps 3 jours par semaine au plus, 32 h classé après ; ABJ
   assert.equal(a.overHours, 32);                                   // 36 h > 32 h : proposé, marqué
   assert.ok(r.options.indexOf(p) < r.options.indexOf(a));          // et classé après
 });
+
+test('noms affichés : mention de contrat retirée du nom et rendue en badge', () => {
+  const s = n => C.splitName(n);
+  assert.deepStrictEqual(s('NOEL 1/2 T (1)'), { base: 'NOEL', tags: ['½'] });
+  assert.deepStrictEqual(s('BLANCKAERT 1/2 T (2)'), { base: 'BLANCKAERT', tags: ['½'] });
+  assert.deepStrictEqual(s('TESSIER 32 80%'), { base: 'TESSIER', tags: ['32h'] });
+  assert.deepStrictEqual(s('LAMBERT 32'), { base: 'LAMBERT', tags: ['32h'] });
+  assert.deepStrictEqual(s('DURAND 80%'), { base: 'DURAND', tags: ['80%'] });
+  assert.deepStrictEqual(s('SANCHEZ (2)'), { base: 'SANCHEZ (2)', tags: [] }); // homonyme : inchangé
+  assert.deepStrictEqual(s('MOREAU'), { base: 'MOREAU', tags: [] });
+  assert.deepStrictEqual(s('32'), { base: '32', tags: [] });                   // jamais de nom vide
+});

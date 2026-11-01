@@ -13,14 +13,14 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-tab="planning">
 <main>
   <header class="app-head">
     <h1>Planning COA</h1>
     <button id="utilesBtn" class="hdr-btn" type="button" aria-label="Numéros utiles" title="Numéros utiles" hidden>📞</button>
   </header>
 
-  <section id="welcome" class="card welcome" hidden>
+  <section id="welcome" class="card welcome" data-tab="planning" hidden>
     <h2>👋 Bienvenue dans Planning COA</h2>
     <ol class="welcome-steps">
       <li id="wTeam"><strong>Récupère le planning</strong>
@@ -37,36 +37,35 @@
     <div class="actions"><button id="wOk" class="primary" hidden>C'est prêt 👍</button><button id="wSkip" class="link">Passer</button></div>
   </section>
 
-  <section id="calCard" class="card cal" hidden>
-    <div id="nextDays" class="next-days" hidden></div>
-    <p id="calRemind" class="remind" hidden></p>
+  <section id="calCard" class="card cal" data-tab="planning equipe" hidden>
+    <div id="nextDays" class="next-days only-planning" hidden></div>
+    <p id="calRemind" class="remind only-planning" hidden></p>
     <div class="cal-head">
-      <button id="calPrev" class="cal-nav" aria-label="Mois précédent">‹</button>
       <h2 id="calTitle"></h2>
-      <button id="calNext" class="cal-nav" aria-label="Mois suivant">›</button>
+      <button id="calToday" class="today-pill" type="button">Aujourd'hui</button>
+      <button id="calPrev" class="cal-nav" type="button" aria-label="Mois précédent">‹</button>
+      <button id="calNext" class="cal-nav" type="button" aria-label="Mois suivant">›</button>
     </div>
-    <div class="cal-tools">
+    <div class="cal-tools only-planning">
       <select id="calAgent" aria-label="Planning de"></select>
-      <button id="calToday">Aujourd'hui</button>
+      <select id="calCompare" class="cmp-select" aria-label="Comparer avec un collègue"></select>
     </div>
-    <div id="compareRow" class="cal-compare">
-      <span aria-hidden="true">⇄</span>
-      <select id="calCompare" aria-label="Comparer avec un collègue"></select>
-    </div>
-    <p id="compareLegend" class="hint cmp-legend" hidden></p>
-    <p id="teamStatus" class="team-status" hidden></p>
-    <div class="seg" role="tablist" aria-label="Affichage">
+    <p id="compareLegend" class="hint cmp-legend only-planning" hidden></p>
+    <p id="teamStatus" class="team-status only-equipe" hidden></p>
+    <div class="seg only-planning" role="tablist" aria-label="Affichage">
       <button id="viewMonth" role="tab" data-view="month">Mois</button>
       <button id="viewList" role="tab" data-view="list">Liste</button>
-      <button id="viewTeam" role="tab" data-view="team">Équipe</button>
     </div>
-    <div id="calChanges" class="changes" hidden></div>
-    <div id="calGrid" class="cal-grid" role="grid"></div>
-    <div id="calList" class="cal-list" hidden></div>
-    <div id="calTeam" class="cal-team" hidden></div>
-    <p id="calEmpty" class="hint" hidden>Pas de planning pour ce mois : importe le tableau de service ci-dessous.</p>
+    <div id="calChanges" class="changes only-planning" hidden></div>
+    <div id="calGrid" class="cal-grid only-planning" role="grid"></div>
+    <div id="calList" class="cal-list only-planning" hidden></div>
+    <div id="calTeam" class="cal-team only-equipe" hidden></div>
+    <div id="calEmpty" class="cal-empty" hidden>
+      <p id="calEmptyText" class="hint"></p>
+      <button id="calEmptyGo" type="button">Importer le tableau</button>
+    </div>
     <div id="calDay" class="cal-day" hidden></div>
-    <div id="sumBox" class="cal-sum-box">
+    <div id="sumBox" class="cal-sum-box only-planning">
       <div class="seg seg-sm" role="tablist" aria-label="Résumé">
         <button id="sumMonth" role="tab" data-scope="month">Ce mois</button>
         <button id="sumYear" role="tab" data-scope="year">Année</button>
@@ -76,7 +75,14 @@
     </div>
   </section>
 
-  <section class="card">
+  <section id="meCard" class="card me-card" data-tab="reglages" hidden>
+    <label class="me-row" for="meName"><span class="me-label">👤 Je suis</span>
+      <select id="meName" aria-label="Ton nom"></select></label>
+    <p class="hint">Ton nom sert pour « Aujourd'hui / Demain », l'agenda du téléphone, ton numéro et les envois à l'équipe.
+      Regarder le planning d'un collègue ne le change pas.</p>
+  </section>
+
+  <section id="importCard" class="card" data-tab="reglages">
     <details id="importDetails" class="fold" open>
       <summary><h2><span id="importTitle">Importer un nouveau planning</span></h2></summary>
     <label id="drop" class="drop" for="file">
@@ -110,11 +116,9 @@
     </details>
   </section>
 
-  <section id="previewCard" class="card" hidden>
+  <section id="previewCard" class="card" data-tab="reglages" hidden>
     <details id="exportDetails" class="fold">
-      <summary><h2>Ajouter à l'agenda du téléphone <span class="opt">facultatif</span></h2></summary>
-    <!-- agent exporté = celui choisi sous la date du calendrier (menu caché, synchronisé) -->
-    <select id="agent" hidden aria-hidden="true"></select>
+      <summary><h2>📅 Ajouter à l'agenda du téléphone <span class="opt">facultatif</span></h2></summary>
     <div id="changes" class="changes" hidden></div>
     <p id="summary" class="summary"></p>
     <div id="unknown" class="unknown" hidden></div>
@@ -145,8 +149,8 @@
     </details>
   </section>
 
-  <section class="card">
-    <details id="shareDetails">
+  <section class="card" data-tab="reglages">
+    <details id="shareDetails" class="fold">
       <summary><h2>📲 Partager l'application</h2></summary>
       <p class="hint">Fais scanner ce QR code avec l'appareil photo du téléphone.</p>
       <div class="qr">
@@ -159,8 +163,8 @@
     </details>
   </section>
 
-  <section class="card">
-    <details id="teamDetails">
+  <section class="card" data-tab="reglages">
+    <details id="teamDetails" class="fold">
       <summary><h2>🔑 Code d'équipe</h2></summary>
       <div id="teamOut">
         <p class="hint">Avec le code d'équipe, le planning publié par un collègue arrive tout seul dans ton calendrier,
@@ -215,10 +219,22 @@
     </details>
   </section>
 
-  <section class="card">
-    <details id="codesDetails">
+  <section class="card" data-tab="reglages">
+    <details id="notesDetails" class="fold">
+      <summary><h2>📝 Mes notes</h2></summary>
+      <p id="notesInfo" class="hint"></p>
+      <p class="hint">Tes notes ne sont gardées que sur ce téléphone. Fais une sauvegarde de temps en temps, et avant de changer
+        de téléphone ou d'installer l'appli sur l'écran d'accueil (sur iPhone, l'icône repart de zéro).</p>
+      <div class="actions"><button id="notesSave" type="button">💾 Sauvegarder</button><button id="notesRestore" type="button">📂 Restaurer</button></div>
+      <input id="notesFile" type="file" accept=".json,application/json" hidden>
+      <p id="notesMsg" class="team-msg" hidden></p>
+    </details>
+  </section>
+
+  <section class="card" data-tab="reglages">
+    <details id="codesDetails" class="fold">
       <summary><h2>🎨 Codes et couleurs</h2></summary>
-      <p class="hint">Coche les codes à mettre dans l'agenda. Réglages mémorisés sur cet appareil.</p>
+      <p class="hint">Coche (📅) les codes à mettre dans l'agenda du téléphone. Les couleurs valent pour l'appli et pour l'agenda. Réglages mémorisés sur cet appareil.</p>
       <div class="table-wrap"><table id="codes"></table></div>
       <div class="actions">
         <button id="addCode">Ajouter un code</button>
@@ -227,6 +243,24 @@
     </details>
   </section>
 </main>
+
+<div id="updateBar" class="update-bar" role="status" hidden>
+  <span>✨ Nouvelle version de l'appli</span><button id="updateGo" type="button">Afficher</button>
+</div>
+
+<nav class="tabbar" aria-label="Navigation">
+  <div class="tabbar-in" role="tablist">
+    <button class="tab" type="button" role="tab" data-tab-btn="planning" aria-selected="true">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+      <span>Planning</span></button>
+    <button class="tab" type="button" role="tab" data-tab-btn="equipe" aria-selected="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="16.8" cy="9.6" r="2.6"/><path d="M15.7 14.6c2.4-.2 4.3 1.3 4.8 4.4"/></svg>
+      <span>Équipe</span></button>
+    <button class="tab" type="button" role="tab" data-tab-btn="reglages" aria-selected="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17.5 7H20M4 17h3.5M12 17h8"/><circle cx="15.2" cy="7" r="2.3"/><circle cx="9.7" cy="17" r="2.3"/></svg>
+      <span>Réglages</span><span id="settingsDot" class="tab-dot" hidden></span></button>
+  </div>
+</nav>
 
 <div id="utilesSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="utilesTitle" hidden>
   <div class="sheet-backdrop" data-close></div>
@@ -241,7 +275,6 @@
     <p id="utilesMsg" class="team-msg" hidden></p>
   </div>
 </div>
-<script src="xlsx.full.min.js"></script>
 <script src="core.js"></script>
 <script src="team.js"></script>
 <script src="app.js"></script>

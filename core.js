@@ -699,6 +699,23 @@
     return { half: /\b1\s*\/\s*2\s*t\b/i.test(n), hours: /(^|\s)32(\s|$)/.test(n) ? 32 : null };
   }
 
+  // Nom à afficher : le nom du tableau sans la mention de contrat, rendue en badge.
+  // « NOEL 1/2 T (1) » → NOEL + « ½ » ; « TESSIER 32 80% » → TESSIER + « 32h » (le 80 % redit les 32 h).
+  // Les homonymes créés à la lecture (« NOM (2) ») restent tels quels.
+  function splitName(name) {
+    const full = String(name || '').trim();
+    let s = ' ' + full;
+    const tags = [];
+    const half = s.match(/\s+1\s*\/\s*2\s*t\b(\s*\(\s*\d\s*\))?/i);
+    if (half) { tags.push('½'); s = s.replace(half[0], ''); }
+    const pct = s.match(/\s+(\d{2,3})\s*%/);
+    if (pct) s = s.replace(pct[0], '');
+    const hours = s.match(/\s+(\d{2})(?=\s|$)/);
+    if (hours) { tags.push(hours[1] + 'h'); s = s.replace(hours[0], ''); } else if (pct) tags.push(pct[1] + '%');
+    const base = s.replace(/\s+/g, ' ').trim();
+    return base ? { base, tags } : { base: full, tags: [] };
+  }
+
   // Permutations possibles pour `me` le jour `key` (où il travaille), classées de la meilleure à la
   // moins intéressante. Deux sortes :
   //  - même jour : un collègue qui travaille ce jour-là sur un autre horaire échange avec moi ;
@@ -889,5 +906,5 @@
     return lines.join('\r\n') + '\r\n';
   }
 
-  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, codeMinutes, isoWeek, monthHours, monthSummary, frenchHolidays, holidayName, teamOfDay, swapOptions, planStats, contractOf, parseMatrix, combineResults, bestSheet, GROUPS, groupOf, orderAgents, unmatchedRules, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
+  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, codeMinutes, isoWeek, monthHours, monthSummary, frenchHolidays, holidayName, teamOfDay, swapOptions, planStats, contractOf, splitName, parseMatrix, combineResults, bestSheet, GROUPS, groupOf, orderAgents, unmatchedRules, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
 });
