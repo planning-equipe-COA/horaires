@@ -278,9 +278,12 @@
   function saveRoles(r) { store(STORAGE_ROLES_KEY, JSON.stringify(r)); }
   function newestRoles(a, b) { if (!a) return b || null; if (!b) return a; return (a.at || '') >= (b.at || '') ? a : b; }
   // menus de noms : ordre alphabétique simple (les rôles ne regroupent que le tableau Équipe)
-  function orderNames(names) { return names.slice().sort((a, b) => a.localeCompare(b, 'fr')); }
+  // Nom affiché : le nom du tableau, ou celui choisi dans « Réorganiser les noms » (✏️), envoyé chiffré
+  // avec le planning d'équipe (mh_roles.alias { NOM du tableau: nom affiché }). Les clés restent les noms du tableau.
+  function shown(n) { const a = (loadRoles() || {}).alias; return (a && a[n]) || n; }
+  function orderNames(names) { return names.slice().sort((a, b) => shown(a).localeCompare(shown(b), 'fr')); }
   function nameOptions(names, exclude) {
-    return orderNames(names).filter(n => n !== exclude).map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    return orderNames(names).filter(n => n !== exclude).map(n => `<option value="${esc(n)}">${esc(shown(n))}</option>`).join('');
   }
 
   // ── Numéros de téléphone (volontaires) : chacun ajoute le sien, transmis chiffré avec le planning
@@ -300,11 +303,11 @@
   // nom + liens Appeler / SMS si l'agent a partagé son numéro
   function nameWithPhone(n, bold) {
     const c = loadContacts()[n];
-    const label = bold ? `<strong>${esc(n)}</strong>` : esc(n);
+    const label = bold ? `<strong>${esc(shown(n))}</strong>` : esc(shown(n));
     if (!c || !c.tel || !teamCode()) return label;
     const raw = c.tel.replace(/\s/g, '');
-    return `<span class="with-tel">${label} <a class="tel-link" href="tel:${esc(raw)}" aria-label="Appeler ${esc(n)}">📞</a>` +
-      `<a class="tel-link" href="sms:${esc(raw)}" aria-label="SMS à ${esc(n)}">💬</a></span>`;
+    return `<span class="with-tel">${label} <a class="tel-link" href="tel:${esc(raw)}" aria-label="Appeler ${esc(shown(n))}">📞</a>` +
+      `<a class="tel-link" href="sms:${esc(raw)}" aria-label="SMS à ${esc(shown(n))}">💬</a></span>`;
   }
 
   // ── Numéros utiles (opérationnels) : liste tenue par le responsable seul (code responsable),
@@ -680,7 +683,7 @@
     $('compareRow').hidden = empty || names.length < 2 || state.cal.view === 'team';
     const cmp = state.cal.compare ? plan.agents[state.cal.compare] : null;
     $('compareLegend').hidden = !cmp || state.cal.view === 'team';
-    if (cmp) $('compareLegend').innerHTML = `En haut <strong>${esc(name)}</strong>, en bas <strong>${esc(state.cal.compare)}</strong>. ` +
+    if (cmp) $('compareLegend').innerHTML = `En haut <strong>${esc(shown(name))}</strong>, en bas <strong>${esc(shown(state.cal.compare))}</strong>. ` +
       '<span class="legend-swap">Cadre vert</span> : l\'un travaille pendant que l\'autre est en repos (échange possible).';
     const swapDay = k => {
       if (!cmp || !days[k] || !cmp[k]) return false;
@@ -825,7 +828,7 @@
       return `<button class="next-day" data-key="${k}"><span class="next-label">${label} <span class="muted">${esc(wd)}</span></span>` +
         `<span class="next-code">${code ? chip(code) + ' ' + esc(codeLabel(code)) : '<span class="muted">pas de planning</span>'}</span>` +
         (code && C.dayKind(defOf(code)) === 'travail'
-          ? `<span class="next-mates">${mates.length ? 'avec ' + mates.slice(0, 3).map(esc).join(', ') + (mates.length > 3 ? ` +${mates.length - 3}` : '') : 'seul(e) en ' + esc(codeLabel(code))}</span>`
+          ? `<span class="next-mates">${mates.length ? 'avec ' + mates.slice(0, 3).map(n => esc(shown(n))).join(', ') + (mates.length > 3 ? ` +${mates.length - 3}` : '') : 'seul(e) en ' + esc(codeLabel(code))}</span>`
           : '') +
         (((plan.remarks || {})[me] || {})[k] ? `<span class="next-note next-remark">💬 ${esc(plan.remarks[me][k])}</span>` : '') +
         (notes[k] ? `<span class="next-note">📝 ${esc(notes[k])}</span>` : '') + '</button>';
@@ -950,7 +953,7 @@
       if (row.header) { html += `<tr class="tt-group"><th class="tt-name" scope="rowgroup">${esc(row.header)}</th><td colspan="${dates.length}"></td></tr>`; continue; }
       const n = row.name;
       const days = plan.agents[n] || {};
-      html += `<tr${n === me ? ' class="me"' : ''}><th class="tt-name" scope="row">${esc(n)}</th>`;
+      html += `<tr${n === me ? ' class="me"' : ''}><th class="tt-name" scope="row">${esc(shown(n))}</th>`;
       for (const d of dates) {
         const k = C.dateKey(d), wd = utc(d).getUTCDay();
         const cls = [wd === 0 || wd === 6 ? 'we' : '', k === todayKey ? 'today' : '', k === state.cal.selected ? 'sel' : ''].filter(Boolean).join(' ');
@@ -1058,7 +1061,7 @@
     events.forEach(e => { const t = C.eventTitle(e.def); counts[t] = (counts[t] || 0) + 1; });
     const detail = Object.keys(counts).map(k => `${counts[k]} ${esc(k)}`).join(', ');
     $('summary').innerHTML = events.length
-      ? `<strong>${events.length} événement${events.length > 1 ? 's' : ''}</strong> pour ${esc(agent.name)} : ${detail}.`
+      ? `<strong>${events.length} événement${events.length > 1 ? 's' : ''}</strong> pour ${esc(shown(agent.name))} : ${detail}.`
       : pastOnly
         ? 'Tous les jours de ce planning sont passés. Décoche « Seulement à partir d\'aujourd\'hui » pour tout exporter.'
         : 'Aucun événement à exporter avec les codes cochés.';
@@ -1208,6 +1211,15 @@
   $('calTeam').addEventListener('click', e => {
     const id = e.target.id;
     if (id === 'ttReorder') { state.reorder = true; state.reorderList = null; state.orderMsg = ''; renderCalendar(); return; }
+    if (e.target.closest('.ro-edit')) {
+      const li = e.target.closest('li'), span = li.querySelector('.ro-name');
+      if (!span) return;
+      const input = document.createElement('input');
+      input.type = 'text'; input.className = 'ro-input'; input.maxLength = 40; input.value = span.textContent;
+      input.setAttribute('aria-label', 'Nom affiché');
+      span.replaceWith(input); e.target.closest('.ro-edit').remove(); input.focus(); input.select();
+      return;
+    }
     if (id === 'roDone') { saveOrder(state.reorderList.slice()); return; }
     if (id === 'roReset') { saveOrder(null); return; }
     if (id === 'roCancel') { state.reorder = false; state.reorderList = null; renderCalendar(); return; }
@@ -1494,18 +1506,33 @@
   function renderReorder(names, me) {
     if (!state.reorderList) state.reorderList = teamOrder(names, me);
     const list = state.reorderList;
-    $('calTeam').innerHTML = '<p class="hint">Maintiens la poignée ☰ et fais glisser le nom à sa place, puis touche « Terminé ».</p>' +
+    $('calTeam').innerHTML = '<p class="hint">Maintiens la poignée ☰ et fais glisser le nom à sa place. ✏️ change le nom affiché ' +
+      '(par exemple pour distinguer deux homonymes). Puis touche « Terminé ».</p>' +
       '<ol class="reorder" id="roList">' + list.map(n =>
         `<li data-name="${esc(n)}"${n === me ? ' class="me"' : ''}>` +
         `<span class="ro-handle" role="button" aria-label="Déplacer ${esc(n)}">` +
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>' +
-        `<span class="ro-name">${esc(n)}</span></li>`).join('') +
+        `<span class="ro-name">${esc(shown(n))}</span>` +
+        `<button class="ro-edit link" type="button" aria-label="Renommer ${esc(shown(n))}">✏️</button></li>`).join('') +
       '</ol><div class="actions"><button id="roDone" class="primary" type="button">Terminé</button>' +
       '<button id="roReset" type="button">Par défaut</button><button id="roCancel" class="link" type="button">Annuler</button></div>';
   }
+  // noms affichés : ceux déjà choisis + les champs ✏️ ouverts (vide ou nom du tableau = on retire)
+  function aliasDraft() {
+    const alias = Object.assign({}, (loadRoles() || {}).alias || {});
+    const list = $('roList');
+    if (list) list.querySelectorAll('li').forEach(li => {
+      const input = li.querySelector('.ro-input');
+      if (!input) return;
+      const v = input.value.trim().replace(/\s+/g, ' '), n = li.dataset.name;
+      if (!v || v === n) delete alias[n]; else alias[n] = v;
+    });
+    return alias;
+  }
   async function saveOrder(order) {
     const prev = loadRoles() || {};
-    const updated = { np: order ? '' : prev.np || '', order: order || [], at: new Date().toISOString() };
+    const alias = aliasDraft();
+    const updated = { np: order ? '' : prev.np || '', order: order || [], alias, at: new Date().toISOString() };
     saveRoles(updated);
     state.reorder = false; state.reorderList = null;
     state.orderMsg = order ? '✓ Ordre enregistré.' : '✓ Ordre par défaut rétabli.';
@@ -1530,7 +1557,7 @@
   // ── Mon numéro (carte équipe) ─────────────────────────────────────────────
   function renderMyPhone() {
     const me = load(STORAGE_NAME_KEY), c = me && loadContacts()[me];
-    $('myPhoneWho').textContent = me ? me : 'choisis d\'abord ton nom';
+    $('myPhoneWho').textContent = me ? shown(me) : 'choisis d\'abord ton nom';
     $('myPhone').value = c && c.tel || '';
     $('myPhoneRemove').hidden = !(c && c.tel);
     $('myPhoneSave').disabled = !me;

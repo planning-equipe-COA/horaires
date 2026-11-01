@@ -408,3 +408,6 @@ body.sheet-open { overflow: hidden; }
 .rules { display: grid; gap: 0; }
 .rule-row { padding: 8px 0; border-top: 1px solid var(--line); font-size: .9rem; line-height: 1.45; }
 .rule-label { font-weight: 600; }
+
+.ro-edit { margin-left: auto; padding: 4px 8px; font-size: 1rem; }
+.ro-input { flex: 1; min-width: 0; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); }

@@ -153,7 +153,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   `renderReorder`, `saveOrder`. **Ne jamais écrire de vrais noms dans ce code public** : l'ordre vit
   dans `mh_roles.order` (noms complets) et part chiffré avec le planning d'équipe (`roles`, le plus
   récent l'emporte ; commit « Ordre mis à jour »). Nouveaux agents ajoutés à la fin (alphabétique).
-  Menus de noms toujours alphabétiques. Retirés à la demande de l'utilisateur : carte « Rôles des
+  **Noms affichés** : ✏️ dans « Réorganiser les noms » (`shown`, `aliasDraft`) → `mh_roles.alias`
+  { nom du tableau: nom affiché }, envoyé chiffré avec `roles` ; les clés du planning restent les noms du
+  tableau (« NOM (2) ») ; vide ou nom d'origine = retiré. Demandé pour distinguer deux homonymes.
+  Menus de noms toujours alphabétiques (sur le nom affiché). Retirés à la demande de l'utilisateur : carte « Rôles des
   agents » (ROA/COA) puis « toucher un nom = fin de liste » (`mh_roles.np` encore lu par défaut).
 - **Numéros de téléphone (volontaires)** : carte équipe → « 📞 Mon numéro » (pour `mh_name`), Partager /
   Retirer. Stockés dans le planning d'équipe chiffré (`contacts` { NOM: { tel, at } }, commit
