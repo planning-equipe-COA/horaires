@@ -258,6 +258,30 @@
     return orderNames(names).filter(n => n !== exclude).map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
   }
 
+  // ── Numéros de téléphone (volontaires) : chacun ajoute le sien, transmis chiffré avec le planning
+  // d'équipe ({ NOM: { tel, at } }) ; copie locale mh_contacts mise à jour à chaque synchro.
+  const STORAGE_CONTACTS_KEY = 'mh_contacts';
+  function loadContacts() { try { return JSON.parse(load(STORAGE_CONTACTS_KEY)) || {}; } catch (e) { return {}; } }
+  function saveContacts(c) { store(STORAGE_CONTACTS_KEY, JSON.stringify(c || {})); }
+  // 06 12 34 56 78 / +33 6 12 34 56 78 → affichage lisible ; null si invalide
+  function normalizePhone(v) {
+    let d = String(v || '').replace(/[^\d+]/g, '');
+    if (d.startsWith('+33')) d = '0' + d.slice(3);
+    else if (d.startsWith('0033')) d = '0' + d.slice(4);
+    if (/^0\d{9}$/.test(d)) return d.replace(/(\d{2})(?=\d)/g, '$1 ');
+    if (/^\+\d{8,15}$/.test(d)) return d;
+    return null;
+  }
+  // nom + liens Appeler / SMS si l'agent a partagé son numéro
+  function nameWithPhone(n, bold) {
+    const c = loadContacts()[n];
+    const label = bold ? `<strong>${esc(n)}</strong>` : esc(n);
+    if (!c || !c.tel || !teamCode()) return label;
+    const raw = c.tel.replace(/\s/g, '');
+    return `<span class="with-tel">${label} <a class="tel-link" href="tel:${esc(raw)}" aria-label="Appeler ${esc(n)}">📞</a>` +
+      `<a class="tel-link" href="sms:${esc(raw)}" aria-label="SMS à ${esc(n)}">💬</a></span>`;
+  }
+
   function planToAgents(agents, remarks) {
     return Object.keys(agents || {}).map(name => ({ name,
       entries: Object.keys(agents[name]).sort().map(k => {
@@ -368,6 +392,7 @@
       if (state.plan && state.plan.teamAt === remote.at) { if (manual) teamMsg('✓ Ton planning est à jour.', 'ok'); return; }
       const data = await T.decrypt(remote.text, code);
       if (data.roles && newestRoles(loadRoles(), data.roles) === data.roles) saveRoles(data.roles);
+      saveContacts(data.contacts || {});
       const n = applyAgents(state.plan, planToAgents(data.agents, data.remarks),
         { at: remote.at, file: 'équipe', teamAt: remote.at, teamBy: data.by || null });
       openOnUsefulMonth();
@@ -525,7 +550,8 @@
       const res = await T.publishPlan(teamCode(), token, by, current => {
         previous = current;
         const full = C.mergePlan(current, agents, minKeep());
-        const merged = { agents: full.agents, remarks: full.remarks, roles: newestRoles(current && current.roles, loadRoles()) };
+        const merged = { agents: full.agents, remarks: full.remarks, roles: newestRoles(current && current.roles, loadRoles()),
+          contacts: (current && current.contacts) || {} };
         n = countChanges(current, merged);
         if (current && !n) throw new Error('identique'); // quelqu'un l'a envoyé entre-temps
         return { plan: merged };
@@ -557,7 +583,8 @@
     try {
       const token = await publishKey();
       const res = await T.publishPlan(teamCode(), token, info.by,
-        () => ({ plan: { agents: info.previous ? info.previous.agents : {}, remarks: info.previous && info.previous.remarks || {}, roles: info.previous && info.previous.roles || loadRoles() } }));
+        current => ({ plan: { agents: info.previous ? info.previous.agents : {}, remarks: info.previous && info.previous.remarks || {},
+          roles: info.previous && info.previous.roles || loadRoles(), contacts: (current && current.contacts) || {} } }));
       state.plan.teamAt = res.at;
       savePlan();
       undoInfo = null;
@@ -798,13 +825,13 @@
     if (team.length > 1 || (team.length === 1 && team[0].names.length > 1)) {
       html += '<div class="day-team"><p class="day-sub">Équipe du jour</p>' + team.map(g =>
         `<div class="team-row${g.code === code ? ' mine' : ''}"><span class="team-code">${chip(g.code)} ${esc(codeLabel(g.code))} <span class="muted">(${g.names.length})</span></span>` +
-        `<span class="team-names">${g.names.map(n => n === name ? `<strong>${esc(n)}</strong>` : esc(n)).join(', ')}</span></div>`).join('') + '</div>';
+        `<span class="team-names">${g.names.map(n => nameWithPhone(n, n === name)).join(', ')}</span></div>`).join('') + '</div>';
     }
     if (code && C.dayKind(defOf(code)) === 'travail') {
       const free = team.filter(g => g.kind === 'repos').flatMap(g => g.names).filter(n => n !== name)
         .sort((a, b) => a.localeCompare(b, 'fr'));
       html += `<p class="day-swap">🔁 <span class="muted">Pour un échange, en repos ce jour-là :</span> ` +
-        (free.length ? free.map(esc).join(', ') : '<span class="muted">personne</span>') + '</p>';
+        (free.length ? free.map(n => nameWithPhone(n)).join(', ') : '<span class="muted">personne</span>') + '</p>';
     }
     html += `<label class="day-note"><span class="day-sub">📝 Ma note <span class="muted">(gardée sur ce téléphone)</span></span>` +
       `<textarea data-note="${k}" rows="2" maxlength="500" placeholder="ex. échangé avec Paul, RDV…">${esc(notes[k] || '')}</textarea></label>`;
@@ -1250,6 +1277,7 @@
   $('teamSyncNow').addEventListener('click', () => syncTeam(true));
   $('teamLeave').addEventListener('click', () => {
     store(STORAGE_TEAM_KEY, '');
+    saveContacts({}); // plus dans l'équipe : on ne garde pas les numéros des collègues
     $('publishBox').hidden = true;
     teamMsg('Tu as quitté l\'équipe : ton calendrier reste sur ce téléphone, il ne se met plus à jour tout seul.');
     renderTeam();
@@ -1329,7 +1357,8 @@
         const key = await T.checkCode(teamCode());
         if (key.status !== 'ok') throw new Error('cle');
         const res = await T.publishPlan(teamCode(), key.token, by,
-          current => ({ plan: { agents: data.agents || {}, remarks: data.remarks || {}, roles: newestRoles(current && current.roles, loadRoles()) } }), undefined, 'Planning restauré');
+          current => ({ plan: { agents: data.agents || {}, remarks: data.remarks || {}, roles: newestRoles(current && current.roles, loadRoles()),
+            contacts: (current && current.contacts) || {} } }), undefined, 'Planning restauré');
         applyAgents(state.plan, planToAgents(data.agents, data.remarks),
           { at: res.at, file: 'équipe', teamAt: res.at, teamBy: by || null });
         renderCalendar();
@@ -1381,7 +1410,8 @@
       const key = await T.checkCode(teamCode());
       if (key.status !== 'ok') throw new Error('cle');
       const res = await T.publishPlan(teamCode(), key.token, load(STORAGE_NAME_KEY) || '', current => ({ plan: {
-        agents: (current && current.agents) || {}, remarks: (current && current.remarks) || {}, roles: updated } }), undefined, 'Ordre mis à jour');
+        agents: (current && current.agents) || {}, remarks: (current && current.remarks) || {}, roles: updated,
+        contacts: (current && current.contacts) || {} } }), undefined, 'Ordre mis à jour');
       if (state.plan && before && state.plan.teamAt === before.at) { state.plan.teamAt = res.at; savePlan(); renderTeam(); }
       state.orderMsg += ' Envoyé à l\'équipe : tes collègues ont le même ordre.';
     } catch (e) {
@@ -1390,6 +1420,55 @@
     renderCalendar();
     setTimeout(() => { state.orderMsg = ''; const m = document.getElementById('orderMsg'); if (m) m.hidden = true; }, 8000);
   }
+
+  // ── Mon numéro (carte équipe) ─────────────────────────────────────────────
+  function renderMyPhone() {
+    const me = load(STORAGE_NAME_KEY), c = me && loadContacts()[me];
+    $('myPhoneWho').textContent = me ? me : 'choisis d\'abord ton nom';
+    $('myPhone').value = c && c.tel || '';
+    $('myPhoneRemove').hidden = !(c && c.tel);
+    $('myPhoneSave').disabled = !me;
+  }
+  function phoneMsg(text, kind) {
+    $('myPhoneMsg').hidden = !text;
+    $('myPhoneMsg').textContent = text || '';
+    $('myPhoneMsg').className = 'team-msg ' + (kind || '');
+  }
+  async function publishMyPhone(tel) {
+    const me = load(STORAGE_NAME_KEY);
+    if (!me || !teamCode()) return;
+    $('myPhoneSave').disabled = $('myPhoneRemove').disabled = true;
+    phoneMsg(tel ? 'Envoi à l\'équipe…' : 'Retrait…');
+    try {
+      const before = await T.fetchPlan();
+      const key = await T.checkCode(teamCode());
+      if (key.status !== 'ok') throw new Error('cle');
+      let contacts = {};
+      const res = await T.publishPlan(teamCode(), key.token, me, current => {
+        contacts = Object.assign({}, (current && current.contacts) || {});
+        if (tel) contacts[me] = { tel, at: new Date().toISOString() }; else delete contacts[me];
+        return { plan: { agents: (current && current.agents) || {}, remarks: (current && current.remarks) || {},
+          roles: (current && current.roles) || loadRoles(), contacts } };
+      }, undefined, 'Coordonnées mises à jour');
+      saveContacts(contacts);
+      if (state.plan && before && state.plan.teamAt === before.at) { state.plan.teamAt = res.at; savePlan(); renderTeam(); }
+      phoneMsg(tel ? '✓ Numéro partagé avec l\'équipe.' : '✓ Numéro retiré. Il n\'est plus visible dans l\'appli.', 'ok');
+      renderMyPhone();
+      renderCalendar();
+    } catch (e) {
+      phoneMsg('Pas envoyé : ' + errText(e), 'err');
+    } finally {
+      $('myPhoneSave').disabled = $('myPhoneRemove').disabled = false;
+    }
+  }
+  $('myPhoneSave').addEventListener('click', () => {
+    const tel = normalizePhone($('myPhone').value);
+    if (!tel) { phoneMsg('Numéro invalide (ex. 06 12 34 56 78).', 'err'); return; }
+    $('myPhone').value = tel;
+    publishMyPhone(tel);
+  });
+  $('myPhoneRemove').addEventListener('click', () => publishMyPhone(null));
+  $('teamDetails').addEventListener('toggle', () => { if ($('teamDetails').open) renderMyPhone(); });
 
   $('teamRenew').addEventListener('click', e => {
     e.preventDefault();

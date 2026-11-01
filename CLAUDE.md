@@ -124,5 +124,13 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   récent l'emporte ; commit « Ordre mis à jour »). Nouveaux agents ajoutés à la fin (alphabétique).
   Menus de noms toujours alphabétiques. Retirés à la demande de l'utilisateur : carte « Rôles des
   agents » (ROA/COA) puis « toucher un nom = fin de liste » (`mh_roles.np` encore lu par défaut).
+- **Numéros de téléphone (volontaires)** : carte équipe → « 📞 Mon numéro » (pour `mh_name`), Partager /
+  Retirer. Stockés dans le planning d'équipe chiffré (`contacts` { NOM: { tel, at } }, commit
+  « Coordonnées mises à jour »), copie locale `mh_contacts` (vidée en quittant l'équipe). **Toute
+  publication doit reporter `contacts` du planning actuel** (envoi, annuler, restaurer, ordre), sinon
+  les numéros sont perdus. Affichés en liens tel:/sms: dans « Équipe du jour » et « Pour un échange »
+  (`nameWithPhone`). Limites dites à l'utilisateur : visibles par tous ceux qui ont le code, restent
+  dans l'historique chiffré. Rotation automatique du code écartée (sans intérêt) : changer le code
+  quand quelqu'un quitte l'équipe.
 - Écarté par l'utilisateur : « Partager → Planning COA » sur Android.
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.

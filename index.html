@@ -179,6 +179,16 @@
           <p class="hint">En cas d'erreur remarquée tard : choisis une version pour voir ce qu'elle change, puis restaure-la pour toute l'équipe.</p>
           <div id="historyList"></div>
         </details>
+        <div class="my-phone">
+          <p class="day-sub">📞 Mon numéro <span class="muted">(facultatif)</span></p>
+          <p class="hint">Pour <strong id="myPhoneWho"></strong> : si tu le souhaites, partage ton numéro pour que tes collègues
+            puissent t'appeler ou t'écrire en un geste (échanges de poste). Il est chiffré, mais <strong>visible par toute
+            l'équipe qui a le code</strong>. Tu peux le retirer quand tu veux.</p>
+          <div class="w-code"><input id="myPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="06 12 34 56 78" aria-label="Mon numéro">
+            <button id="myPhoneSave" type="button">Partager</button></div>
+          <button id="myPhoneRemove" class="link" type="button" hidden>Retirer mon numéro</button>
+          <p id="myPhoneMsg" class="team-msg" hidden></p>
+        </div>
         <p class="hint"><a href="#" id="teamRenew">Renouveler la clé de publication</a></p>
       </div>
       <div id="teamSetup" hidden>
