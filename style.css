@@ -350,6 +350,13 @@ button.link { background: none; border: 0; color: var(--muted); text-decoration:
 .fold[open] > summary::after { transform: rotate(-135deg); margin-bottom: -3px; }
 .fold[open] > summary { margin-bottom: 12px; }
 .remind { cursor: pointer; }
+.warn-remind { background: var(--warn-bg); border-left-color: var(--warn); }
+.warn-remind p { margin: 0; }
+.warn-remind p + p { margin-top: 6px; }
+.key-box { margin-top: 8px; }
+.key-box .hint { margin-top: 0; }
+.key-box .w-code { margin-top: 6px; }
+#keyExp, #teamTokenExp { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
 
 /* ── Rôles des agents ───────────────────────────────────────────────────── */
 #rolesRoa, #rolesNp { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; resize: vertical; }

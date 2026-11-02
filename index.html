@@ -40,6 +40,7 @@
   <section id="calCard" class="card cal" data-tab="planning equipe" hidden>
     <div id="nextDays" class="next-days only-planning" hidden></div>
     <p id="calRemind" class="remind only-planning" hidden></p>
+    <div id="teamWarn" class="remind warn-remind only-planning" role="button" tabindex="0" hidden></div>
     <div class="cal-head">
       <h2 id="calTitle"></h2>
       <button id="calToday" class="today-pill" type="button">Aujourd'hui</button>
@@ -178,6 +179,13 @@
       </div>
       <div id="teamIn" hidden>
         <p id="teamInfo"></p>
+        <div class="key-box">
+          <p id="keyInfo" class="hint"></p>
+          <div id="keyEdit" class="w-code" hidden>
+            <input id="keyExp" type="date" aria-label="Date d'expiration de la clé de publication">
+            <button id="keyExpSave" type="button">Enregistrer</button>
+          </div>
+        </div>
         <div class="actions">
           <button id="teamSyncNow">Vérifier maintenant</button>
           <button id="teamLeave">Quitter</button>
@@ -212,6 +220,10 @@
         <div class="row">
           <label for="teamToken">Clé GitHub</label>
           <input id="teamToken" type="password" autocomplete="off" placeholder="github_pat_…">
+        </div>
+        <div class="row">
+          <label for="teamTokenExp">Date d'expiration de la clé <span class="muted">(affichée par GitHub à sa création)</span></label>
+          <input id="teamTokenExp" type="date">
         </div>
         <div class="actions"><button id="teamSetupOk" class="primary">Enregistrer la clé</button></div>
       </div>

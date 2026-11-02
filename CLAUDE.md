@@ -57,6 +57,14 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   import. `plan.teamAt` = date de la publication reçue (seule info en clair de l'enveloppe), `teamBy`.
   Si le code ne déchiffre plus (code changé) : il est oublié et l'agent doit saisir le nouveau.
   Lien « Renouveler la clé de publication » masqué (`#teamRenewRow`) sauf si GitHub refuse la clé (`errText` 'cle').
+- **Alertes d'équipe** (nov. 2026, en haut de l'onglet Planning, `#teamWarn`, `renderTeamAlerts`) :
+  - clé de publication qui expire dans 14 jours ou moins (ou expirée). GitHub n'expose PAS au navigateur
+    l'en-tête `github-authentication-token-expiration` (absent d'Access-Control-Expose-Headers) : la date est
+    donc saisie à la main (configuration / renouvellement : `#teamTokenExp` ; clé déjà en place : « Indiquer /
+    Modifier la date » dans la carte équipe → `T.setKeyExpiry`) et gardée chiffrée dans `cle.enc` (`exp`).
+    Copie locale `mh_key` { exp, checkedAt }, relue au plus une fois par jour pendant la synchro.
+  - planning d'équipe pas vérifié depuis plus de 3 jours (`mh_sync_ok` = dernière lecture réussie chez GitHub,
+    même sans nouveauté) ; toucher l'alerte relance la vérification. L'onglet Équipe affiche « vérifié il y a … ».
 - Fichiers réels : classeurs **.xlsm** à deux feuilles « MOIS AAAA THEORIQUE » et « MOIS AAAA PLANIFIE »
   (`bestSheet` prend PLANIFIE = planning réel) ; titre « MAI 2027 » en A1, « Tableau de service du
   03/05/2027 au 06/06/2027 », et une ligne « mise à jour » avec une date d'édition : `findContext`

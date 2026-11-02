@@ -123,14 +123,25 @@
     const text = await readPublic(KEY_FILE, fetchFn);
     if (text == null) return { status: 'absent' };
     const key = await decrypt(text, code); // lève 'code' si le code est faux
-    return { status: 'ok', token: key.token };
+    return { status: 'ok', token: key.token, exp: key.exp || null };
   }
 
-  // Première configuration : la clé GitHub est chiffrée avec le code d'équipe et déposée
-  async function setupKey(code, token, by, fetchFn) {
+  // Première configuration : la clé GitHub est chiffrée avec le code d'équipe et déposée.
+  // exp (AAAA-MM-JJ) : date d'expiration de la clé, saisie à la main (le navigateur ne peut pas la lire chez GitHub)
+  async function setupKey(code, token, by, fetchFn, exp) {
     const existing = await readWithKey(KEY_FILE, token, fetchFn); // vérifie au passage que la clé marche
-    const text = await encrypt({ token, by, at: new Date().toISOString() }, code, new Date().toISOString());
+    const text = await encrypt({ token, by, at: new Date().toISOString(), exp: exp || null }, code, new Date().toISOString());
     await write(KEY_FILE, text, existing && existing.sha, token, 'Clé de publication de l\'équipe', fetchFn);
+  }
+
+  // Indique (ou corrige) la date d'expiration de la clé déjà en place, sans la ressaisir
+  async function setKeyExpiry(code, exp, fetchFn) {
+    const text = await readPublic(KEY_FILE, fetchFn);
+    if (text == null) throw new Error('depot');
+    const key = await decrypt(text, code);
+    const existing = await readWithKey(KEY_FILE, key.token, fetchFn);
+    const updated = await encrypt(Object.assign({}, key, { exp: exp || null }), code, new Date().toISOString());
+    await write(KEY_FILE, updated, existing && existing.sha, key.token, 'Clé de publication de l\'équipe', fetchFn);
   }
 
   // Planning de l'équipe : { at, text } (chiffré) ou null
@@ -188,5 +199,5 @@
   }
 
   return { DATA_REPO, PLAN_FILE, KEY_FILE, normCode, encrypt, decrypt, envelopeAt,
-    checkCode, setupKey, fetchPlan, publishPlan, readWithKey, listVersions, readVersion, hashSecret, checkSecret };
+    checkCode, setupKey, setKeyExpiry, fetchPlan, publishPlan, readWithKey, listVersions, readVersion, hashSecret, checkSecret };
 });

@@ -108,3 +108,17 @@ test('code responsable : empreinte vérifiable, mauvais code refusé', async () 
   assert.strictEqual(await T.checkSecret('phare-moulin', stored), false);
   assert.strictEqual(await T.checkSecret('x', null), false);
 });
+
+test('clé de publication : date d\'expiration enregistrée, puis corrigée sans ressaisir la clé', async () => {
+  const gh = fakeGitHub('ghp_bonne');
+  const code = 'tarmac-cerise-boussole-neige';
+  await T.setupKey(code, 'ghp_bonne', 'RAPH', gh.fetchFn);
+  assert.strictEqual((await T.checkCode(code, gh.fetchFn)).exp, null); // clé configurée avant cette version
+  await T.setKeyExpiry(code, '2027-01-31', gh.fetchFn);
+  const key = await T.checkCode(code, gh.fetchFn);
+  assert.strictEqual(key.exp, '2027-01-31');
+  assert.strictEqual(key.token, 'ghp_bonne');                         // la clé elle-même ne change pas
+  assert.ok(!gh.files['cle.enc'].text.includes('2027-01-31'));        // la date est chiffrée elle aussi
+  await T.setupKey(code, 'ghp_bonne', 'RAPH', gh.fetchFn, '2027-06-30'); // renouvellement avec sa date
+  assert.strictEqual((await T.checkCode(code, gh.fetchFn)).exp, '2027-06-30');
+});

@@ -468,12 +468,69 @@
     }
     const p = state.plan;
     $('teamStatus').hidden = !(joined && p && p.teamAt);
+    const syncOk = renderTeamAlerts();
     if (!$('teamStatus').hidden) {
-      $('teamStatus').textContent = `👥 Planning d'équipe du ${longDate(p.teamAt)}` + (p.teamBy ? `, publié par ${p.teamBy}` : '');
+      $('teamStatus').textContent = `👥 Planning d'équipe du ${longDate(p.teamAt)}` + (p.teamBy ? `, publié par ${p.teamBy}` : '') +
+        (syncOk ? ` · vérifié ${agoText(syncOk)}` : '');
     }
     $('importHint').textContent = joined
       ? 'Le fichier Excel reste sur ton appareil. Comme tu es dans l\'équipe, l\'appli te proposera d\'envoyer les noms et les codes à tes collègues, chiffrés avec le code d\'équipe.'
       : 'Le fichier est lu sur ton appareil et le planning reste sur ce téléphone : rien n\'est envoyé sur Internet.';
+  }
+
+  // ── Alertes d'équipe : clé de publication bientôt expirée, planning d'équipe pas vérifié depuis longtemps
+  const STORAGE_SYNC_OK_KEY = 'mh_sync_ok'; // dernière vérification réussie auprès de GitHub
+  const STORAGE_KEY_INFO_KEY = 'mh_key';    // { exp: 'AAAA-MM-JJ' | null, checkedAt }
+  const KEY_WARN_DAYS = 14, STALE_DAYS = 3;
+  function loadKeyInfo() { try { return JSON.parse(load(STORAGE_KEY_INFO_KEY)) || {}; } catch (e) { return {}; } }
+  function saveKeyInfo(exp) { store(STORAGE_KEY_INFO_KEY, JSON.stringify({ exp: exp || null, checkedAt: Date.now() })); }
+  // GitHub ne laisse pas le navigateur lire la date d'expiration : elle est saisie à la main et gardée
+  // chiffrée avec la clé (cle.enc) ; relue au plus une fois par jour (déchiffrement un peu lent)
+  async function refreshKeyInfo(force) {
+    const code = teamCode(), info = loadKeyInfo();
+    if (!code || (!force && info.checkedAt && Date.now() - info.checkedAt < 864e5)) return;
+    try {
+      const key = await T.checkCode(code);
+      if (key.status === 'ok') { saveKeyInfo(key.exp); renderTeam(); }
+    } catch (e) { /* réessayé à la prochaine synchro */ }
+  }
+  function keyDaysLeft(exp) {
+    if (!exp) return null;
+    const t = todayDate(), end = keyToDate(exp.replace(/-/g, ''));
+    return Math.round((utc(end) - utc(t)) / 864e5);
+  }
+  const fmtLongDay = iso => utc(keyToDate(iso.replace(/-/g, ''))).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  function agoText(ms) {
+    const min = Math.round((Date.now() - ms) / 60000);
+    if (min < 2) return 'à l\'instant';
+    if (min < 60) return `il y a ${min} min`;
+    const d = new Date(ms), n = new Date();
+    if (d.toDateString() === n.toDateString()) return 'aujourd\'hui à ' + timeOf(d.toISOString());
+    const days = Math.max(1, Math.round((n - d) / 864e5));
+    return days === 1 ? 'hier' : `il y a ${days} jours`;
+  }
+  function renderTeamAlerts() {
+    const joined = !!teamCode();
+    const exp = joined ? loadKeyInfo().exp : null, left = keyDaysLeft(exp);
+    // carte « Code d'équipe » : date de la clé
+    $('keyInfo').innerHTML = !joined ? '' : exp
+      ? `🔑 Clé de publication valable jusqu'au <strong>${esc(fmtLongDay(exp))}</strong>${left < 0 ? ' — <strong>expirée</strong>' : ''}. <a href="#" id="keyExpChange">Modifier la date</a>`
+      : '🔑 Date d\'expiration de la clé de publication non indiquée : l\'appli ne pourra pas prévenir avant qu\'elle expire. ' +
+        '<a href="#" id="keyExpChange">Indiquer la date</a> <span class="muted">(GitHub l\'affiche à la création de la clé)</span>';
+    // onglet Planning : alertes
+    const lines = [];
+    if (left !== null && left <= KEY_WARN_DAYS) {
+      lines.push(left < 0
+        ? `⚠️ La clé de publication de l'équipe a expiré le ${esc(fmtLongDay(exp))} : plus personne ne peut envoyer le planning. La personne qui a configuré l'équipe doit en créer une nouvelle (Réglages → Code d'équipe).`
+        : `⚠️ La clé de publication de l'équipe expire ${left === 0 ? 'aujourd\'hui' : left === 1 ? 'demain' : 'dans ' + left + ' jours'} (le ${esc(fmtLongDay(exp))}). Préviens la personne qui a configuré l'équipe : sans nouvelle clé, plus personne ne pourra envoyer le planning.`);
+    }
+    const ok = +load(STORAGE_SYNC_OK_KEY) || 0;
+    const stale = joined && ok && Date.now() - ok > STALE_DAYS * 864e5;
+    if (stale) lines.push(`📡 Planning d'équipe pas vérifié depuis ${esc(agoText(ok).replace('il y a ', ''))} (pas de connexion ?) : les derniers changements de tes collègues peuvent manquer. <strong>Touche ici pour vérifier.</strong>`);
+    $('teamWarn').hidden = !lines.length;
+    $('teamWarn').dataset.act = stale ? 'sync' : 'key';
+    $('teamWarn').innerHTML = lines.map(l => `<p>${l}</p>`).join('');
+    return ok;
   }
 
   let syncing = false, lastSync = 0;
@@ -484,6 +541,8 @@
     if (manual) teamMsg('Vérification…');
     try {
       const remote = await T.fetchPlan();
+      store(STORAGE_SYNC_OK_KEY, String(Date.now()));
+      refreshKeyInfo(false);
       if (!remote) { if (manual) teamMsg('Aucun planning publié pour l\'instant.'); return; }
       if (state.plan && state.plan.teamAt === remote.at) { if (manual) teamMsg('✓ Ton planning est à jour.', 'ok'); return; }
       const data = await T.decrypt(remote.text, code);
@@ -557,8 +616,10 @@
     $('teamSetupOk').disabled = true;
     teamMsg('Enregistrement de la clé…');
     try {
-      await T.setupKey(code, token, load(STORAGE_NAME_KEY) || '');
+      const exp = $('teamTokenExp').value || null;
+      await T.setupKey(code, token, load(STORAGE_NAME_KEY) || '', undefined, exp);
       store(STORAGE_TEAM_KEY, code);
+      saveKeyInfo(exp);
       pendingCode = '';
       $('teamToken').value = '';
       $('teamSetup').hidden = true;
@@ -1469,9 +1530,51 @@
     }
   });
   $('teamSetupOk').addEventListener('click', setupTeam);
+  // date d'expiration de la clé déjà en place : indiquée ou corrigée sans ressaisir la clé
+  $('keyInfo').addEventListener('click', e => {
+    if (e.target.id !== 'keyExpChange') return;
+    e.preventDefault();
+    $('keyExp').value = loadKeyInfo().exp || '';
+    $('keyEdit').hidden = false;
+    $('keyExp').focus();
+  });
+  $('keyExpSave').addEventListener('click', async () => {
+    const exp = $('keyExp').value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(exp)) { teamMsg('Choisis la date d\'expiration affichée par GitHub.', 'err'); return; }
+    $('keyExpSave').disabled = true;
+    teamMsg('Enregistrement de la date…');
+    try {
+      await T.setKeyExpiry(teamCode(), exp);
+      saveKeyInfo(exp);
+      $('keyEdit').hidden = true;
+      teamMsg('✓ Date enregistrée pour toute l\'équipe : l\'appli préviendra deux semaines avant.', 'ok');
+      renderTeam();
+    } catch (err) {
+      teamMsg('Pas enregistré : ' + errText(err), 'err');
+    } finally {
+      $('keyExpSave').disabled = false;
+    }
+  });
+  // alertes en haut du planning : vérifier maintenant, ou aller voir la clé
+  const teamWarnGo = async () => {
+    if ($('teamWarn').dataset.act === 'sync') {
+      $('teamWarn').innerHTML = '<p>📡 Vérification…</p>';
+      lastSync = 0;
+      await syncTeam(true);
+      renderTeam();
+      if ($('teamWarn').dataset.act === 'sync') $('teamWarn').insertAdjacentHTML('beforeend', '<p>Pas de réponse : réessaie quand tu auras du réseau.</p>');
+      return;
+    }
+    setTab('reglages'); $('teamDetails').open = true;
+    requestAnimationFrame(() => $('teamDetails').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
+  $('teamWarn').addEventListener('click', teamWarnGo);
+  $('teamWarn').addEventListener('keydown', e => { if (e.key === 'Enter') teamWarnGo(); });
   $('teamSyncNow').addEventListener('click', () => syncTeam(true));
   $('teamLeave').addEventListener('click', () => {
     store(STORAGE_TEAM_KEY, '');
+    store(STORAGE_KEY_INFO_KEY, '');
+    store(STORAGE_SYNC_OK_KEY, '');
     saveContacts({}); // plus dans l'équipe : on ne garde pas les numéros des collègues
     saveUtiles({ list: [] });
     store(STORAGE_ADMIN_KEY, '');
