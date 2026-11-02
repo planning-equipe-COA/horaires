@@ -106,10 +106,10 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 /* ── Calendrier ─────────────────────────────────────────────────────────── */
 .opt { font-size: .75rem; font-weight: 500; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
 .saved { margin: 10px 0 0; color: var(--ok); font-weight: 600; font-size: .92rem; }
-.cal-head { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
-.cal-head h2 { flex: 1; min-width: 0; margin: 0; font-size: 1.2rem; text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.cal-head { display: flex; align-items: center; gap: 5px; margin-bottom: 10px; }
+.cal-head h2 { flex: 1; min-width: 0; margin: 0; font-size: 1.12rem; text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 .cal-nav { width: 40px; height: 40px; flex: none; padding: 0; font-size: 1.4rem; line-height: 1; border-radius: 50%; }
-.today-pill { flex: none; padding: 5px 10px; font-size: .8rem; font-weight: 600; border-radius: 999px; color: var(--accent); }
+.today-pill { flex: none; padding: 4px 9px; font-size: .76rem; font-weight: 600; border-radius: 999px; color: var(--accent); }
 .today-pill.ghost { display: none; }
 .cal-tools { display: flex; gap: 8px; margin-bottom: 12px; }
 .cal-tools select { min-width: 0; font-size: .92rem; padding: 7px 9px; }
@@ -286,7 +286,11 @@ button.link { background: none; border: 0; color: var(--muted); text-decoration:
 .cmp-inline { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--muted); font-size: .85rem; }
 .cmp-inline .chip { font-size: .68rem; }
 /* ── Vue Équipe ─────────────────────────────────────────────────────────── */
-.tt-wrap { overflow-x: auto; margin: 0 -4px; -webkit-overflow-scrolling: touch; }
+.tt-wrap { overflow: auto; max-height: calc(100dvh - 230px); margin: 0 -4px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.team-table thead th { position: sticky; top: 0; z-index: 2; background: var(--card); }
+.team-table thead th.tt-name { z-index: 3; }
+.team-table tfoot th, .team-table tfoot td { position: sticky; bottom: 0; z-index: 2; background: var(--card); }
+.team-table tfoot th.tt-name { z-index: 3; }
 .team-table { border-collapse: separate; border-spacing: 0; font-size: .78rem; width: auto; }
 .team-table th, .team-table td { padding: 3px 2px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; min-width: 2.1em; }
 .team-table thead th { font-weight: 600; color: var(--muted); font-size: .72rem; line-height: 1.2; cursor: pointer; }
@@ -398,6 +402,17 @@ body.sheet-open { overflow: hidden; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .sheet-head h2 { margin: 0; }
 .sheet-close { width: 38px; height: 38px; padding: 0; border-radius: 50%; }
+.sheet:not([hidden]) .sheet-panel { animation: sheet-up .22s ease-out; }
+.sheet:not([hidden]) .sheet-backdrop { animation: sheet-fade .22s ease-out; }
+@keyframes sheet-up { from { transform: translateY(40px); opacity: .4; } to { transform: none; opacity: 1; } }
+@keyframes sheet-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sheet:not([hidden]) .sheet-panel, .sheet:not([hidden]) .sheet-backdrop { animation: none; } }
+/* détail du jour en panneau depuis le bas (on le referme en glissant vers le bas) */
+.day-sheet .sheet-panel { padding-top: 24px; }
+.sheet-grab { position: absolute; top: 8px; left: 50%; width: 40px; height: 5px; margin-left: -20px; border-radius: 3px; background: var(--line); }
+.day-close { position: absolute; top: 12px; right: 12px; }
+.day-sheet .cal-day { margin: 0; padding: 0 0 4px; background: transparent; }
+.day-sheet .cal-day-head { padding-right: 46px; font-size: 1.05rem; min-height: 38px; }
 .u-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .u-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .u-label { font-weight: 600; overflow-wrap: anywhere; }

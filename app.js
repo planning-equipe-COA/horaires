@@ -1128,14 +1128,27 @@
     $('calList').innerHTML = html;
   }
 
+  // Détail d'un jour (vue Mois, vue Équipe) : panneau qui monte du bas, ouvert en touchant un jour.
+  // La vue Liste garde son détail déplié dans la liste.
   function renderDay() {
-    const k = state.cal.selected, box = $('calDay');
-    if (state.tab !== 'equipe' && state.cal.view === 'list') { box.hidden = true; return; }
-    const d = k && keyToDate(k);
-    if (!d || d.y !== state.cal.y || d.m !== state.cal.m) { box.hidden = true; return; }
-    const html = dayDetailHTML(k, true, state.tab === 'equipe' ? 'equipe' : 'planning');
-    box.innerHTML = html;
-    box.hidden = false;
+    if (!state.dayOpen) return;
+    const k = state.cal.selected, d = k && keyToDate(k);
+    if (!d) { closeDay(); return; }
+    $('calDay').innerHTML = dayDetailHTML(k, true, state.tab === 'equipe' ? 'equipe' : 'planning');
+  }
+  function openDay(k) {
+    state.cal.selected = k;
+    state.dayOpen = true;
+    renderDay();
+    $('daySheet').hidden = false;
+    $('daySheet').querySelector('.sheet-panel').scrollTop = 0;
+    document.body.classList.add('sheet-open');
+  }
+  function closeDay() {
+    if (!state.dayOpen && $('daySheet').hidden) return;
+    state.dayOpen = false;
+    $('daySheet').hidden = true;
+    if ($('utilesSheet').hidden) document.body.classList.remove('sheet-open');
   }
 
   // À l'ouverture : le mois en cours s'il a des jours, sinon le prochain mois rempli, sinon le dernier
@@ -1160,6 +1173,7 @@
   }
 
   function moveMonth(delta) {
+    closeDay();
     let { y, m } = state.cal;
     m += delta;
     if (m < 1) { m = 12; y--; } else if (m > 12) { m = 1; y++; }
@@ -1359,7 +1373,7 @@
     if (!cell) return;
     state.cal.selected = cell.dataset.key;
     renderCalendar();
-    $('calDay').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    openDay(cell.dataset.key);
   });
   function scrollToSelected() {
     const row = $('calList').querySelector('.cal-row.selected') || $('calList').querySelector('.cal-row.today');
@@ -1389,7 +1403,7 @@
     if (me) state.cal.agent = me;
     renderCalendar();
     if (state.cal.view === 'list') scrollToSelected();
-    else $('calDay').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    else openDay(b.dataset.key);
   });
   ['sumMonth', 'sumYear'].forEach(id => $(id).addEventListener('click', e => {
     state.cal.sum = e.currentTarget.dataset.scope;
@@ -1409,8 +1423,20 @@
     $('calGrid').querySelectorAll('.selected').forEach(x => x.classList.remove('selected'));
     cell.classList.add('selected');
     updateTodayPill();
-    renderDay();
+    openDay(cell.dataset.key);
   });
+  // panneau du jour : fermer (fond, ✕, Échap, glisser vers le bas)
+  $('daySheet').addEventListener('click', e => { if (e.target.closest('[data-close]')) closeDay(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && state.dayOpen) closeDay(); });
+  (() => {
+    const panel = $('daySheet').querySelector('.sheet-panel');
+    let y0 = null;
+    panel.addEventListener('touchstart', e => { y0 = panel.scrollTop <= 0 ? e.touches[0].clientY : null; }, { passive: true });
+    panel.addEventListener('touchend', e => {
+      if (y0 != null && e.changedTouches[0].clientY - y0 > 80) closeDay();
+      y0 = null;
+    }, { passive: true });
+  })();
   // « Voir les N autres » permutations (détail du jour, vue Mois ou Liste)
   document.addEventListener('click', e => {
     const btn = e.target.closest('.swap-all');
@@ -1955,6 +1981,7 @@
   function setTab(t) {
     if (!['planning', 'equipe', 'reglages'].includes(t)) t = 'planning';
     const changed = state.tab !== t;
+    closeDay();
     state.tab = t;
     document.body.dataset.tab = t;
     document.querySelectorAll('.tab[data-tab-btn]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tabBtn === t)));

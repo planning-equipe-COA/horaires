@@ -150,6 +150,12 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   Détail du jour compact (onglet Planning, grille ou liste) : « Avec toi : … » (même service), « 👥 Toute l'équipe
   ce jour-là (N) » replié, permutations repliées, « 📝 Ajouter une note » (le champ n'apparaît qu'au toucher ou
   s'il y a déjà une note). Onglet Équipe : toute l'équipe dépliée, pas de note.
+  Le détail du jour (vue Mois, vue Équipe, cartes Aujourd'hui/Demain) s'ouvre dans un **panneau depuis le bas**
+  (`#daySheet`, `openDay` / `closeDay`, `state.dayOpen`) : fond, ✕, Échap ou glisser vers le bas pour fermer ;
+  fermé au changement de mois ou d'onglet. La vue Liste garde son détail déplié dans la liste.
+  Vue Équipe : le tableau défile dans son cadre (`.tt-wrap`, hauteur max = écran) avec dates (en-tête),
+  noms (colonne) et ligne « Total » figés.
+  Proposé mais en attente de l'avis de l'utilisateur : cases du calendrier teintées par service (maquette faite).
   Permutations : bouton « ✉️ Proposer » (seulement sur mon propre planning) → message déjà rédigé
   (`swapMessage`) : SMS au numéro partagé (`sms:NUM?&body=`, iPhone et Android), sinon feuille de partage,
   sinon copie.
