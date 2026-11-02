@@ -294,7 +294,8 @@ button.link { background: none; border: 0; color: var(--muted); text-decoration:
 .cmp-inline { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--muted); font-size: .85rem; }
 .cmp-inline .chip { font-size: .68rem; }
 /* ── Vue Équipe ─────────────────────────────────────────────────────────── */
-.tt-wrap { overflow: auto; max-height: calc(100dvh - 230px); margin: 0 -4px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+/* hauteur ajustée par fitTeamTable() pour finir au-dessus de la barre d'onglets ; en bout de tableau, la page prend le relais */
+.tt-wrap { overflow: auto; max-height: calc(100dvh - 230px); margin: 0 -4px; -webkit-overflow-scrolling: touch; }
 .team-table thead th { position: sticky; top: 0; z-index: 2; background: var(--card); }
 .team-table thead th.tt-name { z-index: 3; }
 .team-table tfoot th, .team-table tfoot td { position: sticky; bottom: 0; z-index: 2; background: var(--card); }

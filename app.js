@@ -1095,9 +1095,21 @@
       `<p id="orderMsg" class="hint order-msg"${state.orderMsg ? '' : ' hidden'}>${esc(state.orderMsg || '')}</p>` +
       '<p class="hint">Touche un jour pour voir l\'équipe de ce jour-là, ou un code pour le surligner. Fais glisser le tableau pour voir tout le mois.</p>';
     const wrap = $('calTeam').querySelector('.tt-wrap');
+    fitTeamTable();
     const target = wrap.querySelector('th.sel, th.today');
     if (target) wrap.scrollLeft = Math.max(0, target.offsetLeft - 140);
   }
+
+  // Le tableau de l'équipe défile dans son cadre : ce cadre doit s'arrêter au-dessus de la barre d'onglets
+  // (sinon les dernières lignes passent dessous), mesuré page en haut, avec un minimum pour les petits écrans
+  function fitTeamTable() {
+    const wrap = $('calTeam').querySelector('.tt-wrap');
+    if (!wrap || $('calTeam').hidden) return;
+    const bar = document.querySelector('.tabbar').getBoundingClientRect();
+    const top = wrap.getBoundingClientRect().top + window.scrollY;
+    wrap.style.maxHeight = Math.max(240, Math.floor(bar.top - top - 12)) + 'px';
+  }
+  window.addEventListener('resize', fitTeamTable);
 
   // Vue liste : les jours du mois de haut en bas ; toucher un jour déplie les collègues du même service
   function renderList(days, changes, todayKey, cmp, swapDay, remarks) {
