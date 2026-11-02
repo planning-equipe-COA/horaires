@@ -18,6 +18,12 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   (avant nov. 2026 il suivait le dernier planning consulté : numéro ou envois risquaient de partir au nom
   d'un collègue). Aucun nom n'est choisi tout seul à l'import.
 - `index.html`, `style.css` — UI mobile d'abord, mode sombre.
+  **Pas d'emoji dans l'interface** (choix de l'utilisateur, nov. 2026 : « plus pro ») : icônes au trait en
+  `<symbol id="i-…">` en tête de `index.html` (phone, msg, cal, users, user, key, signal, bell, euro, clock, note,
+  flag, star, mail, swap, trash, send, lock, alert, clip, share, download, upload, palette, sparkle, edit), utilisées
+  par `<svg class="ic"><use href="#i-…"/></svg>` (dans app.js : `ICON('nom')`). Jamais d'icône dans un texte
+  posé en `textContent`. Restent volontairement des emoji : les pastilles de couleur des titres de l'agenda
+  du téléphone (🟤 Matin…, voir Couleurs) et les menus de couleur (un `<option>` ne peut pas contenir d'icône).
 - `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` — ajout à l'écran d'accueil.
 - `sw.js` — **ouverture depuis la copie du téléphone** (instantané, même sans réseau). À chaque ouverture
   (et au retour sur l'appli, message `check` envoyé par la page, 60 s mini) il retélécharge tous les `FILES`

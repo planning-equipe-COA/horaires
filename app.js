@@ -15,6 +15,8 @@
   const CODES_VERSION = 9;
   const $ = id => document.getElementById(id);
 
+  // icône au trait (voir les <symbol> en tête de index.html)
+  const ICON = n => `<svg class="ic" aria-hidden="true"><use href="#i-${n}"/></svg>`;
   function esc(s) {
     return String(s).replace(/[&<>"']/g, ch => (
       { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -232,17 +234,17 @@
       const r = results[i];
       const keys = r.agents.flatMap(a => a.entries.map(e => C.dateKey(e.date))).sort();
       if (!r.agents.length || !keys.length) {
-        return `<div class="rep-row bad"><strong>${esc(b.name)}</strong><span>⚠️ aucun planning reconnu (feuille « ${esc(b.wb.SheetNames[b.sheet])} »)</span></div>`;
+        return `<div class="rep-row bad"><strong>${esc(b.name)}</strong><span><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> aucun planning reconnu (feuille « ${esc(b.wb.SheetNames[b.sheet])} »)</span></div>`;
       }
       const found = r.agents.some(a => a.name === me);
       const alike = !found && me ? r.agents.filter(a => first(a.name) === first(me)).map(a => a.name) : [];
       return `<div class="rep-row${found || !me ? '' : ' warn'}"><strong>${esc(b.name)}</strong>` +
         `<span>du ${esc(fmt(keys[0]))} au ${esc(fmt(keys[keys.length - 1]))} · ${r.agents.length} agents` +
         (b.wb.SheetNames.length > 1 ? ` · feuille « ${esc(b.wb.SheetNames[b.sheet])} »` : '') +
-        (r.monthAssumed ? ' · ⚠️ mois deviné' : '') + '</span>' +
+        (r.monthAssumed ? ' · <svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> mois deviné' : '') + '</span>' +
         (me ? `<span>${found ? '✓ ' + esc(shown(me)) + ' trouvé' : alike.length
-          ? '⚠️ ' + esc(shown(me)) + ' écrit ici « ' + alike.map(esc).join(' », « ') + ' »'
-          : '⚠️ ' + esc(shown(me)) + ' absent de ce fichier'}</span>` : '') + '</div>';
+          ? '<svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> ' + esc(shown(me)) + ' écrit ici « ' + alike.map(esc).join(' », « ') + ' »'
+          : '<svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> ' + esc(shown(me)) + ' absent de ce fichier'}</span>` : '') + '</div>';
     }).join('');
   }
 
@@ -354,8 +356,8 @@
     const label = nameHTML(n, bold);
     if (!c || !c.tel || !teamCode()) return label;
     const raw = c.tel.replace(/\s/g, '');
-    return `<span class="with-tel">${label} <a class="tel-link" href="tel:${esc(raw)}" aria-label="Appeler ${esc(shown(n))}">📞</a>` +
-      `<a class="tel-link" href="sms:${esc(raw)}" aria-label="SMS à ${esc(shown(n))}">💬</a></span>`;
+    return `<span class="with-tel">${label} <a class="tel-link" href="tel:${esc(raw)}" aria-label="Appeler ${esc(shown(n))}"><svg class="ic" aria-hidden="true"><use href="#i-phone"/></svg></a>` +
+      `<a class="tel-link" href="sms:${esc(raw)}" aria-label="SMS à ${esc(shown(n))}"><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg></a></span>`;
   }
 
   // ── Numéros utiles (opérationnels) : liste tenue par le responsable seul (code responsable),
@@ -419,9 +421,9 @@
     $('saved').innerHTML = keys.length
       ? `✓ Planning enregistré sur ce téléphone, du ${esc(fmt(keys[0]))} au ${esc(fmt(keys[keys.length - 1]))}` +
         (state.books && state.books.length > 1 ? ` (${state.books.length} fichiers combinés).` : '.') +
-        (nRemarks ? `<br><span class="saved-remarks">💬 ${nRemarks} commentaire${nRemarks > 1 ? 's' : ''} de case${nRemarks > 1 ? 's' : ''} lu${nRemarks > 1 ? 's' : ''} dans le fichier` +
-          (mine ? ` (dont ${mine} sur ton planning)` : '') + ' : repère le 💬 dans le calendrier.</span>' : '') +
-        '<br><button type="button" class="saved-go" data-go-tab="planning">📅 Voir le planning</button>' : '';
+        (nRemarks ? `<br><span class="saved-remarks"><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg> ${nRemarks} commentaire${nRemarks > 1 ? 's' : ''} de case${nRemarks > 1 ? 's' : ''} lu${nRemarks > 1 ? 's' : ''} dans le fichier` +
+          (mine ? ` (dont ${mine} sur ton planning)` : '') + ' : repère le <svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg> dans le calendrier.</span>' : '') +
+        '<br><button type="button" class="saved-go" data-go-tab="planning"><svg class="ic" aria-hidden="true"><use href="#i-cal"/></svg> Voir le planning</button>' : '';
     renderCalendar();
     schedulePublish();
     // premier lancement : « Qui es-tu ? » attend dans l'onglet Planning
@@ -470,8 +472,8 @@
     $('teamStatus').hidden = !(joined && p && p.teamAt);
     const syncOk = renderTeamAlerts();
     if (!$('teamStatus').hidden) {
-      $('teamStatus').textContent = `👥 Planning d'équipe du ${longDate(p.teamAt)}` + (p.teamBy ? `, publié par ${p.teamBy}` : '') +
-        (syncOk ? ` · vérifié ${agoText(syncOk)}` : '');
+      $('teamStatus').innerHTML = ICON('users') + esc(` Planning d'équipe du ${longDate(p.teamAt)}` + (p.teamBy ? `, publié par ${p.teamBy}` : '') +
+        (syncOk ? ` · vérifié ${agoText(syncOk)}` : ''));
     }
     $('importHint').textContent = joined
       ? 'Le fichier Excel reste sur ton appareil. Comme tu es dans l\'équipe, l\'appli te proposera d\'envoyer les noms et les codes à tes collègues, chiffrés avec le code d\'équipe.'
@@ -514,19 +516,19 @@
     const exp = joined ? loadKeyInfo().exp : null, left = keyDaysLeft(exp);
     // carte « Code d'équipe » : date de la clé
     $('keyInfo').innerHTML = !joined ? '' : exp
-      ? `🔑 Clé de publication valable jusqu'au <strong>${esc(fmtLongDay(exp))}</strong>${left < 0 ? ' — <strong>expirée</strong>' : ''}. <a href="#" id="keyExpChange">Modifier la date</a>`
-      : '🔑 Date d\'expiration de la clé de publication non indiquée : l\'appli ne pourra pas prévenir avant qu\'elle expire. ' +
+      ? `<svg class="ic" aria-hidden="true"><use href="#i-key"/></svg> Clé de publication valable jusqu'au <strong>${esc(fmtLongDay(exp))}</strong>${left < 0 ? ' — <strong>expirée</strong>' : ''}. <a href="#" id="keyExpChange">Modifier la date</a>`
+      : '<svg class="ic" aria-hidden="true"><use href="#i-key"/></svg> Date d\'expiration de la clé de publication non indiquée : l\'appli ne pourra pas prévenir avant qu\'elle expire. ' +
         '<a href="#" id="keyExpChange">Indiquer la date</a> <span class="muted">(GitHub l\'affiche à la création de la clé)</span>';
     // onglet Planning : alertes
     const lines = [];
     if (left !== null && left <= KEY_WARN_DAYS) {
       lines.push(left < 0
-        ? `⚠️ La clé de publication de l'équipe a expiré le ${esc(fmtLongDay(exp))} : plus personne ne peut envoyer le planning. La personne qui a configuré l'équipe doit en créer une nouvelle (Réglages → Code d'équipe).`
-        : `⚠️ La clé de publication de l'équipe expire ${left === 0 ? 'aujourd\'hui' : left === 1 ? 'demain' : 'dans ' + left + ' jours'} (le ${esc(fmtLongDay(exp))}). Préviens la personne qui a configuré l'équipe : sans nouvelle clé, plus personne ne pourra envoyer le planning.`);
+        ? `<svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> La clé de publication de l'équipe a expiré le ${esc(fmtLongDay(exp))} : plus personne ne peut envoyer le planning. La personne qui a configuré l'équipe doit en créer une nouvelle (Réglages → Code d'équipe).`
+        : `<svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> La clé de publication de l'équipe expire ${left === 0 ? 'aujourd\'hui' : left === 1 ? 'demain' : 'dans ' + left + ' jours'} (le ${esc(fmtLongDay(exp))}). Préviens la personne qui a configuré l'équipe : sans nouvelle clé, plus personne ne pourra envoyer le planning.`);
     }
     const ok = +load(STORAGE_SYNC_OK_KEY) || 0;
     const stale = joined && ok && Date.now() - ok > STALE_DAYS * 864e5;
-    if (stale) lines.push(`📡 Planning d'équipe pas vérifié depuis ${esc(agoText(ok).replace('il y a ', ''))} (pas de connexion ?) : les derniers changements de tes collègues peuvent manquer. <strong>Touche ici pour vérifier.</strong>`);
+    if (stale) lines.push(`<svg class="ic" aria-hidden="true"><use href="#i-signal"/></svg> Planning d'équipe pas vérifié depuis ${esc(agoText(ok).replace('il y a ', ''))} (pas de connexion ?) : les derniers changements de tes collègues peuvent manquer. <strong>Touche ici pour vérifier.</strong>`);
     $('teamWarn').hidden = !lines.length;
     $('teamWarn').dataset.act = stale ? 'sync' : 'key';
     $('teamWarn').innerHTML = lines.map(l => `<p>${l}</p>`).join('');
@@ -684,7 +686,7 @@
           `par rapport au planning publié le ${longDate(remote.at)}${current.by ? ' par ' + current.by : ''}.`
         : `Premier planning de l'équipe : ${agents.length} agents, ${period}.`) +
         (state.result && state.result.monthAssumed ? ' Vérifie d\'abord le mois ci-dessus : il n\'est pas écrit dans le fichier.' : ''));
-      $('publish').textContent = '📤 Envoyer à l\'équipe';
+      $('publish').innerHTML = ICON('send') + ' Envoyer à l\'équipe';
       publishButtons(true, true, false);
     } catch (e) {
       if (run !== previewRun) return;
@@ -826,7 +828,7 @@
         html += `<button class="${cls.join(' ')}" data-key="${k}" aria-label="${d.d}${code ? ' : ' + esc(codeLabel(code)) : ''}">` +
           `<span class="n">${d.d}</span>${code ? chip(code) : ''}` +
           (cmp ? `<span class="cmp-chip">${cmp[k] ? chip(cmp[k]) : '<span class="chip cmp-none">·</span>'}</span>` : '') +
-          `${notes[k] ? '<span class="note-dot" aria-label="note">📝</span>' : ''}</button>`;
+          `${notes[k] ? '<span class="note-dot" aria-label="note"><svg class="ic" aria-hidden="true"><use href="#i-note"/></svg></span>' : ''}</button>`;
       }
     }
     $('calGrid').innerHTML = html;
@@ -854,11 +856,11 @@
     box.hidden = plan.changesSeen || !list.length;
     if (!box.hidden) {
       const fmt = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
-      box.innerHTML = `<strong>🔔 ${list.length} jour${list.length > 1 ? 's ont' : ' a'} changé dans le nouveau planning :</strong><ul>` +
+      box.innerHTML = `<strong><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg> ${list.length} jour${list.length > 1 ? 's ont' : ' a'} changé dans le nouveau planning :</strong><ul>` +
         list.slice(0, 8).map(ch => `<li>${esc(fmt(ch.key))} : ${esc(codeTitle(ch.before))} → <strong>${esc(codeTitle(ch.after))}</strong></li>`).join('') +
         (list.length > 8 ? `<li>… et ${list.length - 8} autre${list.length - 8 > 1 ? 's' : ''} (marqués d'un point)</li>` : '') +
         '</ul><button id="calChangesOk">J\'ai vu</button>' +
-        '<button id="calChangesExport" class="link" type="button">📅 Mettre à jour l\'agenda du téléphone</button>';
+        '<button id="calChangesExport" class="link" type="button"><svg class="ic" aria-hidden="true"><use href="#i-cal"/></svg> Mettre à jour l\'agenda du téléphone</button>';
     }
     renderDay();
   }
@@ -892,11 +894,11 @@
     extra.push(`<span class="sum-item"><strong>${s.holidays.length}</strong> férié${s.holidays.length > 1 ? 's' : ''}` +
       (s.holidays.length && (!year || s.holidays.length <= 4) ? ` <span class="muted">(${s.holidays.map(h => esc(h.name)).join(', ')})</span>` : '') + '</span>');
     extra.push(`<span class="sum-item"><strong>${s.nights}</strong> nuit${s.nights > 1 ? 's' : ''}</span>`);
-    html += `<div class="sum-row sum-maj"><span class="sum-n">💶</span><span class="sum-title">Travaillés en majoration</span>` +
+    html += `<div class="sum-row sum-maj"><span class="sum-n"><svg class="ic" aria-hidden="true"><use href="#i-euro"/></svg></span><span class="sum-title">Travaillés en majoration</span>` +
       `<span class="sum-detail">${extra.join('')}</span></div>`;
     const hours = C.monthHours(days, state.codes, state.cal.y, year ? null : state.cal.m);
     const fmtH = min => { const h = Math.floor(min / 60), r = min % 60; return h + ' h' + (r ? ' ' + String(r).padStart(2, '0') : ''); };
-    html += `<div class="sum-row sum-hours"><span class="sum-n">⏱</span><span class="sum-title">${fmtH(hours.minutes)} <span class="muted">théoriques${year ? ' sur l\'année' : ' ce mois'}</span></span>` +
+    html += `<div class="sum-row sum-hours"><span class="sum-n"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg></span><span class="sum-title">${fmtH(hours.minutes)} <span class="muted">théoriques${year ? ' sur l\'année' : ' ce mois'}</span></span>` +
       `<span class="sum-detail">${year ? '' : hours.weeks.map(w =>
         `<span class="sum-item">S${w.w} : <strong>${fmtH(w.minutes)}</strong></span>`).join('')}</span></div>`;
     $('calTally').innerHTML = html;
@@ -949,8 +951,8 @@
         (code && C.dayKind(defOf(code)) === 'travail'
           ? `<span class="next-mates">${mates.length ? 'avec ' + mates.slice(0, 3).map(n => esc(shown(n))).join(', ') + (mates.length > 3 ? ` +${mates.length - 3}` : '') : 'seul(e) en ' + esc(codeLabel(code))}</span>`
           : '') +
-        (((plan.remarks || {})[me] || {})[k] ? `<span class="next-note next-remark">💬 ${esc(plan.remarks[me][k])}</span>` : '') +
-        (notes[k] ? `<span class="next-note">📝 ${esc(notes[k])}</span>` : '') + '</button>';
+        (((plan.remarks || {})[me] || {})[k] ? `<span class="next-note next-remark"><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg> ${esc(plan.remarks[me][k])}</span>` : '') +
+        (notes[k] ? `<span class="next-note"><svg class="ic" aria-hidden="true"><use href="#i-note"/></svg> ${esc(notes[k])}</span>` : '') + '</button>';
     }).join('');
   }
 
@@ -963,13 +965,13 @@
     box.hidden = t.d < 20 || Object.keys(days).some(k => k.slice(0, 6) === prefix);
     if (box.hidden) return;
     const month = new Date(Date.UTC(next.y, next.m - 1, 1)).toLocaleDateString('fr-FR', { month: 'long', timeZone: 'UTC' });
-    box.textContent = `📅 Le planning de ${month} n'est pas encore là. Dès qu'il sort, touche ici pour l'importer` +
-      (teamCode() ? ' : l\'appli te proposera de l\'envoyer à toute l\'équipe.' : '.');
+    box.innerHTML = ICON('cal') + esc(` Le planning de ${month} n'est pas encore là. Dès qu'il sort, touche ici pour l'importer` +
+      (teamCode() ? ' : l\'appli te proposera de l\'envoyer à toute l\'équipe.' : '.'));
   }
 
   // ── Détail d'un jour : férié, changement, équipe du jour, échanges, note perso ──
   function noteFieldHTML(k) {
-    return `<label class="day-note"><span class="day-sub">📝 Ma note <span class="muted">(gardée sur ce téléphone)</span></span>` +
+    return `<label class="day-note"><span class="day-sub"><svg class="ic" aria-hidden="true"><use href="#i-note"/></svg> Ma note <span class="muted">(gardée sur ce téléphone)</span></span>` +
       `<textarea data-note="${k}" rows="2" maxlength="500" placeholder="ex. échangé avec Paul, RDV…">${esc(notes[k] || '')}</textarea></label>`;
   }
   function dayDetailHTML(k, withHead, mode) {
@@ -984,9 +986,9 @@
         (code ? ` ${chip(code)} <span>${esc(codeLabel(code))}</span>` : ' <span class="muted">pas de planning</span>') + '</div>';
     }
     const holiday = C.holidayName(k);
-    if (holiday) html += `<p class="day-holiday">🎉 Férié : ${esc(holiday)}</p>`;
+    if (holiday) html += `<p class="day-holiday"><svg class="ic" aria-hidden="true"><use href="#i-flag"/></svg> Férié : ${esc(holiday)}</p>`;
     const remark = ((plan.remarks || {})[name] || {})[k];
-    if (remark) html += `<p class="day-remark">💬 <span class="muted">Commentaire sur le planning :</span> ${esc(remark)}</p>`;
+    if (remark) html += `<p class="day-remark"><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg> <span class="muted">Commentaire sur le planning :</span> ${esc(remark)}</p>`;
     const ch = ((plan.changes || {})[name] || []).find(c => c.key === k);
     if (ch && !plan.changesSeen) html += `<p class="was">Avant le nouveau planning : ${esc(codeTitle(ch.before))}</p>`;
 
@@ -1004,10 +1006,10 @@
       const total = team.reduce((n, g) => n + g.names.length, 0);
       html += teamMode
         ? `<div class="day-team"><p class="day-sub">Équipe du jour</p>${rows}</div>`
-        : `<details class="day-team day-team-fold"><summary>👥 <strong>Toute l'équipe ce jour-là</strong> <span class="muted">(${total})</span></summary>${rows}</details>`;
+        : `<details class="day-team day-team-fold"><summary><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg> <strong>Toute l'équipe ce jour-là</strong> <span class="muted">(${total})</span></summary>${rows}</details>`;
     }
     if (working && k >= C.dateKey(todayDate())) html += swapHTML(plan, name, k, code, isMe);
-    if (!teamMode) html += notes[k] ? noteFieldHTML(k) : `<button class="link note-add" type="button" data-note-add="${k}">📝 Ajouter une note</button>`;
+    if (!teamMode) html += notes[k] ? noteFieldHTML(k) : `<button class="link note-add" type="button" data-note-add="${k}"><svg class="ic" aria-hidden="true"><use href="#i-note"/></svg> Ajouter une note</button>`;
     return html;
   }
 
@@ -1024,16 +1026,16 @@
         ? `son ${chip(o.code)} ${esc(codeLabel(o.code))} contre ton ${chip(code)}, <span class="muted">le même jour</span>`
         : `prend ton ${chip(code)} ; tu prends son ${chip(o.backCode)} le <strong>${esc(fmt(o.back))}</strong>`;
       const tags = [];
-      if (i === 0 && o.gap >= 660) tags.push('<span class="swap-tag best">⭐ Meilleure option</span>');
-      if (o.gap < 660) tags.push(`<span class="swap-tag warn">⚠️ repos de ${hm(o.gap)} seulement</span>`);
+      if (i === 0 && o.gap >= 660) tags.push('<span class="swap-tag best"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg> Meilleure option</span>');
+      if (o.gap < 660) tags.push(`<span class="swap-tag warn"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> repos de ${hm(o.gap)} seulement</span>`);
       if (o.weekMin > 48 * 60) tags.push(`<span class="swap-tag warn">semaine de ${hm(o.weekMin)}</span>`);
       if (o.overHours) tags.push(`<span class="swap-tag warn">au-delà des ${o.overHours} h du contrat</span>`);
       if (o.run >= 6) tags.push(`<span class="swap-tag">${o.run} jours d'affilée</span>`);
       return `<li${i >= SWAP_SHOWN ? ' class="swap-more" hidden' : ''}>${nameWithPhone(o.name)}${o.type === 'meme-jour' ? ' :' : ''} ${what}` +
         (tags.length ? ' ' + tags.join(' ') : '') +
-        (isMe ? ` <button class="swap-ask" type="button" data-swap="${i}">✉️ Proposer</button>` : '') + '</li>';
+        (isMe ? ` <button class="swap-ask" type="button" data-swap="${i}"><svg class="ic" aria-hidden="true"><use href="#i-mail"/></svg> Proposer</button>` : '') + '</li>';
     };
-    let html = `<details class="day-swap"><summary>🔁 <strong>Permutations possibles</strong> ` +
+    let html = `<details class="day-swap"><summary><svg class="ic" aria-hidden="true"><use href="#i-swap"/></svg> <strong>Permutations possibles</strong> ` +
       `<span class="muted">(${n ? n + ' solution' + (n > 1 ? 's' : '') : 'aucune'})</span></summary>`;
     if (n) {
       html += '<ol class="swap-list">' + r.options.map(item).join('') + '</ol>';
@@ -1074,7 +1076,7 @@
         const cls = [wd === 0 || wd === 6 ? 'we' : '', k === todayKey ? 'today' : '', k === state.cal.selected ? 'sel' : '',
           hl && days[k] === hl ? 'hl' : ''].filter(Boolean).join(' ');
         const rk = ((plan.remarks || {})[n] || {})[k];
-        html += `<td class="${cls}${rk ? ' remark' : ''}" data-key="${k}"${rk ? ` title="${esc(rk)}"` : ''}>${days[k] ? chip(days[k]) : ''}${rk ? '<span class="tt-remark">💬</span>' : ''}</td>`;
+        html += `<td class="${cls}${rk ? ' remark' : ''}" data-key="${k}"${rk ? ` title="${esc(rk)}"` : ''}>${days[k] ? chip(days[k]) : ''}${rk ? '<span class="tt-remark"><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg></span>' : ''}</td>`;
       }
       html += '</tr>';
     }
@@ -1119,10 +1121,10 @@
         `<span class="cal-row-date"><span class="wd">${esc(dayName)}</span><span class="n">${d.d}</span></span>` +
         `<span class="cal-row-code">${code ? chip(code) + ' ' + esc(codeLabel(code)) : '<span class="muted">—</span>'}` +
         (ch ? ` <span class="was">avant : ${esc(codeTitle(ch.before))}</span>` : '') +
-        (notes[k] ? ' <span class="note-dot">📝</span>' : '') +
+        (notes[k] ? ' <span class="note-dot"><svg class="ic" aria-hidden="true"><use href="#i-note"/></svg></span>' : '') +
         (cmp ? `<span class="cmp-inline">⇄ ${cmp[k] ? chip(cmp[k]) + ' ' + esc(codeLabel(cmp[k])) : '<span class="muted">—</span>'}</span>` : '') +
         '</span>' +
-        (remarks[k] ? `<span class="row-remark">💬 ${esc(remarks[k])}</span>` : '') + '</button>';
+        (remarks[k] ? `<span class="row-remark"><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg> ${esc(remarks[k])}</span>` : '') + '</button>';
       if (k === state.cal.selected) html += `<div class="cal-row-detail">${dayDetailHTML(k, false, 'planning')}</div>`;
     }
     $('calList').innerHTML = html;
@@ -1208,7 +1210,7 @@
     const changed = new Map(changes.map(ch => [ch.key, ch]));
     $('changes').hidden = !changes.length;
     $('changes').innerHTML = changes.length
-      ? `🔔 ${changes.length} jour${changes.length > 1 ? 's ont' : ' a'} changé (marqués ci-dessous) : refais l'export pour mettre ton agenda à jour.`
+      ? `<svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg> ${changes.length} jour${changes.length > 1 ? 's ont' : ' a'} changé (marqués ci-dessous) : refais l'export pour mettre ton agenda à jour.`
       : '';
 
     const counts = {};
@@ -1244,7 +1246,7 @@
   function renderCodes() {
     const colorOptions = sel => '<option value="">Aucune</option>' + Object.keys(C.COLORS).map(k =>
       `<option value="${k}" ${sel === k ? 'selected' : ''}>${C.COLORS[k].emoji} ${k}</option>`).join('');
-    let html = '<tr><th title="Mettre dans l\'agenda du téléphone" aria-label="Agenda">📅</th><th>Code</th><th>Libellé</th><th>Couleur</th><th></th></tr>';
+    let html = '<tr><th title="Mettre dans l\'agenda du téléphone" aria-label="Agenda"><svg class="ic" aria-hidden="true"><use href="#i-cal"/></svg></th><th>Code</th><th>Libellé</th><th>Couleur</th><th></th></tr>';
     state.codes.forEach((c, i) => {
       html += `<tr data-i="${i}">` +
         `<td><input type="checkbox" data-f="include" ${c.include ? 'checked' : ''}></td>` +
@@ -1388,7 +1390,7 @@
       document.querySelectorAll(`[data-key="${k}"]`).forEach(el => {
         const host = el.classList.contains('cal-row') ? el.querySelector('.cal-row-code') : el;
         const dot = host && host.querySelector('.note-dot');
-        if (notes[k] && !dot && host) host.insertAdjacentHTML('beforeend', '<span class="note-dot">📝</span>');
+        if (notes[k] && !dot && host) host.insertAdjacentHTML('beforeend', '<span class="note-dot"><svg class="ic" aria-hidden="true"><use href="#i-note"/></svg></span>');
         if (!notes[k] && dot) dot.remove();
       });
       renderNextDays();
@@ -1584,7 +1586,7 @@
   // alertes en haut du planning : vérifier maintenant, ou aller voir la clé
   const teamWarnGo = async () => {
     if ($('teamWarn').dataset.act === 'sync') {
-      $('teamWarn').innerHTML = '<p>📡 Vérification…</p>';
+      $('teamWarn').innerHTML = '<p><svg class="ic" aria-hidden="true"><use href="#i-signal"/></svg> Vérification…</p>';
       lastSync = 0;
       await syncTeam(true);
       renderTeam();
@@ -1709,14 +1711,14 @@
   function renderReorder(names, me) {
     if (!state.reorderList) state.reorderList = teamOrder(names, me);
     const list = state.reorderList;
-    $('calTeam').innerHTML = '<p class="hint">Maintiens la poignée ☰ et fais glisser le nom à sa place. ✏️ change le nom affiché ' +
+    $('calTeam').innerHTML = '<p class="hint">Maintiens la poignée ☰ et fais glisser le nom à sa place. <svg class="ic" aria-hidden="true"><use href="#i-edit"/></svg> change le nom affiché ' +
       '(par exemple pour distinguer deux homonymes). Puis touche « Terminé ».</p>' +
       '<ol class="reorder" id="roList">' + list.map(n =>
         `<li data-name="${esc(n)}"${n === me ? ' class="me"' : ''}>` +
         `<span class="ro-handle" role="button" aria-label="Déplacer ${esc(n)}">` +
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>' +
         `<span class="ro-name">${nameHTML(n)}</span>` +
-        `<button class="ro-edit link" type="button" aria-label="Renommer ${esc(shown(n))}">✏️</button></li>`).join('') +
+        `<button class="ro-edit link" type="button" aria-label="Renommer ${esc(shown(n))}"><svg class="ic" aria-hidden="true"><use href="#i-edit"/></svg></button></li>`).join('') +
       '</ol><div class="actions"><button id="roDone" class="primary" type="button">Terminé</button>' +
       '<button id="roReset" type="button">Par défaut</button><button id="roCancel" class="link" type="button">Annuler</button></div>';
   }
@@ -1822,8 +1824,8 @@
     const list = loadUtiles().list || [];
     $('utilesView').innerHTML = list.length ? list.map(u =>
       `<div class="u-row"><div class="u-text"><span class="u-label">${esc(u.label)}</span><span class="u-tel">${esc(u.tel)}</span></div>` +
-      `<a class="u-act" href="tel:${esc(telHref(u.tel))}" aria-label="Appeler ${esc(u.label)}">📞</a>` +
-      `<a class="u-act" href="sms:${esc(telHref(u.tel))}" aria-label="SMS à ${esc(u.label)}">💬</a></div>`).join('')
+      `<a class="u-act" href="tel:${esc(telHref(u.tel))}" aria-label="Appeler ${esc(u.label)}"><svg class="ic" aria-hidden="true"><use href="#i-phone"/></svg></a>` +
+      `<a class="u-act" href="sms:${esc(telHref(u.tel))}" aria-label="SMS à ${esc(u.label)}"><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg></a></div>`).join('')
       : '<p class="hint">Aucun numéro pour l\'instant.</p>';
   }
   function openUtiles() {
@@ -1860,7 +1862,7 @@
       ut.draft.map((u, i) => `<div class="u-edit" data-i="${i}">` +
         `<input class="u-input" data-f="label" value="${esc(u.label)}" placeholder="Service (ex. PC opérations)" aria-label="Service">` +
         `<input class="u-input" data-f="tel" value="${esc(u.tel)}" placeholder="Numéro" inputmode="tel" aria-label="Numéro">` +
-        `<button type="button" data-del="${i}" aria-label="Supprimer">🗑</button></div>`).join('') +
+        `<button type="button" data-del="${i}" aria-label="Supprimer"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg></button></div>`).join('') +
       '<div class="actions"><button id="uAdd" type="button">+ Ajouter un numéro</button></div>' +
       '<div class="actions"><button id="uSave" type="button" class="primary">Enregistrer pour l\'équipe</button>' +
       '<button id="uCancel" class="link" type="button">Annuler</button></div>';
@@ -1895,7 +1897,7 @@
   }
   // appui court : ouvre le panneau ; appui long (2 s) sur l'icône : l'ouvre avec le cadenas
   let btnTimer = null, btnLong = false;
-  function revealLock() { $('utilesAdmin').hidden = false; utilesMsg('🔒 Accès responsable affiché.', 'ok'); }
+  function revealLock() { $('utilesAdmin').hidden = false; utilesMsg('Accès responsable affiché.', 'ok'); }
   $('utilesBtn').addEventListener('pointerdown', () => {
     btnLong = false;
     clearTimeout(btnTimer);
