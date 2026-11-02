@@ -155,7 +155,9 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   fermé au changement de mois ou d'onglet. La vue Liste garde son détail déplié dans la liste.
   Vue Équipe : le tableau défile dans son cadre (`.tt-wrap`, hauteur max = écran) avec dates (en-tête),
   noms (colonne) et ligne « Total » figés.
-  Proposé mais en attente de l'avis de l'utilisateur : cases du calendrier teintées par service (maquette faite).
+  Option « Cases colorées » (Réglages → Codes et couleurs, `mh_cal_style` = 'tint', classe `body.tint-cells`) :
+  case du jour teintée par service, repos sans couleur ; « Pastilles » reste l'affichage par défaut (choix de l'utilisateur :
+  plus parlant en mode clair, proposé au choix de chacun).
   Permutations : bouton « ✉️ Proposer » (seulement sur mon propre planning) → message déjà rédigé
   (`swapMessage`) : SMS au numéro partagé (`sms:NUM?&body=`, iPhone et Android), sinon feuille de partage,
   sinon copie.

@@ -2132,6 +2132,22 @@
     if (go) setTab(go.dataset.goTab);
   });
 
+  // Affichage du calendrier : « Pastilles » (par défaut) ou « Cases colorées » (mh_cal_style), au choix de chacun
+  function applyCalStyle(style) {
+    const tint = style === 'tint';
+    document.body.classList.toggle('tint-cells', tint);
+    $('styleChips').setAttribute('aria-selected', String(!tint));
+    $('styleTint').setAttribute('aria-selected', String(tint));
+    $('styleChips').setAttribute('aria-checked', String(!tint));
+    $('styleTint').setAttribute('aria-checked', String(tint));
+  }
+  ['styleChips', 'styleTint'].forEach(id => $(id).addEventListener('click', e => {
+    const style = e.currentTarget.dataset.calStyle;
+    store('mh_cal_style', style);
+    applyCalStyle(style);
+  }));
+  applyCalStyle(load('mh_cal_style'));
+
   renderCodes();
   document.body.dataset.tab = state.tab;
   document.querySelectorAll('.tab[data-tab-btn]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tabBtn === state.tab)));

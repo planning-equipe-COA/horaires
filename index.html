@@ -245,6 +245,12 @@
   <section class="card" data-tab="reglages">
     <details id="codesDetails" class="fold">
       <summary><h2>🎨 Codes et couleurs</h2></summary>
+      <p class="day-sub">Affichage du calendrier</p>
+      <div class="seg seg-sm" role="radiogroup" aria-label="Affichage du calendrier">
+        <button id="styleChips" type="button" role="radio" data-cal-style="chips">Pastilles</button>
+        <button id="styleTint" type="button" role="radio" data-cal-style="tint">Cases colorées</button>
+      </div>
+      <p class="hint">« Cases colorées » teinte toute la case du jour à la couleur du service ; les repos restent sans couleur.</p>
       <p class="hint">Coche (📅) les codes à mettre dans l'agenda du téléphone. Les couleurs valent pour l'appli et pour l'agenda. Réglages mémorisés sur cet appareil.</p>
       <div class="table-wrap"><table id="codes"></table></div>
       <div class="actions">
