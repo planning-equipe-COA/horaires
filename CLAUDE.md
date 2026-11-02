@@ -163,7 +163,11 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   Le détail du jour (vue Mois, vue Équipe, cartes Aujourd'hui/Demain) s'ouvre dans un **panneau depuis le bas**
   (`#daySheet`, `openDay` / `closeDay`, `state.dayOpen`) : fond, ✕, Échap ou glisser vers le bas pour fermer ;
   fermé au changement de mois ou d'onglet. La vue Liste garde son détail déplié dans la liste.
-  Vue Équipe : le tableau défile dans son cadre (`.tt-wrap`, hauteur max = écran) avec dates (en-tête),
+  Vue Équipe, lignes : seulement les agents qui ont un code dans le mois (sauf moi). Un même nom écrit autrement
+  d'un tableau à l'autre (« BLANCKAERT » / « BLANCKAERT 1/2 T (2) » ; le tableau d'octobre finit le 1er novembre)
+  est fusionné en une ligne s'ils n'ont aucun jour en commun dans le mois (vrais homonymes, ex. ANDRIEU 32 /
+  ANDRIEU 1/2 T, gardés séparés car ils se chevauchent). Fusion d'affichage seulement : le planning garde les deux noms.
+  Vue Équipe : le tableau défile dans son cadre (`.tt-wrap`, hauteur calculée par `fitTeamTable` pour finir au-dessus de la barre d'onglets) avec dates (en-tête),
   noms (colonne) et ligne « Total » figés.
   Option « Cases colorées » (Réglages → carte « Affichage du calendrier », séparée de « Codes et couleurs » à la demande de l'utilisateur, `mh_cal_style` = 'tint', classe `body.tint-cells`) :
   case du jour teintée par service, repos sans couleur ; « Pastilles » reste l'affichage par défaut (choix de l'utilisateur :

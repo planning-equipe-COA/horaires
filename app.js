@@ -1052,7 +1052,29 @@
     const { y, m } = state.cal;
     const dates = C.monthGrid(y, m).flat().filter(Boolean);
     if (state.reorder) { renderReorder(names, me); return; }
-    const rows = teamOrder(names, me).map(n => ({ name: n }));
+    // seulement les agents qui ont au moins un code ce mois-ci : un nom écrit autrement dans un autre tableau
+    // (« BLANCKAERT 1/2 T (2) » / « BLANCKAERT ») est un autre agent, qui ferait sinon une ligne vide
+    const inMonth = n => dates.some(d => (plan.agents[n] || {})[C.dateKey(d)]);
+    // même nom écrit autrement d'un tableau à l'autre (ex. octobre se termine le 1er novembre) : une seule ligne
+    // si les deux ne travaillent jamais les mêmes jours ce mois-ci (deux homonymes, eux, se chevauchent)
+    const keys = dates.map(d => C.dateKey(d));
+    const ordered = teamOrder(names, me).filter(n => n === me || inMonth(n));
+    const byBase = new Map();
+    for (const n of ordered) { const b = C.splitName(n).base.toUpperCase(); if (!byBase.has(b)) byBase.set(b, []); byBase.get(b).push(n); }
+    const rows = [], used = new Set();
+    for (const n of ordered) {
+      if (used.has(n)) continue;
+      const group = byBase.get(C.splitName(n).base.toUpperCase());
+      const overlap = group.length > 1 && keys.some(k => group.filter(x => (plan.agents[x] || {})[k]).length > 1);
+      const members = overlap ? [n] : group;
+      members.forEach(x => used.add(x));
+      // nom affiché : celui qui a le plus de jours ce mois-ci (le nom du tableau le plus récent, en pratique)
+      const count = x => keys.filter(k => (plan.agents[x] || {})[k]).length;
+      const main = members.includes(me) ? me : members.slice().sort((a, b) => count(b) - count(a))[0];
+      const days = Object.assign({}, ...members.map(x => plan.agents[x] || {}));
+      const remarks = Object.assign({}, ...members.map(x => (plan.remarks || {})[x] || {}));
+      rows.push({ name: main, days, remarks, me: members.includes(me) });
+    }
     // codes présents ce mois-ci (dans l'ordre des codes) : touchés, ils sont surlignés dans le tableau
     const present = new Set();
     for (const n of names) for (const d of dates) { const c = (plan.agents[n] || {})[C.dateKey(d)]; if (c) present.add(c); }
@@ -1069,13 +1091,13 @@
     for (const row of rows) {
       if (row.header) { html += `<tr class="tt-group"><th class="tt-name" scope="rowgroup">${esc(row.header)}</th><td colspan="${dates.length}"></td></tr>`; continue; }
       const n = row.name;
-      const days = plan.agents[n] || {};
-      html += `<tr${n === me ? ' class="me"' : ''}><th class="tt-name" scope="row">${esc(shown(n))}${tagsHTML(n)}</th>`;
+      const days = row.days;
+      html += `<tr${row.me ? ' class="me"' : ''}><th class="tt-name" scope="row">${esc(shown(n))}${tagsHTML(n)}</th>`;
       for (const d of dates) {
         const k = C.dateKey(d), wd = utc(d).getUTCDay();
         const cls = [wd === 0 || wd === 6 ? 'we' : '', k === todayKey ? 'today' : '', k === state.cal.selected ? 'sel' : '',
           hl && days[k] === hl ? 'hl' : ''].filter(Boolean).join(' ');
-        const rk = ((plan.remarks || {})[n] || {})[k];
+        const rk = row.remarks[k];
         html += `<td class="${cls}${rk ? ' remark' : ''}" data-key="${k}"${rk ? ` title="${esc(rk)}"` : ''}>${days[k] ? chip(days[k]) : ''}${rk ? '<span class="tt-remark"><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg></span>' : ''}</td>`;
       }
       html += '</tr>';
