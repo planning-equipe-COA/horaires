@@ -1081,13 +1081,18 @@
     const order = state.codes.map(c => C.normCode(c.code));
     const legend = [...present].sort((a, b) => ((order.indexOf(a) + 1) || 999) - ((order.indexOf(b) + 1) || 999) || a.localeCompare(b));
     const hl = present.has(state.cal.hl) ? state.cal.hl : '';
-    let html = `<table class="team-table${hl ? ' hl-on' : ''}"><thead><tr><th class="tt-name"></th>`;
+    // Deux tableaux aux colonnes identiques : l'en-tête des dates reste collé en haut de l'écran (seule la page
+    // défile verticalement : une seule barre de défilement), le corps défile horizontalement, synchronisé.
+    const width = `style="width:${(8.6 + dates.length * 2.3).toFixed(1)}em"`;
+    const cols = '<colgroup><col style="width:8.6em">' + dates.map(() => '<col style="width:2.3em">').join('') + '</colgroup>';
+    let head = `<table class="team-table" ${width}>${cols}<thead><tr><th class="tt-name"></th>`;
     for (const d of dates) {
       const k = C.dateKey(d), wd = utc(d).getUTCDay();
       const cls = [wd === 0 || wd === 6 ? 'we' : '', k === todayKey ? 'today' : '', k === state.cal.selected ? 'sel' : '', C.holidayName(k) ? 'hol' : ''].filter(Boolean).join(' ');
-      html += `<th class="${cls}" data-key="${k}"><span>${WEEKDAYS[(wd + 6) % 7].slice(0, 1).toUpperCase()}</span>${d.d}</th>`;
+      head += `<th class="${cls}" data-key="${k}"><span>${WEEKDAYS[(wd + 6) % 7].slice(0, 1).toUpperCase()}</span>${d.d}</th>`;
     }
-    html += '</tr></thead><tbody>';
+    head += '</tr></thead></table>';
+    let html = `<table class="team-table${hl ? ' hl-on' : ''}" ${width}>${cols}<tbody>`;
     for (const row of rows) {
       if (row.header) { html += `<tr class="tt-group"><th class="tt-name" scope="rowgroup">${esc(row.header)}</th><td colspan="${dates.length}"></td></tr>`; continue; }
       const n = row.name;
@@ -1112,26 +1117,16 @@
     html += '</table>';
     const legendHTML = legend.length > 1 ? '<div class="tt-legend"><span>Surligner :</span>' + legend.map(c =>
       `<button class="hl-btn" type="button" data-hl="${esc(c)}" aria-pressed="${c === hl}" aria-label="Surligner ${esc(codeLabel(c))}">${chip(c)}</button>`).join('') + '</div>' : '';
-    $('calTeam').innerHTML = legendHTML + `<div class="tt-wrap">${html}</div>` +
+    $('calTeam').innerHTML = legendHTML + `<div class="tt-head"><div class="tt-head-in">${head}</div></div><div class="tt-wrap">${html}</div>` +
       '<div class="tt-tools"><button id="ttReorder" type="button">↕︎ Réorganiser les noms</button></div>' +
       `<p id="orderMsg" class="hint order-msg"${state.orderMsg ? '' : ' hidden'}>${esc(state.orderMsg || '')}</p>` +
       '<p class="hint">Touche un jour pour voir l\'équipe de ce jour-là, ou un code pour le surligner. Fais glisser le tableau pour voir tout le mois.</p>';
-    const wrap = $('calTeam').querySelector('.tt-wrap');
-    fitTeamTable();
-    const target = wrap.querySelector('th.sel, th.today');
-    if (target) wrap.scrollLeft = Math.max(0, target.offsetLeft - 140);
+    const wrap = $('calTeam').querySelector('.tt-wrap'), headIn = $('calTeam').querySelector('.tt-head-in');
+    wrap.addEventListener('scroll', () => { if (headIn.scrollLeft !== wrap.scrollLeft) headIn.scrollLeft = wrap.scrollLeft; }, { passive: true });
+    headIn.addEventListener('scroll', () => { if (wrap.scrollLeft !== headIn.scrollLeft) wrap.scrollLeft = headIn.scrollLeft; }, { passive: true });
+    const target = headIn.querySelector('th.sel, th.today');
+    if (target) wrap.scrollLeft = headIn.scrollLeft = Math.max(0, target.offsetLeft - 140);
   }
-
-  // Le tableau de l'équipe défile dans son cadre : ce cadre doit s'arrêter au-dessus de la barre d'onglets
-  // (sinon les dernières lignes passent dessous), mesuré page en haut, avec un minimum pour les petits écrans
-  function fitTeamTable() {
-    const wrap = $('calTeam').querySelector('.tt-wrap');
-    if (!wrap || $('calTeam').hidden) return;
-    const bar = document.querySelector('.tabbar').getBoundingClientRect();
-    const top = wrap.getBoundingClientRect().top + window.scrollY;
-    wrap.style.maxHeight = Math.max(240, Math.floor(bar.top - top - 12)) + 'px';
-  }
-  window.addEventListener('resize', fitTeamTable);
 
   // Vue liste : les jours du mois de haut en bas ; toucher un jour déplie les collègues du même service
   function renderList(days, changes, todayKey, cmp, swapDay, remarks) {

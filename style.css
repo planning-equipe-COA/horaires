@@ -294,12 +294,14 @@ button.link { background: none; border: 0; color: var(--muted); text-decoration:
 .cmp-inline { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--muted); font-size: .85rem; }
 .cmp-inline .chip { font-size: .68rem; }
 /* ── Vue Équipe ─────────────────────────────────────────────────────────── */
-/* hauteur ajustée par fitTeamTable() pour finir au-dessus de la barre d'onglets ; en bout de tableau, la page prend le relais */
-.tt-wrap { overflow: auto; max-height: calc(100dvh - 230px); margin: 0 -4px; -webkit-overflow-scrolling: touch; }
-.team-table thead th { position: sticky; top: 0; z-index: 2; background: var(--card); }
-.team-table thead th.tt-name { z-index: 3; }
-.team-table tfoot th, .team-table tfoot td { position: sticky; bottom: 0; z-index: 2; background: var(--card); }
-.team-table tfoot th.tt-name { z-index: 3; }
+/* vue Équipe : une seule barre de défilement vertical (la page) ; le corps du tableau défile horizontalement et
+   l'en-tête des dates (tableau à part, colonnes identiques) reste collé en haut de l'écran, synchronisé */
+.tt-wrap { overflow-x: auto; overflow-y: hidden; margin: 0 -4px; -webkit-overflow-scrolling: touch; }
+.tt-head { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; margin: 0 -4px; background: var(--card); border-bottom: 1px solid var(--line); }
+.tt-head-in { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.tt-head-in::-webkit-scrollbar { display: none; }
+.team-table { table-layout: fixed; }
+.tt-head .team-table th { border-bottom: 0; }
 .team-table { border-collapse: separate; border-spacing: 0; font-size: .78rem; width: auto; }
 .team-table th, .team-table td { padding: 3px 2px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; min-width: 2.1em; }
 .team-table thead th { font-weight: 600; color: var(--muted); font-size: .72rem; line-height: 1.2; cursor: pointer; }

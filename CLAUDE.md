@@ -167,8 +167,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   d'un tableau à l'autre (« BLANCKAERT » / « BLANCKAERT 1/2 T (2) » ; le tableau d'octobre finit le 1er novembre)
   est fusionné en une ligne s'ils n'ont aucun jour en commun dans le mois (vrais homonymes, ex. ANDRIEU 32 /
   ANDRIEU 1/2 T, gardés séparés car ils se chevauchent). Fusion d'affichage seulement : le planning garde les deux noms.
-  Vue Équipe : le tableau défile dans son cadre (`.tt-wrap`, hauteur calculée par `fitTeamTable` pour finir au-dessus de la barre d'onglets) avec dates (en-tête),
-  noms (colonne) et ligne « Total » figés.
+  Vue Équipe : **une seule barre de défilement vertical (la page)**. Le corps du tableau (`.tt-wrap`) ne défile
+  qu'horizontalement ; l'en-tête des dates est un tableau à part (`.tt-head`, `position: sticky` en haut de l'écran),
+  colonnes identiques (`<colgroup>` 8,6 em + 2,3 em par jour, `table-layout: fixed`), défilement horizontal
+  synchronisé dans les deux sens. (Avant : cadre à défilement vertical propre → deux « ascenseurs », signalé.)
   Option « Cases colorées » (Réglages → carte « Affichage du calendrier », séparée de « Codes et couleurs » à la demande de l'utilisateur, `mh_cal_style` = 'tint', classe `body.tint-cells`) :
   case du jour teintée par service, repos sans couleur ; « Pastilles » reste l'affichage par défaut (choix de l'utilisateur :
   plus parlant en mode clair, proposé au choix de chacun).
