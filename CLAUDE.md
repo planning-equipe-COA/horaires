@@ -245,5 +245,14 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   l'utilisateur. Liste dans le planning chiffré (`utiles` { list:[{label, tel}], at }, commit « Numéros
   utiles mis à jour »), copie locale `mh_utiles`. **Toute publication doit reporter `utiles` et
   `admin`** via `keepShared(current)`. Pas de numéros de collègues dans ce panneau (choix de l'utilisateur).
+- **Imprimer / PDF** (nov. 2026) : bouton imprimante en haut à droite, à côté de 📞 (`#calPrint`, onglets Planning et
+  Équipe, dès qu'un planning est sur le téléphone ; pas dans l'en-tête du calendrier : le mois y était tronqué à 360 px) → panneau `#printSheet` : Quoi = « Mon planning » (**seulement `mh_name`**, demandé par l'utilisateur ;
+  désactivé sans « Je suis »), « Le planning de l'équipe » ou « Les deux » (défaut selon l'onglet) ; Période = mois
+  affiché ou « Du … au … » (3 mois max). `doPrint` fabrique les pages dans `#printArea` (enfant direct de `body`) puis
+  `window.print()` ; `body.printing` + `@media print` n'impriment que cette zone ; `afterprint` la vide. Une page par
+  mois : mon planning en A4 portrait (grille lun→dim, code + libellé, férié, commentaires, résumé, légende), l'équipe
+  en A4 paysage (`@page team`, lignes = `teamRowsFor`, partagé avec la vue Équipe). Mois sans aucun code : pas de page.
+  PDF = fenêtre d'impression du téléphone (Android « Enregistrer au format PDF », iPhone Partager → Fichiers).
+  Couleurs forcées (`print-color-adjust: exact`), thème clair imposé dans `#printArea`.
 - Écarté par l'utilisateur : « Partager → Planning COA » sur Android.
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.

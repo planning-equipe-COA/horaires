@@ -765,6 +765,7 @@
   const EMPTY_PLAN = { agents: {}, changes: {}, changesSeen: true, at: 'vide' };
   function planView() { return state.plan || EMPTY_PLAN; }
   function renderCalendar() {
+    $('calPrint').hidden = !(state.plan && Object.keys(state.plan.agents || {}).length); // Imprimer / PDF
     const plan = planView();
     const names = orderNames(Object.keys(plan.agents));
     const empty = !names.length;
@@ -1048,17 +1049,12 @@
   }
 
   // Vue « Équipe » : tous les agents en lignes, les jours du mois en colonnes (comme le tableau Excel)
-  function renderTeamTable(plan, names, me, todayKey) {
-    const { y, m } = state.cal;
-    const dates = C.monthGrid(y, m).flat().filter(Boolean);
-    if (state.reorder) { renderReorder(names, me); return; }
-    // seulement les agents qui ont au moins un code ce mois-ci : un nom écrit autrement dans un autre tableau
-    // (« BLANCKAERT 1/2 T (2) » / « BLANCKAERT ») est un autre agent, qui ferait sinon une ligne vide
-    const inMonth = n => dates.some(d => (plan.agents[n] || {})[C.dateKey(d)]);
-    // même nom écrit autrement d'un tableau à l'autre (ex. octobre se termine le 1er novembre) : une seule ligne
-    // si les deux ne travaillent jamais les mêmes jours ce mois-ci (deux homonymes, eux, se chevauchent)
-    const keys = dates.map(d => C.dateKey(d));
-    const ordered = teamOrder(names, me).filter(n => n === me || inMonth(n));
+  // Lignes de la vue Équipe pour des jours donnés (aussi pour l'impression) : seulement les agents qui ont un code
+  // ces jours-là (sauf moi) ; un même nom écrit autrement d'un tableau à l'autre (« BLANCKAERT 1/2 T (2) » /
+  // « BLANCKAERT ») fait une seule ligne s'ils ne travaillent jamais les mêmes jours (deux homonymes, eux, se chevauchent)
+  function teamRowsFor(plan, names, me, keys) {
+    const inPeriod = n => keys.some(k => (plan.agents[n] || {})[k]);
+    const ordered = teamOrder(names, me).filter(n => n === me || inPeriod(n));
     const byBase = new Map();
     for (const n of ordered) { const b = C.splitName(n).base.toUpperCase(); if (!byBase.has(b)) byBase.set(b, []); byBase.get(b).push(n); }
     const rows = [], used = new Set();
@@ -1075,6 +1071,162 @@
       const remarks = Object.assign({}, ...members.map(x => (plan.remarks || {})[x] || {}));
       rows.push({ name: main, days, remarks, me: members.includes(me) });
     }
+    return rows;
+  }
+
+  // ── Imprimer / PDF : mon planning (seulement le mien), celui de l'équipe, ou les deux ; mois affiché ou période ──
+  // La page à imprimer est fabriquée sur le téléphone dans #printArea (seule partie imprimée, voir @media print).
+  const PRINT_MAX_DAYS = 93;
+  const isoOf = k => k.slice(0, 4) + '-' + k.slice(4, 6) + '-' + k.slice(6, 8);
+  const keyOf = iso => String(iso || '').replace(/-/g, '');
+  function monthBounds(y, m) {
+    const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    return [C.dateKey({ y, m, d: 1 }), C.dateKey({ y, m, d: last })];
+  }
+  function printChoice(name) { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.value : ''; }
+  function openPrint() {
+    const me = load(STORAGE_NAME_KEY) || '';
+    const hasMe = !!(me && planView().agents[me]);
+    $('prMeName').textContent = hasMe ? '(' + nameText(me) + ')' : '';
+    $('prNoMe').hidden = hasMe;
+    document.querySelectorAll('input[name="prWhat"]').forEach(r => { r.disabled = !hasMe && r.value !== 'team'; });
+    const what = !hasMe || state.tab === 'equipe' ? 'team' : 'me';
+    document.querySelector(`input[name="prWhat"][value="${what}"]`).checked = true;
+    const { y, m } = state.cal, [a, b] = monthBounds(y, m);
+    $('prMonthLabel').textContent = 'Le mois affiché (' + utc({ y, m, d: 1 }).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' }) + ')';
+    if (!printChoice('prWhen')) document.querySelector('input[name="prWhen"][value="month"]').checked = true;
+    if (printChoice('prWhen') === 'month' || !$('prFrom').value) { $('prFrom').value = isoOf(a); $('prTo').value = isoOf(b); }
+    $('prRange').hidden = printChoice('prWhen') !== 'range';
+    $('prMsg').hidden = true;
+    $('printSheet').hidden = false;
+    document.body.classList.add('sheet-open');
+  }
+  function closePrint() {
+    $('printSheet').hidden = true;
+    if ($('utilesSheet').hidden && $('daySheet').hidden) document.body.classList.remove('sheet-open');
+  }
+  // découpe [from, to] en morceaux d'un mois : [{ y, m, from, to }]
+  function monthSegments(from, to) {
+    const out = [];
+    let y = +from.slice(0, 4), m = +from.slice(4, 6);
+    for (let guard = 0; guard < 24; guard++) {
+      const [a, b] = monthBounds(y, m);
+      if (a > to) break;
+      out.push({ y, m, from: a < from ? from : a, to: b > to ? to : b });
+      if (++m > 12) { m = 1; y++; }
+    }
+    return out;
+  }
+  function periodLabel(seg) {
+    const raw = utc({ y: seg.y, m: seg.m, d: 1 }).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    const month = raw.charAt(0).toUpperCase() + raw.slice(1);
+    const [a, b] = monthBounds(seg.y, seg.m);
+    if (seg.from === a && seg.to === b) return month;
+    return month + ' · du ' + +seg.from.slice(6) + ' au ' + +seg.to.slice(6);
+  }
+  function legendHTML(codes) {
+    const order = state.codes.map(c => C.normCode(c.code));
+    const list = [...codes].sort((a, b) => ((order.indexOf(a) + 1) || 999) - ((order.indexOf(b) + 1) || 999) || a.localeCompare(b));
+    return list.length ? '<p class="pr-legend">' + list.map(c => `<span>${chip(c)} ${esc(codeLabel(c))}</span>`).join('') + '</p>' : '';
+  }
+  const printedOn = () => 'Planning COA · imprimé le ' + new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  function printMePage(plan, me, seg) {
+    const days = plan.agents[me] || {}, remarks = (plan.remarks || {})[me] || {};
+    const used = new Set();
+    let worked = 0, rest = 0, leave = 0, other = 0, minutes = 0;
+    const byCode = {};
+    let html = `<section class="pr-page pr-me"><header class="pr-head"><h1>Planning de ${esc(nameText(me))}</h1>` +
+      `<p>${esc(periodLabel(seg))}</p></header><table class="pr-cal"><thead><tr>` +
+      ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].map(d => `<th>${d}</th>`).join('') + '</tr></thead><tbody>';
+    for (const week of C.monthGrid(seg.y, seg.m)) {
+      html += '<tr>';
+      for (const d of week) {
+        if (!d) { html += '<td class="pr-out"></td>'; continue; }
+        const k = C.dateKey(d), inside = k >= seg.from && k <= seg.to;
+        const code = inside ? days[k] : '', hol = C.holidayName(k), wd = utc(d).getUTCDay();
+        if (code) {
+          used.add(code);
+          const def = defOf(code), kind = C.dayKind(def);
+          if (kind === 'travail') { worked++; byCode[code] = (byCode[code] || 0) + 1; }
+          else if (kind === 'repos') rest++; else if (kind === 'conge') leave++; else other++;
+          minutes += C.codeMinutes(def);
+        }
+        const cls = [!inside ? 'pr-off' : '', wd === 0 || wd === 6 ? 'pr-we' : '', hol ? 'pr-hol' : ''].filter(Boolean).join(' ');
+        html += `<td class="${cls}"><span class="pr-num">${d.d}</span>` + (hol && inside ? `<span class="pr-holname">${esc(hol)}</span>` : '') +
+          (code ? `<div class="pr-code">${chip(code)}<span>${esc(codeLabel(code))}</span></div>` : '') +
+          (inside && remarks[k] ? `<div class="pr-remark">${esc(remarks[k])}</div>` : '') + '</td>';
+      }
+      html += '</tr>';
+    }
+    const h = Math.floor(minutes / 60), mn = minutes % 60;
+    const detail = Object.keys(byCode).map(c => `${byCode[c]} ${esc(codeLabel(c))}`).join(', ');
+    html += '</tbody></table><p class="pr-sum">' +
+      `<strong>${worked}</strong> jour${worked > 1 ? 's' : ''} travaillé${worked > 1 ? 's' : ''}` + (detail ? ` (${detail})` : '') +
+      ` · <strong>${rest}</strong> repos` + (leave ? ` · <strong>${leave}</strong> congé${leave > 1 ? 's' : ''}` : '') +
+      (other ? ` · <strong>${other}</strong> autre${other > 1 ? 's' : ''}` : '') +
+      (minutes ? ` · <strong>${h} h${mn ? ' ' + String(mn).padStart(2, '0') : ''}</strong> théoriques` : '') + '</p>' +
+      legendHTML(used) + `<footer class="pr-foot">${esc(printedOn())}</footer></section>`;
+    return html;
+  }
+  function printTeamPage(plan, me, seg) {
+    const names = Object.keys(plan.agents);
+    const keys = [];
+    for (let k = seg.from; k <= seg.to; k = C.dateKey((d => { const t = new Date(Date.UTC(d.y, d.m - 1, d.d + 1)); return { y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate() }; })(keyToDate(k)))) keys.push(k);
+    const rows = teamRowsFor(plan, names, me, keys);
+    const used = new Set();
+    let html = `<section class="pr-page pr-team"><header class="pr-head"><h1>Planning de l'équipe</h1>` +
+      `<p>${esc(periodLabel(seg))}</p></header><table class="pr-tt"><colgroup><col class="pr-tt-name">` +
+      keys.map(() => '<col>').join('') + '</colgroup><thead><tr><th></th>';
+    for (const k of keys) {
+      const d = keyToDate(k), wd = utc(d).getUTCDay();
+      html += `<th class="${wd === 0 || wd === 6 ? 'pr-we' : ''}${C.holidayName(k) ? ' pr-hol' : ''}"><span>${WEEKDAYS[(wd + 6) % 7].slice(0, 1).toUpperCase()}</span>${d.d}</th>`;
+    }
+    html += '</tr></thead><tbody>';
+    for (const row of rows) {
+      html += `<tr${row.me ? ' class="pr-mine"' : ''}><th>${esc(nameText(row.name))}</th>`;
+      for (const k of keys) {
+        const code = row.days[k], wd = utc(keyToDate(k)).getUTCDay();
+        if (code) used.add(code);
+        html += `<td class="${wd === 0 || wd === 6 ? 'pr-we' : ''}">${code ? chip(code) : ''}${row.remarks[k] ? '<sup>*</sup>' : ''}</td>`;
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table>' + legendHTML(used) +
+      (rows.some(r => keys.some(k => r.remarks[k])) ? '<p class="pr-note">* commentaire sur le tableau de service</p>' : '') +
+      `<footer class="pr-foot">${esc(printedOn())}</footer></section>`;
+    return html;
+  }
+  function doPrint() {
+    const plan = planView(), me = load(STORAGE_NAME_KEY) || '';
+    const what = printChoice('prWhat') || 'team';
+    let from, to;
+    if (printChoice('prWhen') === 'range') { from = keyOf($('prFrom').value); to = keyOf($('prTo').value); }
+    else [from, to] = monthBounds(state.cal.y, state.cal.m);
+    const msg = t => { $('prMsg').textContent = t; $('prMsg').hidden = !t; };
+    if (!/^\d{8}$/.test(from) || !/^\d{8}$/.test(to)) return msg('Choisis les deux dates.');
+    if (from > to) [from, to] = [to, from];
+    const span = Math.round((utc(keyToDate(to)) - utc(keyToDate(from))) / 864e5) + 1;
+    if (span > PRINT_MAX_DAYS) return msg('Trois mois au plus à la fois.');
+    const segs = monthSegments(from, to);
+    let html = '';
+    // pas de page pour un mois sans aucun code (planning pas encore sorti)
+    const filled = (names, seg) => names.some(n => Object.keys(plan.agents[n] || {}).some(k => k >= seg.from && k <= seg.to));
+    if (what !== 'team' && me) html += segs.filter(seg => filled([me], seg)).map(seg => printMePage(plan, me, seg)).join('');
+    if (what !== 'me') html += segs.filter(seg => filled(Object.keys(plan.agents), seg)).map(seg => printTeamPage(plan, me, seg)).join('');
+    if (!html) return msg('Pas de planning sur le téléphone pour cette période.');
+    $('printArea').innerHTML = html;
+    closePrint();
+    document.body.classList.add('printing');
+    setTimeout(() => window.print(), 60);
+  }
+  window.addEventListener('afterprint', () => { document.body.classList.remove('printing'); $('printArea').innerHTML = ''; });
+
+  function renderTeamTable(plan, names, me, todayKey) {
+    const { y, m } = state.cal;
+    const dates = C.monthGrid(y, m).flat().filter(Boolean);
+    if (state.reorder) { renderReorder(names, me); return; }
+    const keys = dates.map(d => C.dateKey(d));
+    const rows = teamRowsFor(plan, names, me, keys);
     // codes présents ce mois-ci (dans l'ordre des codes) : touchés, ils sont surlignés dans le tableau
     const present = new Set();
     for (const n of names) for (const d of dates) { const c = (plan.agents[n] || {})[C.dateKey(d)]; if (c) present.add(c); }
@@ -1323,6 +1475,13 @@
   $('sheet').addEventListener('change', () => { $('month').value = ''; refresh(); });
   $('month').addEventListener('change', refresh);
 
+  $('calPrint').addEventListener('click', openPrint);
+  $('printSheet').addEventListener('click', e => { if (e.target.closest('[data-close]')) closePrint(); });
+  $('printSheet').addEventListener('change', e => {
+    if (e.target.name === 'prWhen') { $('prRange').hidden = e.target.value !== 'range'; $('prMsg').hidden = true; }
+  });
+  $('prGo').addEventListener('click', doPrint);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('printSheet').hidden) closePrint(); });
   $('calPrev').addEventListener('click', () => moveMonth(-1));
   $('calNext').addEventListener('click', () => moveMonth(1));
   $('calToday').addEventListener('click', () => {

@@ -545,3 +545,59 @@ h2 .ic { color: var(--accent); width: 1.2em; height: 1.2em; }
 .swap-tag.best .ic { color: #c99a06; }
 .warn-remind .ic, .rep-row .ic, .day-holiday .ic { color: var(--warn); }
 .changes > strong .ic { color: var(--warn); }
+
+/* ── Imprimer / PDF (#printArea, fabriquée par doPrint) ─────────────────────────── */
+.pr-choice { border: 0; margin: 0 0 10px; padding: 0; }
+.pr-choice legend { font-weight: 600; margin-bottom: 4px; }
+.pr-range { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 4px 0 0 26px; }
+.pr-range input { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); }
+.hdr-btns { display: flex; gap: 8px; }
+body[data-tab="reglages"] #calPrint { display: none; }
+#printSheet h2 { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
+#printArea { display: none; }
+@media print {
+  @page { size: A4; margin: 10mm; }
+  @page team { size: A4 landscape; margin: 8mm; }
+  html, body { background: #fff !important; }
+  body.printing > *:not(#printArea) { display: none !important; }
+  body.printing #printArea { display: block; }
+  #printArea {
+    --text: #17202b; --muted: #5a6677; --line: #c9d1db; --chip: #e3e8ee;
+    color: #17202b; font: 10pt/1.3 -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  #printArea * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .pr-page { break-after: page; page-break-after: always; }
+  .pr-page:last-child { break-after: auto; page-break-after: auto; }
+  .pr-team { page: team; }
+  .pr-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6mm; border-bottom: 1.5pt solid #17202b; padding-bottom: 2mm; }
+  .pr-head h1 { font-size: 16pt; margin: 0; }
+  .pr-head p { margin: 0; font-size: 12pt; }
+  .pr-cal { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .pr-cal th { font-size: 9pt; font-weight: 600; padding: 1.5mm; border-bottom: 1pt solid #17202b; text-align: left; }
+  .pr-cal td { height: 24mm; vertical-align: top; border: .6pt solid var(--line); padding: 1.5mm; }
+  .pr-cal td.pr-we { background: #f4f6f9; }
+  .pr-cal td.pr-out, .pr-cal td.pr-off { background: #fafbfc; color: #b5bdc8; }
+  .pr-num { font-weight: 700; font-size: 10pt; }
+  .pr-hol .pr-num { color: #b3261e; }
+  .pr-holname { display: block; font-size: 6.5pt; color: #b3261e; }
+  .pr-code { display: flex; flex-wrap: wrap; align-items: center; gap: 1mm 1.5mm; margin-top: 1.5mm; font-size: 8pt; line-height: 1.15; }
+  .pr-code .chip { font-size: 9pt; }
+  .pr-remark { margin-top: 1mm; font-size: 6.5pt; color: var(--muted); overflow: hidden; max-height: 9mm; }
+  .pr-sum { margin: 4mm 0 2mm; font-size: 10pt; }
+  .pr-legend { display: flex; flex-wrap: wrap; gap: 1.5mm 5mm; margin: 2mm 0; font-size: 8.5pt; }
+  .pr-legend span { display: inline-flex; align-items: center; gap: 1.5mm; }
+  .pr-note { font-size: 7.5pt; color: var(--muted); margin: 1mm 0; }
+  .pr-foot { margin-top: 4mm; font-size: 7.5pt; color: var(--muted); }
+  .pr-tt { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 7.5pt; }
+  .pr-tt col.pr-tt-name { width: 34mm; }
+  .pr-tt th, .pr-tt td { border: .5pt solid var(--line); padding: .8mm .3mm; text-align: center; overflow: hidden; }
+  .pr-tt thead th { font-weight: 600; font-size: 7pt; line-height: 1.1; }
+  .pr-tt thead th span { display: block; font-weight: 400; color: var(--muted); }
+  .pr-tt tbody th { text-align: left; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 1mm; }
+  .pr-tt .pr-we { background: #f0f3f7; }
+  .pr-tt .pr-hol { color: #b3261e; }
+  .pr-tt tr.pr-mine th { font-weight: 700; }
+  .pr-tt .chip { font-size: 7.5pt; min-width: 1.9em; padding: 0 1px; border-radius: 3px; line-height: 1.5; }
+  .pr-tt tr { break-inside: avoid; }
+  .pr-tt sup { font-size: 6pt; }
+}
