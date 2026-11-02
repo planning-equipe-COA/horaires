@@ -423,7 +423,7 @@ body.tint-cells .cal-grid .cal-cell:has(> .chip[data-color="violet"]) { backgrou
 body.tint-cells .cal-grid .cal-cell:has(> .chip[data-color="orange"]) { background: color-mix(in srgb, #f0891f 26%, var(--bg)); }
 body.tint-cells .cal-grid .cal-cell:has(> .chip[data-color="rouge"]) { background: color-mix(in srgb, #d2382d 26%, var(--bg)); }
 body.tint-cells .cal-grid .cal-cell:has(> .chip[data-color="blanc"]) { background: transparent; border-color: var(--line); }
-#codesDetails .seg { margin: 4px 0 0; }
+#styleDetails .seg { margin: 0; }
 .day-sheet .cal-day { margin: 0; padding: 0 0 4px; background: transparent; }
 .day-sheet .cal-day-head { padding-right: 46px; font-size: 1.05rem; min-height: 38px; }
 .u-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }

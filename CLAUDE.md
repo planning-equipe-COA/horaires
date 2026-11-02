@@ -161,7 +161,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   fermé au changement de mois ou d'onglet. La vue Liste garde son détail déplié dans la liste.
   Vue Équipe : le tableau défile dans son cadre (`.tt-wrap`, hauteur max = écran) avec dates (en-tête),
   noms (colonne) et ligne « Total » figés.
-  Option « Cases colorées » (Réglages → Codes et couleurs, `mh_cal_style` = 'tint', classe `body.tint-cells`) :
+  Option « Cases colorées » (Réglages → carte « Affichage du calendrier », séparée de « Codes et couleurs » à la demande de l'utilisateur, `mh_cal_style` = 'tint', classe `body.tint-cells`) :
   case du jour teintée par service, repos sans couleur ; « Pastilles » reste l'affichage par défaut (choix de l'utilisateur :
   plus parlant en mode clair, proposé au choix de chacun).
   Permutations : bouton « ✉️ Proposer » (seulement sur mon propre planning) → message déjà rédigé
