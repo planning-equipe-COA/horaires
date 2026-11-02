@@ -17,7 +17,11 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   Réglages → « 👤 Je suis » (`#meName`). Regarder le planning d'un collègue (`#calAgent`) ne le change JAMAIS
   (avant nov. 2026 il suivait le dernier planning consulté : numéro ou envois risquaient de partir au nom
   d'un collègue). Aucun nom n'est choisi tout seul à l'import.
-- `index.html`, `style.css` — UI mobile d'abord, mode sombre.
+- `index.html`, `style.css` — UI mobile d'abord, mode sombre. Thème au choix (Réglages → « Affichage » : Auto / Clair /
+  Sombre, `mh_theme` → `html[data-theme]`, appliqué par un petit script dans le `<head>` avant le CSS ; Auto = suit
+  le téléphone). Les couleurs sombres sont écrites deux fois dans style.css (media query + `[data-theme="dark"]`).
+  Carte « Sauvegarde des notes » (ex « Mes notes », renommée : on croyait y écrire les notes ; elles s'écrivent dans
+  le détail d'un jour).
   **Pas d'emoji dans l'interface** (choix de l'utilisateur, nov. 2026 : « plus pro ») : icônes au trait en
   `<symbol id="i-…">` en tête de `index.html` (phone, msg, cal, users, user, key, signal, bell, euro, clock, note,
   flag, star, mail, swap, trash, send, lock, alert, clip, share, download, upload, palette, sparkle, edit), utilisées

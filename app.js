@@ -2044,7 +2044,7 @@
     const n = Object.keys(notes).length;
     $('notesInfo').textContent = n
       ? `${n} note${n > 1 ? 's' : ''} sur ce téléphone, jamais envoyée${n > 1 ? 's' : ''}.`
-      : 'Aucune note pour l\'instant : ajoute-en depuis le détail d\'un jour.';
+      : 'Aucune note pour l\'instant.';
     $('notesSave').disabled = !n;
   }
   $('notesSave').addEventListener('click', async () => {
@@ -2149,6 +2149,21 @@
     applyCalStyle(style);
   }));
   applyCalStyle(load('mh_cal_style'));
+
+  // Thème : Auto (suit le téléphone), Clair ou Sombre (mh_theme, appliqué dès le <head> pour éviter un éclair)
+  function applyTheme(t) {
+    if (t !== 'light' && t !== 'dark') t = 'auto';
+    if (t === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+    document.querySelectorAll('[data-theme-choice]').forEach(b => {
+      b.setAttribute('aria-selected', String(b.dataset.themeChoice === t));
+      b.setAttribute('aria-checked', String(b.dataset.themeChoice === t));
+    });
+  }
+  document.querySelectorAll('[data-theme-choice]').forEach(b => b.addEventListener('click', () => {
+    store('mh_theme', b.dataset.themeChoice);
+    applyTheme(b.dataset.themeChoice);
+  }));
+  applyTheme(load('mh_theme'));
 
   renderCodes();
   document.body.dataset.tab = state.tab;

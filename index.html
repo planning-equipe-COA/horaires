@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="Planning COA">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<script>try { var t = localStorage.getItem('mh_theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body data-tab="planning">
@@ -233,10 +234,12 @@
 
   <section class="card" data-tab="reglages">
     <details id="notesDetails" class="fold">
-      <summary><h2><svg class="ic" aria-hidden="true"><use href="#i-note"/></svg> Mes notes</h2></summary>
+      <summary><h2><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg> Sauvegarde des notes</h2></summary>
+      <p class="hint"><strong>Les notes s'écrivent dans le calendrier</strong> : touche un jour, puis « Ajouter une note ».
+        Ici, tu peux seulement les sauvegarder dans un fichier ou les récupérer.</p>
       <p id="notesInfo" class="hint"></p>
-      <p class="hint">Tes notes ne sont gardées que sur ce téléphone. Fais une sauvegarde de temps en temps, et avant de changer
-        de téléphone ou d'installer l'appli sur l'écran d'accueil (sur iPhone, l'icône repart de zéro).</p>
+      <p class="hint">Elles ne sont gardées que sur ce téléphone : sauvegarde-les avant de changer de téléphone ou d'installer
+        l'appli sur l'écran d'accueil (sur iPhone, l'icône repart de zéro).</p>
       <div class="actions"><button id="notesSave" type="button"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg> Sauvegarder</button><button id="notesRestore" type="button"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg> Restaurer</button></div>
       <input id="notesFile" type="file" accept=".json,application/json" hidden>
       <p id="notesMsg" class="team-msg" hidden></p>
@@ -245,7 +248,15 @@
 
   <section class="card" data-tab="reglages">
     <details id="styleDetails" class="fold">
-      <summary><h2><svg class="ic" aria-hidden="true"><use href="#i-grid"/></svg> Affichage du calendrier</h2></summary>
+      <summary><h2><svg class="ic" aria-hidden="true"><use href="#i-grid"/></svg> Affichage</h2></summary>
+      <p class="day-sub">Thème</p>
+      <div class="seg seg-sm" role="radiogroup" aria-label="Thème">
+        <button type="button" role="radio" data-theme-choice="auto">Auto</button>
+        <button type="button" role="radio" data-theme-choice="light">Clair</button>
+        <button type="button" role="radio" data-theme-choice="dark">Sombre</button>
+      </div>
+      <p class="hint">« Auto » suit le réglage du téléphone (clair le jour, sombre le soir s'il est réglé ainsi).</p>
+      <p class="day-sub">Calendrier</p>
       <div class="seg seg-sm" role="radiogroup" aria-label="Affichage du calendrier">
         <button id="styleChips" type="button" role="radio" data-cal-style="chips">Pastilles</button>
         <button id="styleTint" type="button" role="radio" data-cal-style="tint">Cases colorées</button>

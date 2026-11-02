@@ -1,12 +1,20 @@
 :root {
   --bg: #f3f5f8; --card: #fff; --text: #17202b; --muted: #627084; --line: #dde3ea;
   --accent: #0b5cab; --accent-text: #fff; --warn: #a15c00; --warn-bg: #fff4dc; --error: #b3261e; --ok: #1d7a3a; --chip: #e3e8ee;
+  color-scheme: light;
 }
+/* thème : Auto (suit le téléphone), Clair ou Sombre (Réglages → Affichage, html[data-theme]) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #10151b; --card: #1a222c; --text: #e8edf3; --muted: #94a3b5; --line: #2c3846;
     --accent: #5aa7f5; --accent-text: #08121d; --warn: #f2c063; --warn-bg: #3a2e12; --error: #ff8a80; --ok: #6fd28d; --chip: #4a5a6f;
+    color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #10151b; --card: #1a222c; --text: #e8edf3; --muted: #94a3b5; --line: #2c3846;
+    --accent: #5aa7f5; --accent-text: #08121d; --warn: #f2c063; --warn-bg: #3a2e12; --error: #ff8a80; --ok: #6fd28d; --chip: #4a5a6f;
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -424,6 +432,8 @@ body.tint-cells .cal-grid .cal-cell:has(> .chip[data-color="orange"]) { backgrou
 body.tint-cells .cal-grid .cal-cell:has(> .chip[data-color="rouge"]) { background: color-mix(in srgb, #d2382d 26%, var(--bg)); }
 body.tint-cells .cal-grid .cal-cell:has(> .chip[data-color="blanc"]) { background: transparent; border-color: var(--line); }
 #styleDetails .seg { margin: 0; }
+#styleDetails .day-sub:first-of-type { margin-top: 0; }
+#styleDetails .hint { margin-bottom: 4px; }
 .day-sheet .cal-day { margin: 0; padding: 0 0 4px; background: transparent; }
 .day-sheet .cal-day-head { padding-right: 46px; font-size: 1.05rem; min-height: 38px; }
 .u-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
