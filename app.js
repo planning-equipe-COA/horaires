@@ -400,6 +400,7 @@
     if (!count && before && before.changes && Object.keys(before.changes).length) {
       plan.changes = before.changes;
       for (const f of ['changesSince', 'changesSeen', 'changesAt', 'changesFrom', 'changesUpdated']) plan[f] = before[f];
+      if (meta && meta.updated) plan.changesUpdated = meta.updated; // date de mise à jour envoyée seule
     }
     plan.teamAt = before && before.teamAt || null;
     plan.teamBy = before && before.teamBy || null;
@@ -744,7 +745,15 @@
       if (run !== previewRun) return; // un autre réglage a relancé la comparaison
       const after = { agents: C.mergePlan(current, agents, minKeep()).agents };
       const n = countChanges(current, after);
-      if (current && !n) { publishMsg('✓ L\'équipe a déjà ce planning : rien à envoyer.', 'ok'); return; }
+      const newDate = typedUpdated() && typedUpdated() !== (current && current.updated || null) ? typedUpdated() : null;
+      if (current && !n && !newDate) { publishMsg('✓ L\'équipe a déjà ce planning : rien à envoyer.', 'ok'); return; }
+      if (current && !n) { // aucune case ne change, mais la date de mise à jour tapée est nouvelle : on peut l'envoyer seule
+        $('publishList').hidden = true;
+        publishMsg(`Aucune case ne change. Tu peux envoyer à l'équipe la date de mise à jour du tableau (${updLabel(newDate)}).`);
+        $('publish').innerHTML = ICON('send') + ' Envoyer la date à l\'équipe';
+        publishButtons(true, true, false);
+        return;
+      }
       renderPublishList(current ? listChanges(current, after) : null, n);
       const keys = agents.flatMap(a => a.entries.map(e => C.dateKey(e.date))).sort();
       const fmt = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', timeZone: 'UTC' });
@@ -783,7 +792,7 @@
         const merged = { agents: full.agents, remarks: full.remarks, roles: newestRoles(current && current.roles, loadRoles()),
           contacts: (current && current.contacts) || {}, ...keepShared(current), updated: typedUpdated() };
         n = countChanges(current, merged);
-        if (current && !n) throw new Error('identique'); // quelqu'un l'a envoyé entre-temps
+        if (current && !n && (merged.updated || null) === (current.updated || null)) throw new Error('identique'); // déjà envoyé
         return { plan: merged };
       });
       if (agents !== state.importAgents) return; // un autre réglage a déjà relancé l'envoi
@@ -791,7 +800,9 @@
       state.plan.teamBy = by;
       savePlan();
       renderTeam();
-      publishMsg(previous
+      publishMsg(previous && !n
+        ? '✓ Date de mise à jour envoyée à l\'équipe. Tes collègues la verront à l\'ouverture de l\'appli.'
+        : previous
         ? `✓ Envoyé à l'équipe : ${n} case${n > 1 ? 's changent' : ' change'}. Tes collègues le recevront à l'ouverture de l'appli.`
         : `✓ Premier planning de l'équipe envoyé (${agents.length} agents).`, 'ok');
       undoInfo = { previous, by };
@@ -1600,6 +1611,7 @@
     state.plan.changesUpdated = state.plan.updated; // ce tableau vient d'être importé : c'est sa date
     savePlan();
     renderCalendar();
+    if (teamCode() && state.importAgents) schedulePublish(); // la date seule peut justifier un envoi
   });
   $('calPrint').addEventListener('click', openPrint);
   $('printSheet').addEventListener('click', e => { if (e.target.closest('[data-close]')) closePrint(); });
