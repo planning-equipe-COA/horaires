@@ -643,3 +643,5 @@ body[data-tab="reglages"] #calPrint { display: none; }
 .upd-row .hint { margin: 0; }
 .upd-row input { font: inherit; font-size: 1rem; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); width: 100%; max-width: 14em; }
 .upd-row.filled { border-color: var(--ok); }
+
+.pl-online .ic { color: var(--accent); }

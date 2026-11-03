@@ -93,6 +93,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   « case rouge » : c'est la date qui est en rouge) → `plan.updated` / `plan.changesUpdated` (AAAAMMJJ), publiée avec le planning
   d'équipe (`updated`, `typedUpdated()` au moment de l'envoi ; vide = null) et reçue par les collègues. Affichée : carte
   « Dernier planning modifié le … » (sinon « Le dernier planning a changé ») et en tête du panneau des modifications.
+  **Date de mise en ligne** (demandée) : « Mis en ligne le 3 novembre à 21:40 par GUILLEN » (`onlineText`, = `plan.teamAt` /
+  `teamBy`, date de la publication d'équipe reçue ou envoyée) sous la carte et en tête du panneau des modifications.
   Si aucune case ne change mais que la date tapée est nouvelle, l'aperçu propose « Envoyer la date à l'équipe » (signalé :
   sinon rien n'était proposé) ; changer la date relance la comparaison (`schedulePublish`).
 - Mois : `monthFromText` lit aussi les abréviations suivies d'une année (« DEC 2026 », « NOV 2026 ») ;

@@ -1164,6 +1164,11 @@
     return utc(keyToDate(k)).toLocaleDateString('fr-FR', long ? { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }
       : { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
   }
+  // « Mis en ligne le 3 novembre par GUILLEN » : date de publication du planning d'équipe reçu ou envoyé (plan.teamAt)
+  function onlineText(plan) {
+    if (!plan || !plan.teamAt) return '';
+    return 'Mis en ligne le ' + longDate(plan.teamAt) + ' à ' + timeOf(plan.teamAt) + (plan.teamBy ? ' par ' + shown(plan.teamBy) : '');
+  }
   // ── « Modifications du dernier planning » : toute l'équipe, gardées jusqu'au planning suivant (plan.changes) ──
   function changeGroupsOf(plan) {
     return sortGroups(Object.keys((plan && plan.changes) || {}).filter(n => plan.changes[n].length)
@@ -1174,7 +1179,9 @@
     const total = groups.reduce((n, g) => n + g.items.length, 0);
     const when = plan.changesAt ? longDate(plan.changesAt) : '';
     const src = plan.changesFrom === 'équipe' ? 'reçu de l\'équipe' : 'importé';
+    const online = onlineText(plan);
     let html = (plan.changesUpdated ? `<p class="pl-updated">${ICON('clock')}<span>Tableau de service mis à jour le <strong>${esc(updLabel(plan.changesUpdated, true))}</strong></span></p>` : '') +
+      (online ? `<p class="pl-updated pl-online">${ICON('send')}<span>${esc(online)}</span></p>` : '') +
       `<p class="hint">Planning ${esc(src)}${when ? ' le ' + esc(when) : ''}` +
       (plan.changesSince ? `, comparé au précédent (du ${esc(longDate(plan.changesSince))})` : '') + '. Ancien code → nouveau code.</p>';
     if (!groups.length) html += '<p class="muted">Aucune case n\'a changé avec le dernier planning.</p>';
@@ -1198,7 +1205,8 @@
     btn.hidden = !total;
     btn.classList.toggle('seen', !!plan.changesSeen);
     if (total) btn.innerHTML = ICON('bell') +
-      `<span class="cl-text"><strong>${plan.changesUpdated ? 'Dernier planning modifié le ' + esc(updLabel(plan.changesUpdated)) : 'Le dernier planning a changé'}</strong><span class="cl-sub">${total} case${total > 1 ? 's' : ''} modifiée${total > 1 ? 's' : ''} · ${groups.length} agent${groups.length > 1 ? 's' : ''}</span></span>` +
+      `<span class="cl-text"><strong>${plan.changesUpdated ? 'Dernier planning modifié le ' + esc(updLabel(plan.changesUpdated)) : 'Le dernier planning a changé'}</strong><span class="cl-sub">${total} case${total > 1 ? 's' : ''} modifiée${total > 1 ? 's' : ''} · ${groups.length} agent${groups.length > 1 ? 's' : ''}</span>` +
+      (onlineText(plan) ? `<span class="cl-sub">${esc(onlineText(plan))}</span>` : '') + '</span>' +
       '<span class="cl-go">Voir ›</span>';
   }
 
