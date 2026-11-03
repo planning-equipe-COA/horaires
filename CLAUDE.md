@@ -56,7 +56,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   code peut publier, la clé ne peut pas toucher à l'appli. Lecture publique via raw.githubusercontent
   (cache ~5 min) ; écriture via l'API contents avec `sha` (conflit → on relit, on refusionne, une fois).
   **Après chaque import** d'un agent de l'équipe, l'appli compare d'elle-même au planning publié et
-  affiche un aperçu (« N cases changent ») : rien ne part sans « Envoyer à l'équipe » (garde-fou
+  affiche un aperçu (« N cases changent » + « Voir les cases qui changent » : `listChanges` / `renderPublishList`,
+  par agent, moi d'abord, date · avant → après, ouvert si ≤ 12 cases ou un seul agent, 300 lignes max) : rien ne part sans « Envoyer à l'équipe » (garde-fou
   demandé par l'utilisateur). Envoi = `mergePlan(planning publié, tableau importé)`. Pas de
   proposition si aucune case ne change ; rappel si le mois a été deviné ; « Annuler l'envoi »
   pendant 2 min (republie le planning d'avant). « Versions précédentes » (carte équipe) : historique

@@ -654,6 +654,39 @@
     }
     return n;
   }
+  // Liste des cases qui changent, par agent (moi d'abord) : [{ name, items: [{ key, before, after }] }]
+  function listChanges(before, after) {
+    const a = (before && before.agents) || {}, b = after.agents, out = [];
+    for (const name of new Set(Object.keys(a).concat(Object.keys(b)))) {
+      const x = a[name] || {}, y = b[name] || {}, items = [];
+      for (const k of new Set(Object.keys(x).concat(Object.keys(y)))) if (x[k] !== y[k]) items.push({ key: k, before: x[k] || '', after: y[k] || '' });
+      if (items.length) out.push({ name, items: items.sort((p, q) => p.key.localeCompare(q.key)) });
+    }
+    const me = load(STORAGE_NAME_KEY) || '';
+    return out.sort((p, q) => (q.name === me) - (p.name === me) || shown(p.name).localeCompare(shown(q.name), 'fr'));
+  }
+  const CHANGES_SHOWN = 300;
+  function renderPublishList(groups, total) {
+    const box = $('publishList');
+    if (!groups || !groups.length) { box.hidden = true; return; }
+    const me = load(STORAGE_NAME_KEY) || '';
+    const fmt = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+    const cell = c => c ? chip(c) : '<span class="muted">vide</span>';
+    let shownCount = 0, html = '<p class="hint pl-hint">Planning actuel de l\'équipe → ton fichier</p>';
+    for (const g of groups) {
+      if (shownCount >= CHANGES_SHOWN) break;
+      const items = g.items.slice(0, CHANGES_SHOWN - shownCount);
+      shownCount += items.length;
+      html += `<div class="pl-agent${g.name === me ? ' me' : ''}"><p class="pl-name">${nameHTML(g.name, g.name === me)} ` +
+        `<span class="muted">(${g.items.length})</span></p><ul>` +
+        items.map(i => `<li><span class="pl-date">${esc(fmt(i.key))}</span> ${cell(i.before)} → ${cell(i.after)}</li>`).join('') + '</ul></div>';
+    }
+    if (total > shownCount) html += `<p class="muted">… et ${total - shownCount} autres.</p>`;
+    box.querySelector('summary').textContent = `Voir les cases qui changent (${groups.length} agent${groups.length > 1 ? 's' : ''})`;
+    $('publishListBody').innerHTML = html;
+    box.open = groups.length === 1 || total <= 12;
+    box.hidden = false;
+  }
   function publishButtons(send, skip, undo) {
     $('publish').hidden = !send;
     $('publishSkip').hidden = !skip;
@@ -665,6 +698,7 @@
     previewRun++;
     if (!teamCode() || !state.importAgents || !state.importAgents.length) { $('publishBox').hidden = true; $('settingsDot').hidden = true; return; }
     $('publishBox').hidden = false;
+    $('publishList').hidden = true;
     publishButtons(false, false, false);
     publishMsg('Comparaison avec le planning de l\'équipe…');
     publishTimer = setTimeout(previewPublish, 800); // laisse le temps de changer de feuille ou de mois
@@ -676,8 +710,10 @@
       const remote = await T.fetchPlan();
       const current = remote ? await T.decrypt(remote.text, teamCode()) : null;
       if (run !== previewRun) return; // un autre réglage a relancé la comparaison
-      const n = countChanges(current, { agents: C.mergePlan(current, agents, minKeep()).agents });
+      const after = { agents: C.mergePlan(current, agents, minKeep()).agents };
+      const n = countChanges(current, after);
       if (current && !n) { publishMsg('✓ L\'équipe a déjà ce planning : rien à envoyer.', 'ok'); return; }
+      renderPublishList(current ? listChanges(current, after) : null, n);
       const keys = agents.flatMap(a => a.entries.map(e => C.dateKey(e.date))).sort();
       const fmt = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', timeZone: 'UTC' });
       const period = `du ${fmt(keys[0])} au ${fmt(keys[keys.length - 1])}`;
@@ -702,6 +738,7 @@
   }
   async function doPublish() {
     publishButtons(false, false, false);
+    $('publishList').hidden = true;
     publishMsg('Envoi à l\'équipe…');
     const agents = state.importAgents;
     const by = load(STORAGE_NAME_KEY) || '';
