@@ -923,13 +923,14 @@
     const list = [...changes.values()].filter(ch => ch.key >= todayKey);
     const box = $('calChanges');
     box.hidden = plan.changesSeen || !list.length;
+    $('teamChangesBtn').classList.toggle('dup', !box.hidden); // onglet Planning : le bandeau suffit
     if (!box.hidden) {
       const fmt = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
       box.innerHTML = `<strong><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg> ${list.length} jour${list.length > 1 ? 's ont' : ' a'} changé dans le nouveau planning :</strong><ul>` +
         list.slice(0, 8).map(ch => `<li>${esc(fmt(ch.key))} : ${esc(codeTitle(ch.before))} → <strong>${esc(codeTitle(ch.after))}</strong></li>`).join('') +
         (list.length > 8 ? `<li>… et ${list.length - 8} autre${list.length - 8 > 1 ? 's' : ''} (marqués d'un point)</li>` : '') +
         '</ul><button id="calChangesOk">J\'ai vu</button>' +
-        '<button id="calChangesAll" class="link" type="button">Toutes les modifications</button>' +
+        '<button id="calChangesAll" class="primary" type="button">Voir toutes les modifications</button>' +
         '<button id="calChangesExport" class="link" type="button"><svg class="ic" aria-hidden="true"><use href="#i-cal"/></svg> Mettre à jour l\'agenda du téléphone</button>';
     }
     renderDay();
@@ -1176,7 +1177,10 @@
     const groups = changeGroupsOf(plan), total = groups.reduce((n, g) => n + g.items.length, 0);
     const btn = $('teamChangesBtn');
     btn.hidden = !total;
-    if (total) btn.innerHTML = ICON('bell') + `<span>Modifications du dernier planning <span class="muted">(${total} case${total > 1 ? 's' : ''}, ${groups.length} agent${groups.length > 1 ? 's' : ''})</span></span>`;
+    btn.classList.toggle('seen', !!plan.changesSeen);
+    if (total) btn.innerHTML = ICON('bell') +
+      `<span class="cl-text"><strong>Le dernier planning a changé</strong><span class="cl-sub">${total} case${total > 1 ? 's' : ''} modifiée${total > 1 ? 's' : ''} · ${groups.length} agent${groups.length > 1 ? 's' : ''}</span></span>` +
+      '<span class="cl-go">Voir ›</span>';
   }
 
   // ── Imprimer / PDF : mon planning (seulement le mien), celui de l'équipe, ou les deux ; mois affiché ou période ──
