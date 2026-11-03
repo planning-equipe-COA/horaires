@@ -451,3 +451,12 @@ test('findUpdated : date sous l’intitulé ou en numéro de série', () => {
   const r2 = C.parseMatrix([['NOVEMBRE 2026', 'mise à jour', 46325]].concat(head), { codes: C.DEFAULT_CODES });
   assert.deepEqual(r2.updated, { y: 2026, m: 10, d: 30 });
 });
+
+test('findUpdated : une date tapée l’emporte sur =AUJOURDHUI()', () => {
+  const head = [[null, ' lu', 'ma', 'me', 'je', 've', 'sa', 'di'], [null, 2, 3, 4, 5, 6, 7, 8], ['A', 'M', 'M', 'S', 'S', 'R', 'R', 'R']];
+  const m = [['NOVEMBRE 2026', 'mise a jour', { y: 2026, m: 11, d: 2 }, { y: 2026, m: 11, d: 3 }]].concat(head);
+  m.formulas = { '0,3': true };
+  assert.deepEqual(C.parseMatrix(m, { codes: C.DEFAULT_CODES }).updated, { y: 2026, m: 11, d: 2 });
+  const only = [['NOVEMBRE 2026', 'mise a jour', { y: 2026, m: 11, d: 3 }]].concat(head); only.formulas = { '0,2': true };
+  assert.deepEqual(C.parseMatrix(only, { codes: C.DEFAULT_CODES }).updated, { y: 2026, m: 11, d: 3 });
+});

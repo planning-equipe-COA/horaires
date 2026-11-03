@@ -267,8 +267,6 @@
   // Date de mise à jour du tableau : la plus récente des dates écrites sur une ligne « mise à jour » (en haut
   // du tableau, en rouge barré sur les vrais fichiers) ; null s'il n'y en a pas
   function findUpdated(matrix) {
-    let best = null;
-    const consider = d => { if (d && d.y && (!best || dateKey(d) > dateKey(best))) best = { y: d.y, m: d.m, d: d.d }; };
     // numéro de série Excel (date sans format de date) : 43831 = 1er janv. 2020 … 54789 = 31 déc. 2049
     const serial = n => { const t = new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 864e5); return { y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate() }; };
     const rows = new Set();
@@ -279,18 +277,25 @@
       // la date peut être sous l'intitulé (ligne presque vide, jamais une ligne d'en-têtes de dates)
       if ((matrix[r + 1] || []).filter(v => v != null && v !== '').length <= 3) rows.add(r + 1);
     }
+    // Une date écrite à la main l'emporte sur une date calculée par une formule (=AUJOURDHUI(), qui donne le
+    // jour où le fichier a été ouvert ou enregistré, pas celui de la modification) ; la plus récente sinon.
+    const typed = [], computed = [];
+    const add = (r, c, d) => { if (d && d.y) ((matrix.formulas || {})[r + ',' + c] ? computed : typed).push({ y: d.y, m: d.m, d: d.d }); };
     for (const r of rows) {
       const row = matrix[r] || [];
-      for (const v of row) {
-        if (isDateObj(v)) { consider(v); continue; }
-        if (typeof v === 'number' && v >= 43831 && v <= 54789 && Number.isInteger(v)) { consider(serial(v)); continue; }
-        if (typeof v !== 'string') continue;
+      row.forEach((v, c) => {
+        if (isDateObj(v)) return add(r, c, v);
+        if (typeof v === 'number' && v >= 43831 && v <= 54789 && Number.isInteger(v)) return add(r, c, serial(v));
+        if (typeof v !== 'string') return;
         for (const m of v.matchAll(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4}|\d{2})\b/g)) {
           const y = +m[3] < 100 ? 2000 + +m[3] : +m[3], mo = +m[2], d = +m[1];
-          if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) consider({ y, m: mo, d });
+          if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) add(r, c, { y, m: mo, d });
         }
-      }
+      });
     }
+    const list = typed.length ? typed : computed;
+    let best = null;
+    for (const d of list) if (!best || dateKey(d) > dateKey(best)) best = d;
     return best;
   }
 
@@ -408,6 +413,8 @@
           }
         }
         row.push(v);
+        // case calculée par une formule (ex. =AUJOURDHUI() à côté de « mise à jour » : date du jour d'ouverture)
+        if (cell && cell.f) (m.formulas || (m.formulas = {}))[(r - range.s.r) + ',' + (c - range.s.c)] = true;
         // commentaire de la case (petit triangle rouge dans Excel)
         if (cell && Array.isArray(cell.c) && cell.c.length) {
           const text = cell.c.map(x => String(x.t || '').trim()).filter(Boolean).join(' / ').slice(0, 300);

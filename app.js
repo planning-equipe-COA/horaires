@@ -1163,7 +1163,7 @@
     const when = plan.changesAt ? longDate(plan.changesAt) : '';
     const src = plan.changesFrom === 'équipe' ? 'reçu de l\'équipe' : 'importé';
     const upd = updDate(plan.changesUpdated || plan.updated, true);
-    let html = (upd ? `<p class="pl-updated">${ICON('clock')} Tableau de service mis à jour le <strong>${esc(upd)}</strong></p>` : '') +
+    let html = (upd ? `<p class="pl-updated">${ICON('clock')}<span>Tableau de service mis à jour le <strong>${esc(upd)}</strong></span></p>` : '') +
       `<p class="hint">Planning ${esc(src)}${when ? ' le ' + esc(when) : ''}` +
       (plan.changesSince ? `, comparé au précédent (du ${esc(longDate(plan.changesSince))})` : '') + '. Ancien code → nouveau code.</p>';
     if (!groups.length) html += '<p class="muted">Aucune case n\'a changé avec le dernier planning.</p>';
