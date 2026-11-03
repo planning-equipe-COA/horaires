@@ -69,6 +69,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   l'ancienne version ~5 min après un envoi (bug signalé : modifications envoyées « disparues » à la réouverture). `plan.teamAt` = date de la publication reçue (seule info en clair de l'enveloppe), `teamBy`.
   Si le code ne déchiffre plus (code changé) : il est oublié et l'agent doit saisir le nouveau.
   Lien « Renouveler la clé de publication » masqué (`#teamRenewRow`) sauf si GitHub refuse la clé (`errText` 'cle').
+- Ligne d'état de l'onglet Équipe : « Planning d'équipe publié par X le <date de publication> · vérifié … » (formulation
+  voulue par l'utilisateur).
 - **Alertes d'équipe** (nov. 2026, en haut de l'onglet Planning, `#teamWarn`, `renderTeamAlerts`) :
   - clé de publication qui expire dans 14 jours ou moins (ou expirée). GitHub n'expose PAS au navigateur
     l'en-tête `github-authentication-token-expiration` (absent d'Access-Control-Expose-Headers) : la date est
@@ -81,18 +83,11 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   (`bestSheet` prend PLANIFIE = planning réel) ; titre « MAI 2027 » en A1, « Tableau de service du
   03/05/2027 au 06/06/2027 », et une ligne « mise à jour » avec une date d'édition : `findContext`
   donne la priorité au mois écrit en lettres et ignore les dates des lignes « mise à jour ».
-- **Date « mise à jour » du tableau** (en rouge barré sur les vrais fichiers, ligne « mise a jour » en haut) :
-  `findUpdated` (core) → `result.updated` (la plus récente ; `combineResults` garde la plus récente des fichiers).
-  Cherchée sur la ligne « mise à jour » et la ligne dessous si presque vide ; date Excel, texte jj/mm/aaaa ou numéro de série.
-  **Vérifié sur les vrais fichiers (nov. 2026) : la date à côté de « mise a jour » est une formule =AUJOURDHUI()**
-  (Excel affiche le jour où on ouvre le fichier ; valeur gardée = jour du dernier enregistrement). Les formules sont donc
-  ignorées (`matrix.formulas`) ; seules les dates tapées comptent. À défaut, `parseBook` prend la date du dernier
-  enregistrement du classeur (`wb.Props.ModifiedDate`, heure de Paris ; `res.updatedFrom = 'fichier'`). Une « Copie de »
-  enregistrée par l'agent porte SA date d'enregistrement, pas celle du planificateur.
-  Affichée : message « Planning enregistré » après CHAQUE import (ou « Pas de date « mise à jour » trouvée »), compte rendu
-  multi-fichiers, aperçu d'envoi, ligne d'état de l'onglet Équipe = « Planning d'équipe publié par X le <date de publication> · vérifié … » (formulation
-  voulue par l'utilisateur pour ne pas confondre avec la date de mise à jour), tête de « Modifications du dernier
-  planning » (`plan.changesUpdated || plan.updated`) ; publiée avec le planning d'équipe (`updated`, AAAAMMJJ).
+- **Date « mise à jour » du tableau : RETIRÉE de l'interface** (nov. 2026, choix de l'utilisateur). La case rouge à côté
+  de « mise a jour » est une formule =AUJOURDHUI() : ouverte en lecture seule au bureau elle montre le jour du dernier
+  enregistrement par le planificateur, mais les fichiers que reçoit l'appli sont toujours des « Copie de… » réenregistrées,
+  donc elles portent le jour de la copie (et `wb.Props.ModifiedDate` aussi). Impossible de retrouver la vraie date.
+  `findUpdated` reste dans core.js (dates tapées seulement, testé) mais l'appli ne l'affiche plus.
 - Mois : `monthFromText` lit aussi les abréviations suivies d'une année (« DEC 2026 », « NOV 2026 ») ;
   `findContext` remonte jusqu'au titre de la feuille pour le 2e bloc d'agents (sinon rangé au mauvais mois).
   Classeurs à 3 feuilles (« THEORIQUE », « PLANIFIE New TS ROA », « QUATRE Mi Temps ») : `bestSheet`
@@ -209,8 +204,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   jours passés en gris, « Planning importé / reçu de l'équipe le … comparé au précédent ». Reste visible après « J'ai vu »,
   jusqu'au planning suivant qui change quelque chose (`applyAgents` garde `changes` si le nouveau ne change rien,
   ex. recevoir la version qu'on vient d'envoyer ; `changesAt`, `changesFrom`). Le bandeau 🔔 a « Voir toutes les modifications »
-  (bouton plein). Le lien est une **carte bien visible** (« Dernier planning modifié le <date « mise à jour » du tableau> · N cases modifiées »,
-  sinon « Le dernier planning a changé » ; + bouton « Voir › »,
+  (bouton plein). Le lien est une **carte bien visible** (« Le dernier planning a changé · N cases modifiées » + bouton « Voir › »,
   fond orange tant que pas vu) : en simple lien on ne voyait pas où toucher (signalé). Masquée sur Planning quand le bandeau est là (`.dup`).
 - Jours modifiés : à chaque import, `diffSnapshot` compare chaque agent à son planning précédent ;
   bandeau « 🔔 » + point orange sur les cases jusqu'à « J'ai vu » (`changesSeen`), repris dans

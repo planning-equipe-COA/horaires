@@ -242,7 +242,7 @@
         `<span>du ${esc(fmt(keys[0]))} au ${esc(fmt(keys[keys.length - 1]))} · ${r.agents.length} agents` +
         (b.wb.SheetNames.length > 1 ? ` · feuille « ${esc(b.wb.SheetNames[b.sheet])} »` : '') +
         (r.monthAssumed ? ' · <svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> mois deviné' : '') +
-        (r.updated ? ` · mis à jour le ${esc(fmt(C.dateKey(r.updated)))}` : '') + '</span>' +
+        '</span>' +
         (me ? `<span>${found ? '✓ ' + esc(shown(me)) + ' trouvé' : alike.length
           ? '<svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> ' + esc(shown(me)) + ' écrit ici « ' + alike.map(esc).join(' », « ') + ' »'
           : '<svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> ' + esc(shown(me)) + ' absent de ce fichier'}</span>` : '') + '</div>';
@@ -255,20 +255,7 @@
     const opts = { codes: state.codes, sheetName: name + ' ' + book.name };
     const ym = state.books && state.books.length === 1 && $('month').value.match(/^(\d{4})-(\d{2})$/);
     if (ym) { opts.year = +ym[1]; opts.month = +ym[2]; }
-    const res = C.parseMatrix(matrix, opts);
-    // Pas de date tapée sur la ligne « mise à jour » (sur les vrais tableaux, c'est =AUJOURDHUI()) : on prend la date
-    // du dernier enregistrement du fichier, gardée par Excel dans ses propriétés (heure de Paris)
-    const saved = book.wb.Props && book.wb.Props.ModifiedDate;
-    if (!res.updated && saved) {
-      const t = new Date(saved);
-      if (!isNaN(t)) {
-        const p = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(t);
-        const get = k => +p.find(x => x.type === k).value;
-        res.updated = { y: get('year'), m: get('month'), d: get('day') };
-        res.updatedFrom = 'fichier';
-      }
-    }
-    return res;
+    return C.parseMatrix(matrix, opts);
   }
   function parseSheet(index) { return parseBook(state.books[0], index); }
 
@@ -407,12 +394,11 @@
     plan.changesSeen = false;
     plan.changesAt = meta && meta.at || new Date().toISOString();
     plan.changesFrom = meta && meta.file || '';
-    plan.changesUpdated = meta && meta.updated || null; // date « mise à jour » écrite dans le tableau
     // rien de changé (ex. on reçoit de l'équipe la version qu'on vient d'envoyer) : on garde les dernières
     // modifications au lieu de les effacer
     if (!count && before && before.changes && Object.keys(before.changes).length) {
       plan.changes = before.changes;
-      for (const f of ['changesSince', 'changesSeen', 'changesAt', 'changesFrom', 'changesUpdated']) plan[f] = before[f];
+      for (const f of ['changesSince', 'changesSeen', 'changesAt', 'changesFrom']) plan[f] = before[f];
     }
     plan.teamAt = before && before.teamAt || null;
     plan.teamBy = before && before.teamBy || null;
@@ -424,7 +410,7 @@
 
   function savePlanFromImport(res) {
     applyAgents(state.planBefore || null, res.agents, { at: new Date().toISOString(), file: state.fileName,
-      updated: res.updated ? C.dateKey(res.updated) : null });
+      });
     state.importAgents = res.agents;
 
     // calendrier : on montre le mois en cours s'il est dans le tableau, sinon son premier mois
@@ -445,8 +431,7 @@
     $('saved').innerHTML = keys.length
       ? `✓ Planning enregistré sur ce téléphone, du ${esc(fmt(keys[0]))} au ${esc(fmt(keys[keys.length - 1]))}` +
         (state.books && state.books.length > 1 ? ` (${state.books.length} fichiers combinés).` : '.') +
-        `<br>${ICON('clock')} ` + (res.updated ? `Tableau mis à jour le <strong>${esc(updDate(C.dateKey(res.updated)))}</strong>.`
-          : '<span class="muted">Pas de date « mise à jour » trouvée dans le fichier.</span>') +
+
         (nRemarks ? `<br><span class="saved-remarks"><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg> ${nRemarks} commentaire${nRemarks > 1 ? 's' : ''} de case${nRemarks > 1 ? 's' : ''} lu${nRemarks > 1 ? 's' : ''} dans le fichier` +
           (mine ? ` (dont ${mine} sur ton planning)` : '') + ' : repère le <svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg> dans le calendrier.</span>' : '') +
         '<br><button type="button" class="saved-go" data-go-tab="planning"><svg class="ic" aria-hidden="true"><use href="#i-cal"/></svg> Voir le planning</button>' : '';
@@ -586,7 +571,7 @@
       saveContacts(data.contacts || {});
       saveUtiles({ list: (data.utiles && data.utiles.list) || [], at: data.utiles && data.utiles.at, admin: data.admin || null });
       const n = applyAgents(state.plan, planToAgents(data.agents, data.remarks),
-        { at: remote.at, file: 'équipe', teamAt: remote.at, teamBy: data.by || null, updated: data.updated || null });
+        { at: remote.at, file: 'équipe', teamAt: remote.at, teamBy: data.by || null });
       openOnUsefulMonth();
       renderCalendar();
       teamMsg(`✓ Nouveau planning reçu${data.by ? ' (publié par ' + data.by + ')' : ''}` +
@@ -761,9 +746,8 @@
       const keys = agents.flatMap(a => a.entries.map(e => C.dateKey(e.date))).sort();
       const fmt = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', timeZone: 'UTC' });
       const period = `du ${fmt(keys[0])} au ${fmt(keys[keys.length - 1])}`;
-      const upd = state.result && state.result.updated ? ' (tableau mis à jour le ' + fmt(C.dateKey(state.result.updated)) + ')' : '';
       publishMsg((current
-        ? `Ton fichier${upd} remplace la période ${period} pour toute l'équipe : ${n} case${n > 1 ? 's changent' : ' change'} ` +
+        ? `Ton fichier remplace la période ${period} pour toute l'équipe : ${n} case${n > 1 ? 's changent' : ' change'} ` +
           `par rapport au planning publié le ${longDate(remote.at)}${current.by ? ' par ' + current.by : ''}.`
         : `Premier planning de l'équipe : ${agents.length} agents, ${period}.`) +
         (state.result && state.result.monthAssumed ? ' Vérifie d\'abord le mois ci-dessus : il n\'est pas écrit dans le fichier.' : ''));
@@ -794,8 +778,7 @@
         previous = current;
         const full = C.mergePlan(current, agents, minKeep());
         const merged = { agents: full.agents, remarks: full.remarks, roles: newestRoles(current && current.roles, loadRoles()),
-          contacts: (current && current.contacts) || {}, ...keepShared(current),
-          updated: state.result && state.result.updated ? C.dateKey(state.result.updated) : (current && current.updated) || null };
+          contacts: (current && current.contacts) || {}, ...keepShared(current) };
         n = countChanges(current, merged);
         if (current && !n) throw new Error('identique'); // quelqu'un l'a envoyé entre-temps
         return { plan: merged };
@@ -1160,11 +1143,6 @@
     return rows;
   }
 
-  // « mardi 2 novembre 2026 » pour une date AAAAMMJJ (date « mise à jour » du tableau)
-  function updDate(k, long) {
-    return k ? utc(keyToDate(k)).toLocaleDateString('fr-FR', long ? { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }
-      : { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
-  }
   // ── « Modifications du dernier planning » : toute l'équipe, gardées jusqu'au planning suivant (plan.changes) ──
   function changeGroupsOf(plan) {
     return sortGroups(Object.keys((plan && plan.changes) || {}).filter(n => plan.changes[n].length)
@@ -1175,9 +1153,7 @@
     const total = groups.reduce((n, g) => n + g.items.length, 0);
     const when = plan.changesAt ? longDate(plan.changesAt) : '';
     const src = plan.changesFrom === 'équipe' ? 'reçu de l\'équipe' : 'importé';
-    const upd = updDate(plan.changesUpdated || plan.updated, true);
-    let html = (upd ? `<p class="pl-updated">${ICON('clock')}<span>Tableau de service mis à jour le <strong>${esc(upd)}</strong></span></p>` : '') +
-      `<p class="hint">Planning ${esc(src)}${when ? ' le ' + esc(when) : ''}` +
+    let html =       `<p class="hint">Planning ${esc(src)}${when ? ' le ' + esc(when) : ''}` +
       (plan.changesSince ? `, comparé au précédent (du ${esc(longDate(plan.changesSince))})` : '') + '. Ancien code → nouveau code.</p>';
     if (!groups.length) html += '<p class="muted">Aucune case n\'a changé avec le dernier planning.</p>';
     else {
@@ -1200,7 +1176,7 @@
     btn.hidden = !total;
     btn.classList.toggle('seen', !!plan.changesSeen);
     if (total) btn.innerHTML = ICON('bell') +
-      `<span class="cl-text"><strong>${(plan.changesUpdated || plan.updated) ? 'Dernier planning modifié le ' + esc(updDate(plan.changesUpdated || plan.updated)) : 'Le dernier planning a changé'}</strong><span class="cl-sub">${total} case${total > 1 ? 's' : ''} modifiée${total > 1 ? 's' : ''} · ${groups.length} agent${groups.length > 1 ? 's' : ''}</span></span>` +
+      `<span class="cl-text"><strong>Le dernier planning a changé</strong><span class="cl-sub">${total} case${total > 1 ? 's' : ''} modifiée${total > 1 ? 's' : ''} · ${groups.length} agent${groups.length > 1 ? 's' : ''}</span></span>` +
       '<span class="cl-go">Voir ›</span>';
   }
 
