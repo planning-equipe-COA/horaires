@@ -264,6 +264,26 @@
     return out;
   }
 
+  // Date de mise à jour du tableau : la plus récente des dates écrites sur une ligne « mise à jour » (en haut
+  // du tableau, en rouge barré sur les vrais fichiers) ; null s'il n'y en a pas
+  function findUpdated(matrix) {
+    let best = null;
+    const consider = d => { if (d && d.y && (!best || dateKey(d) > dateKey(best))) best = { y: d.y, m: d.m, d: d.d }; };
+    for (let r = 0; r < Math.min(matrix.length, 20); r++) {
+      const row = matrix[r] || [];
+      if (!row.some(v => typeof v === 'string' && EDIT_RE.test(stripAccents(v)))) continue;
+      for (const v of row) {
+        if (isDateObj(v)) { consider(v); continue; }
+        if (typeof v !== 'string') continue;
+        for (const m of v.matchAll(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4}|\d{2})\b/g)) {
+          const y = +m[3] < 100 ? 2000 + +m[3] : +m[3], mo = +m[2], d = +m[1];
+          if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) consider({ y, m: mo, d });
+        }
+      }
+    }
+    return best;
+  }
+
   // matrix : tableau de lignes ; cellule = texte, nombre, null, ou {y,m,d} pour une date Excel
   function parseMatrix(matrix, options) {
     const now = new Date();
@@ -273,6 +293,7 @@
     const a = parseOriented(matrix, opts.sheetName, opts);
     const b = parseOriented(transpose(matrix), opts.sheetName, opts);
     const best = b.total > a.total ? b : a;
+    best.updated = findUpdated(matrix);
     for (const ag of best.agents) {
       ag.entries.sort((x, y) => dateKey(x.date).localeCompare(dateKey(y.date)));
     }
@@ -335,9 +356,10 @@
   // Même nom d'agent = même personne ; pour un même jour, le dernier tableau de la liste l'emporte.
   function combineResults(results) {
     const agents = new Map();
-    let monthAssumed = false, ctx = null, total = 0;
+    let monthAssumed = false, ctx = null, total = 0, updated = null;
     for (const res of results) {
       monthAssumed = monthAssumed || res.monthAssumed;
+      if (res.updated && (!updated || dateKey(res.updated) > dateKey(updated))) updated = res.updated;
       if (!ctx) ctx = res.ctx;
       total += res.total || 0;
       for (const ag of res.agents) {
@@ -349,7 +371,7 @@
     return {
       agents: [...agents].map(([name, days]) => ({ name,
         entries: [...days.keys()].sort().map(k => days.get(k)) })),
-      monthAssumed, ctx, total,
+      monthAssumed, ctx, total, updated,
     };
   }
 

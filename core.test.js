@@ -433,3 +433,13 @@ test('noms affichés : mention de contrat retirée du nom et rendue en badge', (
   assert.deepStrictEqual(s('MOREAU'), { base: 'MOREAU', tags: [] });
   assert.deepStrictEqual(s('32'), { base: '32', tags: [] });                   // jamais de nom vide
 });
+
+test('findUpdated : date de la ligne « mise à jour » (la plus récente)', () => {
+  const m = [['MAI 2027', null, 'Tableau de service du 03/05/2027 au 06/06/2027'],
+    [null, 'mise a jour ', { y: 2026, m: 9, d: 17 }, null, 'maj 02/10/2026'],
+    [null, ' lu', 'ma', 'me', 'je', 've', 'sa', 'di'], [null, 3, 4, 5, 6, 7, 8, 9], ['A', 'M', 'M', 'S', 'S', 'R', 'R', 'R']];
+  const r = C.parseMatrix(m, { codes: C.DEFAULT_CODES });
+  assert.deepEqual(r.updated, { y: 2026, m: 10, d: 2 });
+  assert.equal(C.parseMatrix([['NOV 2026'], [null, 'lu', 'ma', 'me', 'je', 've', 'sa', 'di'], [null, 2, 3, 4, 5, 6, 7, 8], ['A', 'M', 'M', 'M', 'M', 'M', 'R', 'R']], { codes: C.DEFAULT_CODES }).updated, null);
+  assert.deepEqual(C.combineResults([{ agents: [], updated: { y: 2026, m: 9, d: 1 } }, { agents: [], updated: { y: 2026, m: 10, d: 5 } }]).updated, { y: 2026, m: 10, d: 5 });
+});

@@ -81,6 +81,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   (`bestSheet` prend PLANIFIE = planning réel) ; titre « MAI 2027 » en A1, « Tableau de service du
   03/05/2027 au 06/06/2027 », et une ligne « mise à jour » avec une date d'édition : `findContext`
   donne la priorité au mois écrit en lettres et ignore les dates des lignes « mise à jour ».
+- **Date « mise à jour » du tableau** (en rouge barré sur les vrais fichiers, ligne « mise a jour » en haut) :
+  `findUpdated` (core) → `result.updated` (la plus récente ; `combineResults` garde la plus récente des fichiers).
+  Affichée dans le compte rendu d'import (« mis à jour le … »), l'aperçu d'envoi, et en tête de « Modifications du
+  dernier planning » (`plan.changesUpdated`) ; publiée avec le planning d'équipe (`updated`, AAAAMMJJ).
 - Mois : `monthFromText` lit aussi les abréviations suivies d'une année (« DEC 2026 », « NOV 2026 ») ;
   `findContext` remonte jusqu'au titre de la feuille pour le 2e bloc d'agents (sinon rangé au mauvais mois).
   Classeurs à 3 feuilles (« THEORIQUE », « PLANIFIE New TS ROA », « QUATRE Mi Temps ») : `bestSheet`

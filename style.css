@@ -213,6 +213,8 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .publish-list .chip { font-size: .7rem; }
 .pl-hint { margin: 0 0 4px; }
 .pl-past { opacity: .5; }
+.pl-updated { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; }
+.pl-updated .ic { color: var(--error); width: 18px; height: 18px; }
 .changes-link { display: flex; align-items: center; gap: 6px; width: 100%; margin: 0 0 8px; padding: 6px 0; text-align: left; font-weight: 600; text-decoration: none; }
 .changes-link > span { flex: 1; min-width: 0; }
 .changes-link, .changes-link * { text-decoration: none !important; }
