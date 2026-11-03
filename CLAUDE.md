@@ -83,8 +83,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   donne la priorité au mois écrit en lettres et ignore les dates des lignes « mise à jour ».
 - **Date « mise à jour » du tableau** (en rouge barré sur les vrais fichiers, ligne « mise a jour » en haut) :
   `findUpdated` (core) → `result.updated` (la plus récente ; `combineResults` garde la plus récente des fichiers).
-  Affichée dans le compte rendu d'import (« mis à jour le … »), l'aperçu d'envoi, et en tête de « Modifications du
-  dernier planning » (`plan.changesUpdated`) ; publiée avec le planning d'équipe (`updated`, AAAAMMJJ).
+  Cherchée sur la ligne « mise à jour » et la ligne dessous si presque vide ; date Excel, texte jj/mm/aaaa ou numéro de série.
+  Affichée : message « Planning enregistré » après CHAQUE import (ou « Pas de date « mise à jour » trouvée »), compte rendu
+  multi-fichiers, aperçu d'envoi, ligne d'état de l'onglet Équipe (`plan.updated`), tête de « Modifications du dernier
+  planning » (`plan.changesUpdated || plan.updated`) ; publiée avec le planning d'équipe (`updated`, AAAAMMJJ).
 - Mois : `monthFromText` lit aussi les abréviations suivies d'une année (« DEC 2026 », « NOV 2026 ») ;
   `findContext` remonte jusqu'au titre de la feuille pour le 2e bloc d'agents (sinon rangé au mauvais mois).
   Classeurs à 3 feuilles (« THEORIQUE », « PLANIFIE New TS ROA », « QUATRE Mi Temps ») : `bestSheet`

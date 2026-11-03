@@ -269,11 +269,21 @@
   function findUpdated(matrix) {
     let best = null;
     const consider = d => { if (d && d.y && (!best || dateKey(d) > dateKey(best))) best = { y: d.y, m: d.m, d: d.d }; };
+    // numéro de série Excel (date sans format de date) : 43831 = 1er janv. 2020 … 54789 = 31 déc. 2049
+    const serial = n => { const t = new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 864e5); return { y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate() }; };
+    const rows = new Set();
     for (let r = 0; r < Math.min(matrix.length, 20); r++) {
       const row = matrix[r] || [];
       if (!row.some(v => typeof v === 'string' && EDIT_RE.test(stripAccents(v)))) continue;
+      rows.add(r);
+      // la date peut être sous l'intitulé (ligne presque vide, jamais une ligne d'en-têtes de dates)
+      if ((matrix[r + 1] || []).filter(v => v != null && v !== '').length <= 3) rows.add(r + 1);
+    }
+    for (const r of rows) {
+      const row = matrix[r] || [];
       for (const v of row) {
         if (isDateObj(v)) { consider(v); continue; }
+        if (typeof v === 'number' && v >= 43831 && v <= 54789 && Number.isInteger(v)) { consider(serial(v)); continue; }
         if (typeof v !== 'string') continue;
         for (const m of v.matchAll(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4}|\d{2})\b/g)) {
           const y = +m[3] < 100 ? 2000 + +m[3] : +m[3], mo = +m[2], d = +m[1];

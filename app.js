@@ -432,6 +432,8 @@
     $('saved').innerHTML = keys.length
       ? `✓ Planning enregistré sur ce téléphone, du ${esc(fmt(keys[0]))} au ${esc(fmt(keys[keys.length - 1]))}` +
         (state.books && state.books.length > 1 ? ` (${state.books.length} fichiers combinés).` : '.') +
+        `<br>${ICON('clock')} ` + (res.updated ? `Tableau mis à jour le <strong>${esc(updDate(C.dateKey(res.updated)))}</strong>.`
+          : '<span class="muted">Pas de date « mise à jour » trouvée dans le fichier.</span>') +
         (nRemarks ? `<br><span class="saved-remarks"><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg> ${nRemarks} commentaire${nRemarks > 1 ? 's' : ''} de case${nRemarks > 1 ? 's' : ''} lu${nRemarks > 1 ? 's' : ''} dans le fichier` +
           (mine ? ` (dont ${mine} sur ton planning)` : '') + ' : repère le <svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg> dans le calendrier.</span>' : '') +
         '<br><button type="button" class="saved-go" data-go-tab="planning"><svg class="ic" aria-hidden="true"><use href="#i-cal"/></svg> Voir le planning</button>' : '';
@@ -484,7 +486,7 @@
     const syncOk = renderTeamAlerts();
     if (!$('teamStatus').hidden) {
       $('teamStatus').innerHTML = ICON('users') + esc(` Planning d'équipe du ${longDate(p.teamAt)}` + (p.teamBy ? `, publié par ${p.teamBy}` : '') +
-        (syncOk ? ` · vérifié ${agoText(syncOk)}` : ''));
+        (p.updated ? ` · tableau mis à jour le ${updDate(p.updated)}` : '') + (syncOk ? ` · vérifié ${agoText(syncOk)}` : ''));
     }
     $('importHint').textContent = joined
       ? 'Le fichier Excel reste sur ton appareil. Comme tu es dans l\'équipe, l\'appli te proposera d\'envoyer les noms et les codes à tes collègues, chiffrés avec le code d\'équipe.'
@@ -1144,6 +1146,11 @@
     return rows;
   }
 
+  // « mardi 2 novembre 2026 » pour une date AAAAMMJJ (date « mise à jour » du tableau)
+  function updDate(k, long) {
+    return k ? utc(keyToDate(k)).toLocaleDateString('fr-FR', long ? { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }
+      : { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
+  }
   // ── « Modifications du dernier planning » : toute l'équipe, gardées jusqu'au planning suivant (plan.changes) ──
   function changeGroupsOf(plan) {
     return sortGroups(Object.keys((plan && plan.changes) || {}).filter(n => plan.changes[n].length)
@@ -1154,7 +1161,7 @@
     const total = groups.reduce((n, g) => n + g.items.length, 0);
     const when = plan.changesAt ? longDate(plan.changesAt) : '';
     const src = plan.changesFrom === 'équipe' ? 'reçu de l\'équipe' : 'importé';
-    const upd = plan.changesUpdated ? utc(keyToDate(plan.changesUpdated)).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
+    const upd = updDate(plan.changesUpdated || plan.updated, true);
     let html = (upd ? `<p class="pl-updated">${ICON('clock')} Tableau de service mis à jour le <strong>${esc(upd)}</strong></p>` : '') +
       `<p class="hint">Planning ${esc(src)}${when ? ' le ' + esc(when) : ''}` +
       (plan.changesSince ? `, comparé au précédent (du ${esc(longDate(plan.changesSince))})` : '') + '. Ancien code → nouveau code.</p>';

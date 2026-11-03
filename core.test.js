@@ -443,3 +443,11 @@ test('findUpdated : date de la ligne « mise à jour » (la plus récente)', () 
   assert.equal(C.parseMatrix([['NOV 2026'], [null, 'lu', 'ma', 'me', 'je', 've', 'sa', 'di'], [null, 2, 3, 4, 5, 6, 7, 8], ['A', 'M', 'M', 'M', 'M', 'M', 'R', 'R']], { codes: C.DEFAULT_CODES }).updated, null);
   assert.deepEqual(C.combineResults([{ agents: [], updated: { y: 2026, m: 9, d: 1 } }, { agents: [], updated: { y: 2026, m: 10, d: 5 } }]).updated, { y: 2026, m: 10, d: 5 });
 });
+
+test('findUpdated : date sous l’intitulé ou en numéro de série', () => {
+  const head = [[null, ' lu', 'ma', 'me', 'je', 've', 'sa', 'di'], [null, 2, 3, 4, 5, 6, 7, 8], ['A', 'M', 'M', 'S', 'S', 'R', 'R', 'R']];
+  const r1 = C.parseMatrix([['NOVEMBRE 2026', null, 'mise a jour'], [null, null, { y: 2026, m: 10, d: 30 }]].concat(head), { codes: C.DEFAULT_CODES });
+  assert.deepEqual(r1.updated, { y: 2026, m: 10, d: 30 });
+  const r2 = C.parseMatrix([['NOVEMBRE 2026', 'mise à jour', 46325]].concat(head), { codes: C.DEFAULT_CODES });
+  assert.deepEqual(r2.updated, { y: 2026, m: 10, d: 30 });
+});
