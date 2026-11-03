@@ -547,6 +547,13 @@
       refreshKeyInfo(false);
       if (!remote) { if (manual) teamMsg('Aucun planning publié pour l\'instant.'); return; }
       if (state.plan && state.plan.teamAt === remote.at) { if (manual) teamMsg('✓ Ton planning est à jour.', 'ok'); return; }
+      // GitHub garde l'ancien fichier en cache ~5 min : juste après un envoi, la lecture peut rendre la version
+      // d'AVANT. Ne jamais remplacer le planning du téléphone par une publication plus ancienne que la sienne
+      // (sinon les modifications qu'on vient d'envoyer disparaissent à la réouverture).
+      if (state.plan && state.plan.teamAt && remote.at && remote.at < state.plan.teamAt) {
+        if (manual) teamMsg('✓ Ton planning est à jour (GitHub met quelques minutes à afficher le dernier envoi).', 'ok');
+        return;
+      }
       const data = await T.decrypt(remote.text, code);
       if (data.roles && newestRoles(loadRoles(), data.roles) === data.roles) saveRoles(data.roles);
       saveContacts(data.contacts || {});

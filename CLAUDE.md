@@ -65,7 +65,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   actuel, puis « Restaurer » (republie cette version entière). Messages de commit **sans nom**
   (« Planning publié / restauré ») : l'auteur reste dans le fichier chiffré.
   Synchro à l'ouverture et au retour sur l'appli (60 s min.) si `mh_team_code` ; jamais pendant un
-  import. `plan.teamAt` = date de la publication reçue (seule info en clair de l'enveloppe), `teamBy`.
+  import. **Jamais appliquer une publication plus ancienne que `plan.teamAt`** : raw.githubusercontent rend
+  l'ancienne version ~5 min après un envoi (bug signalé : modifications envoyées « disparues » à la réouverture). `plan.teamAt` = date de la publication reçue (seule info en clair de l'enveloppe), `teamBy`.
   Si le code ne déchiffre plus (code changé) : il est oublié et l'agent doit saisir le nouveau.
   Lien « Renouveler la clé de publication » masqué (`#teamRenewRow`) sauf si GitHub refuse la clé (`errText` 'cle').
 - **Alertes d'équipe** (nov. 2026, en haut de l'onglet Planning, `#teamWarn`, `renderTeamAlerts`) :
