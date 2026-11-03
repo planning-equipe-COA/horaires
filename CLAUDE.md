@@ -85,7 +85,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   `findUpdated` (core) → `result.updated` (la plus récente ; `combineResults` garde la plus récente des fichiers).
   Cherchée sur la ligne « mise à jour » et la ligne dessous si presque vide ; date Excel, texte jj/mm/aaaa ou numéro de série.
   Affichée : message « Planning enregistré » après CHAQUE import (ou « Pas de date « mise à jour » trouvée »), compte rendu
-  multi-fichiers, aperçu d'envoi, ligne d'état de l'onglet Équipe (`plan.updated`), tête de « Modifications du dernier
+  multi-fichiers, aperçu d'envoi, ligne d'état de l'onglet Équipe = « Planning d'équipe publié par X le <date de publication> · vérifié … » (formulation
+  voulue par l'utilisateur pour ne pas confondre avec la date de mise à jour), tête de « Modifications du dernier
   planning » (`plan.changesUpdated || plan.updated`) ; publiée avec le planning d'équipe (`updated`, AAAAMMJJ).
 - Mois : `monthFromText` lit aussi les abréviations suivies d'une année (« DEC 2026 », « NOV 2026 ») ;
   `findContext` remonte jusqu'au titre de la feuille pour le 2e bloc d'agents (sinon rangé au mauvais mois).
@@ -203,7 +204,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   jours passés en gris, « Planning importé / reçu de l'équipe le … comparé au précédent ». Reste visible après « J'ai vu »,
   jusqu'au planning suivant qui change quelque chose (`applyAgents` garde `changes` si le nouveau ne change rien,
   ex. recevoir la version qu'on vient d'envoyer ; `changesAt`, `changesFrom`). Le bandeau 🔔 a « Voir toutes les modifications »
-  (bouton plein). Le lien est une **carte bien visible** (« Le dernier planning a changé · N cases modifiées » + bouton « Voir › »,
+  (bouton plein). Le lien est une **carte bien visible** (« Dernier planning modifié le <date « mise à jour » du tableau> · N cases modifiées »,
+  sinon « Le dernier planning a changé » ; + bouton « Voir › »,
   fond orange tant que pas vu) : en simple lien on ne voyait pas où toucher (signalé). Masquée sur Planning quand le bandeau est là (`.dup`).
 - Jours modifiés : à chaque import, `diffSnapshot` compare chaque agent à son planning précédent ;
   bandeau « 🔔 » + point orange sur les cases jusqu'à « J'ai vu » (`changesSeen`), repris dans

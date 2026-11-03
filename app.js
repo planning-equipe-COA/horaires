@@ -485,8 +485,9 @@
     $('teamStatus').hidden = !(joined && p && p.teamAt);
     const syncOk = renderTeamAlerts();
     if (!$('teamStatus').hidden) {
-      $('teamStatus').innerHTML = ICON('users') + esc(` Planning d'équipe du ${longDate(p.teamAt)}` + (p.teamBy ? `, publié par ${p.teamBy}` : '') +
-        (p.updated ? ` · tableau mis à jour le ${updDate(p.updated)}` : '') + (syncOk ? ` · vérifié ${agoText(syncOk)}` : ''));
+      // « publié par X le … » : la date de publication, à ne pas confondre avec la date « mise à jour » du tableau
+      $('teamStatus').innerHTML = ICON('users') + esc(' Planning d\'équipe publié' + (p.teamBy ? ` par ${shown(p.teamBy)}` : '') +
+        ` le ${longDate(p.teamAt)}` + (syncOk ? ` · vérifié ${agoText(syncOk)}` : ''));
     }
     $('importHint').textContent = joined
       ? 'Le fichier Excel reste sur ton appareil. Comme tu es dans l\'équipe, l\'appli te proposera d\'envoyer les noms et les codes à tes collègues, chiffrés avec le code d\'équipe.'
@@ -1186,7 +1187,7 @@
     btn.hidden = !total;
     btn.classList.toggle('seen', !!plan.changesSeen);
     if (total) btn.innerHTML = ICON('bell') +
-      `<span class="cl-text"><strong>Le dernier planning a changé</strong><span class="cl-sub">${total} case${total > 1 ? 's' : ''} modifiée${total > 1 ? 's' : ''} · ${groups.length} agent${groups.length > 1 ? 's' : ''}</span></span>` +
+      `<span class="cl-text"><strong>${(plan.changesUpdated || plan.updated) ? 'Dernier planning modifié le ' + esc(updDate(plan.changesUpdated || plan.updated)) : 'Le dernier planning a changé'}</strong><span class="cl-sub">${total} case${total > 1 ? 's' : ''} modifiée${total > 1 ? 's' : ''} · ${groups.length} agent${groups.length > 1 ? 's' : ''}</span></span>` +
       '<span class="cl-go">Voir ›</span>';
   }
 
