@@ -191,6 +191,12 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   iPhone : l'icône d'écran d'accueil a un stockage séparé de Safari (code, planning, notes perdus à
   l'ajout — impossible à contourner). Dans Safari (`isIOS && !isStandalone`), la carte équipe propose
   « 📋 Copier le code pour l'écran d'accueil » ; l'accueil de l'icône le recolle en un geste.
+- **Modifications du dernier planning** (nov. 2026, demandé : « pas d'endroit qui dise clairement les modifications ») :
+  lien `#teamChangesBtn` sous le haut du calendrier (onglets Planning et Équipe) → panneau `#changesSheet`
+  (`openChanges`, `changeGroupsHTML` partagé avec l'aperçu d'envoi) : toute l'équipe, moi d'abord, date · ancien → nouveau,
+  jours passés en gris, « Planning importé / reçu de l'équipe le … comparé au précédent ». Reste visible après « J'ai vu »,
+  jusqu'au planning suivant qui change quelque chose (`applyAgents` garde `changes` si le nouveau ne change rien,
+  ex. recevoir la version qu'on vient d'envoyer ; `changesAt`, `changesFrom`). Le bandeau 🔔 a « Toutes les modifications ».
 - Jours modifiés : à chaque import, `diffSnapshot` compare chaque agent à son planning précédent ;
   bandeau « 🔔 » + point orange sur les cases jusqu'à « J'ai vu » (`changesSeen`), repris dans
   l'export. L'ancien suivi par export (`mh_snap`) n'est plus écrit ; il sert une fois de point de

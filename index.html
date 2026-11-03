@@ -56,6 +56,7 @@
     </div>
     <p id="compareLegend" class="hint cmp-legend only-planning" hidden></p>
     <p id="teamStatus" class="team-status only-equipe" hidden></p>
+    <button id="teamChangesBtn" class="link changes-link" type="button" hidden></button>
     <div class="seg only-planning" role="tablist" aria-label="Affichage">
       <button id="viewMonth" role="tab" data-view="month">Mois</button>
       <button id="viewList" role="tab" data-view="list">Liste</button>
@@ -304,6 +305,17 @@
     <div class="sheet-grab" aria-hidden="true"></div>
     <button class="sheet-close day-close" type="button" data-close aria-label="Fermer">✕</button>
     <div id="calDay" class="cal-day"></div>
+  </div>
+</div>
+
+<div id="changesSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="changesTitle" hidden>
+  <div class="sheet-backdrop" data-close></div>
+  <div class="sheet-panel">
+    <div class="sheet-head">
+      <h2 id="changesTitle"><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg> Modifications du dernier planning</h2>
+      <button class="sheet-close" type="button" data-close aria-label="Fermer">✕</button>
+    </div>
+    <div id="changesBody" class="publish-list changes-body"></div>
   </div>
 </div>
 

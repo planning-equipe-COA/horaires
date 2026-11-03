@@ -391,6 +391,14 @@
     }
     plan.changesSince = before && before.at || null;
     plan.changesSeen = false;
+    plan.changesAt = meta && meta.at || new Date().toISOString();
+    plan.changesFrom = meta && meta.file || '';
+    // rien de changé (ex. on reçoit de l'équipe la version qu'on vient d'envoyer) : on garde les dernières
+    // modifications au lieu de les effacer
+    if (!count && before && before.changes && Object.keys(before.changes).length) {
+      plan.changes = before.changes;
+      for (const f of ['changesSince', 'changesSeen', 'changesAt', 'changesFrom']) plan[f] = before[f];
+    }
     plan.teamAt = before && before.teamAt || null;
     plan.teamBy = before && before.teamBy || null;
     Object.assign(plan, meta);
@@ -669,25 +677,35 @@
       for (const k of new Set(Object.keys(x).concat(Object.keys(y)))) if (x[k] !== y[k]) items.push({ key: k, before: x[k] || '', after: y[k] || '' });
       if (items.length) out.push({ name, items: items.sort((p, q) => p.key.localeCompare(q.key)) });
     }
+    return sortGroups(out);
+  }
+  // Liste « agent → date · avant → après » (aperçu d'envoi et « Modifications du dernier planning »)
+  function changeGroupsHTML(groups, max, todayKey) {
     const me = load(STORAGE_NAME_KEY) || '';
-    return out.sort((p, q) => (q.name === me) - (p.name === me) || shown(p.name).localeCompare(shown(q.name), 'fr'));
+    const fmt = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+    const cell = c => c ? chip(c) : '<span class="muted">vide</span>';
+    let count = 0, html = '';
+    for (const g of groups) {
+      if (count >= max) break;
+      const items = g.items.slice(0, max - count);
+      count += items.length;
+      html += `<div class="pl-agent${g.name === me ? ' me' : ''}"><p class="pl-name">${nameHTML(g.name, g.name === me)} ` +
+        `<span class="muted">(${g.items.length})</span></p><ul>` +
+        items.map(i => `<li${todayKey && i.key < todayKey ? ' class="pl-past"' : ''}><span class="pl-date">${esc(fmt(i.key))}</span> ${cell(i.before)} → ${cell(i.after)}</li>`).join('') + '</ul></div>';
+    }
+    return { html, count };
+  }
+  function sortGroups(groups) {
+    const me = load(STORAGE_NAME_KEY) || '';
+    return groups.sort((p, q) => (q.name === me) - (p.name === me) || shown(p.name).localeCompare(shown(q.name), 'fr'));
   }
   const CHANGES_SHOWN = 300;
   function renderPublishList(groups, total) {
     const box = $('publishList');
     if (!groups || !groups.length) { box.hidden = true; return; }
-    const me = load(STORAGE_NAME_KEY) || '';
-    const fmt = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
-    const cell = c => c ? chip(c) : '<span class="muted">vide</span>';
-    let shownCount = 0, html = '<p class="hint pl-hint">Planning actuel de l\'équipe → ton fichier</p>';
-    for (const g of groups) {
-      if (shownCount >= CHANGES_SHOWN) break;
-      const items = g.items.slice(0, CHANGES_SHOWN - shownCount);
-      shownCount += items.length;
-      html += `<div class="pl-agent${g.name === me ? ' me' : ''}"><p class="pl-name">${nameHTML(g.name, g.name === me)} ` +
-        `<span class="muted">(${g.items.length})</span></p><ul>` +
-        items.map(i => `<li><span class="pl-date">${esc(fmt(i.key))}</span> ${cell(i.before)} → ${cell(i.after)}</li>`).join('') + '</ul></div>';
-    }
+    const r = changeGroupsHTML(groups, CHANGES_SHOWN);
+    const shownCount = r.count;
+    let html = '<p class="hint pl-hint">Planning actuel de l\'équipe → ton fichier</p>' + r.html;
     if (total > shownCount) html += `<p class="muted">… et ${total - shownCount} autres.</p>`;
     box.querySelector('summary').textContent = `Voir les cases qui changent (${groups.length} agent${groups.length > 1 ? 's' : ''})`;
     $('publishListBody').innerHTML = html;
@@ -895,6 +913,7 @@
     renderMeCard(names);
     renderPreview();
 
+    renderChangesLink(plan);
     // changements apportés par le dernier tableau importé
     const list = [...changes.values()].filter(ch => ch.key >= todayKey);
     const box = $('calChanges');
@@ -905,6 +924,7 @@
         list.slice(0, 8).map(ch => `<li>${esc(fmt(ch.key))} : ${esc(codeTitle(ch.before))} → <strong>${esc(codeTitle(ch.after))}</strong></li>`).join('') +
         (list.length > 8 ? `<li>… et ${list.length - 8} autre${list.length - 8 > 1 ? 's' : ''} (marqués d'un point)</li>` : '') +
         '</ul><button id="calChangesOk">J\'ai vu</button>' +
+        '<button id="calChangesAll" class="link" type="button">Toutes les modifications</button>' +
         '<button id="calChangesExport" class="link" type="button"><svg class="ic" aria-hidden="true"><use href="#i-cal"/></svg> Mettre à jour l\'agenda du téléphone</button>';
     }
     renderDay();
@@ -1116,6 +1136,40 @@
       rows.push({ name: main, days, remarks, me: members.includes(me) });
     }
     return rows;
+  }
+
+  // ── « Modifications du dernier planning » : toute l'équipe, gardées jusqu'au planning suivant (plan.changes) ──
+  function changeGroupsOf(plan) {
+    return sortGroups(Object.keys((plan && plan.changes) || {}).filter(n => plan.changes[n].length)
+      .map(n => ({ name: n, items: plan.changes[n].slice().sort((a, b) => a.key.localeCompare(b.key)) })));
+  }
+  function openChanges() {
+    const plan = planView(), groups = changeGroupsOf(plan), todayKey = C.dateKey(todayDate());
+    const total = groups.reduce((n, g) => n + g.items.length, 0);
+    const when = plan.changesAt ? longDate(plan.changesAt) : '';
+    const src = plan.changesFrom === 'équipe' ? 'reçu de l\'équipe' : 'importé';
+    let html = `<p class="hint">Planning ${esc(src)}${when ? ' le ' + esc(when) : ''}` +
+      (plan.changesSince ? `, comparé au précédent (du ${esc(longDate(plan.changesSince))})` : '') + '. Ancien code → nouveau code.</p>';
+    if (!groups.length) html += '<p class="muted">Aucune case n\'a changé avec le dernier planning.</p>';
+    else {
+      const r = changeGroupsHTML(groups, 1000, todayKey);
+      html += `<p><strong>${total} case${total > 1 ? 's' : ''}</strong> pour ${groups.length} agent${groups.length > 1 ? 's' : ''}` +
+        ' <span class="muted">(jours passés en gris)</span></p>' + r.html;
+    }
+    $('changesBody').innerHTML = html;
+    $('changesSheet').hidden = false;
+    $('changesSheet').querySelector('.sheet-panel').scrollTop = 0;
+    document.body.classList.add('sheet-open');
+  }
+  function closeChanges() {
+    $('changesSheet').hidden = true;
+    if ($('utilesSheet').hidden && $('daySheet').hidden && $('printSheet').hidden) document.body.classList.remove('sheet-open');
+  }
+  function renderChangesLink(plan) {
+    const groups = changeGroupsOf(plan), total = groups.reduce((n, g) => n + g.items.length, 0);
+    const btn = $('teamChangesBtn');
+    btn.hidden = !total;
+    if (total) btn.innerHTML = ICON('bell') + `<span>Modifications du dernier planning <span class="muted">(${total} case${total > 1 ? 's' : ''}, ${groups.length} agent${groups.length > 1 ? 's' : ''})</span></span>`;
   }
 
   // ── Imprimer / PDF : mon planning (seulement le mien), celui de l'équipe, ou les deux ; mois affiché ou période ──
@@ -1519,6 +1573,9 @@
   $('sheet').addEventListener('change', () => { $('month').value = ''; refresh(); });
   $('month').addEventListener('change', refresh);
 
+  $('teamChangesBtn').addEventListener('click', openChanges);
+  $('changesSheet').addEventListener('click', e => { if (e.target.closest('[data-close]')) closeChanges(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('changesSheet').hidden) closeChanges(); });
   $('calPrint').addEventListener('click', openPrint);
   $('printSheet').addEventListener('click', e => { if (e.target.closest('[data-close]')) closePrint(); });
   $('printSheet').addEventListener('change', e => {
@@ -1680,6 +1737,7 @@
   });
   $('calChanges').addEventListener('click', e => {
     if (e.target.id === 'calChangesExport') { goTo('export'); return; }
+    if (e.target.id === 'calChangesAll') { openChanges(); return; }
     if (e.target.id !== 'calChangesOk') return;
     if (!state.plan) return;
     state.plan.changesSeen = true;
