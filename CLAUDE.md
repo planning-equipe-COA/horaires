@@ -266,7 +266,9 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   **Seul le responsable modifie** : « 🔒 Modifier (responsable) » demande le code responsable (≥ 3 mots,
   différent du code d'équipe), défini la 1re fois ; seule son empreinte PBKDF2 est gardée
   (`TeamSync.hashSecret/checkSecret`, champ `admin`). Verrou applicatif (pas cryptographique), dit à
-  l'utilisateur. Liste dans le planning chiffré (`utiles` { list:[{label, tel}], at }, commit « Numéros
+  l'utilisateur. **Plusieurs numéros par service** (demandé) : `{ label, tels:[{tel, note}], tel }` (`tel` = 1er numéro, lu par
+  les anciennes versions ; `telsOf` relit l'ancien format), « + Autre numéro », précision facultative ; liste toujours **triée par
+  ordre alphabétique** des services (`byLabel`, affichage et enregistrement). Liste dans le planning chiffré (`utiles` { list, at }, commit « Numéros
   utiles mis à jour »), copie locale `mh_utiles`. **Toute publication doit reporter `utiles` et
   `admin`** via `keepShared(current)`. Pas de numéros de collègues dans ce panneau (choix de l'utilisateur).
 - **Imprimer / PDF** (nov. 2026) : bouton imprimante en haut à droite, à côté de 📞 (`#calPrint`, onglets Planning et

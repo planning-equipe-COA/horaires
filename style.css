@@ -464,17 +464,24 @@ body.tint-cells .cal-grid .cal-cell:has(> .chip[data-color="blanc"]) { backgroun
 #styleDetails .hint { margin-bottom: 4px; }
 .day-sheet .cal-day { margin: 0; padding: 0 0 4px; background: transparent; }
 .day-sheet .cal-day-head { padding-right: 46px; font-size: 1.05rem; min-height: 38px; }
-.u-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.u-row { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.u-row .u-label { display: block; margin-bottom: 4px; }
+.u-line { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+.u-note { color: var(--muted); font-size: .8rem; }
 .u-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .u-label { font-weight: 600; overflow-wrap: anywhere; }
 .u-tel { color: var(--muted); font-size: .9rem; }
 .u-act { display: inline-grid; place-items: center; width: 44px; height: 40px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); text-decoration: none; font-size: 1.1rem; }
 .sheet-foot { margin-top: 10px; text-align: right; }
 .u-input { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 4px 0; }
-.u-edit { display: grid; grid-template-columns: 1fr 9em auto; gap: 6px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.u-edit { display: grid; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.u-edit-head { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; }
+.u-edit-tel { display: grid; grid-template-columns: 1fr 1fr 2em; gap: 6px; align-items: center; padding-left: 10px; }
+.u-edit-tel .link { padding: 0; width: 2em; height: 2em; }
+.u-addtel { justify-self: start; padding: 2px 10px; font-size: .88rem; }
 .u-edit .u-input { margin: 0; }
-.u-edit button { width: 40px; height: 38px; padding: 0; }
-@media (max-width: 380px) { .u-edit { grid-template-columns: 1fr auto; } .u-edit [data-f="tel"] { grid-column: 1; } .u-edit button { grid-row: 1 / span 2; grid-column: 2; } }
+.u-edit-head button { width: 40px; height: 38px; padding: 0; }
+@media (max-width: 380px) { .u-edit-tel { grid-template-columns: 1fr 2em; } .u-edit-tel [data-f="note"] { grid-column: 1; } .u-edit-tel > :last-child { grid-row: 1; grid-column: 2; } }
 #utilesTitle { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 /* pas de sélection de texte ni de menu iPhone sur l'appui long */
 .hdr-btn, .app-head h1 { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }

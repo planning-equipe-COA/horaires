@@ -2149,14 +2149,21 @@
     $('utilesMsg').textContent = text || '';
     $('utilesMsg').className = 'team-msg ' + (kind || '');
   }
+  // Plusieurs numéros par service : { label, tels: [{ tel, note }], tel } (tel = 1er numéro, pour les anciennes versions)
+  const telsOf = u => (Array.isArray(u.tels) && u.tels.length ? u.tels : (u.tel ? [{ tel: u.tel, note: '' }] : []))
+    .map(t => ({ tel: String(t.tel || ''), note: String(t.note || '') }));
+  const byLabel = (a, b) => String(a.label || '').localeCompare(String(b.label || ''), 'fr', { sensitivity: 'base' });
   function renderUtilesView() {
-    const list = loadUtiles().list || [];
-    $('utilesView').innerHTML = list.length ? list.map(u =>
-      `<div class="u-row"><div class="u-text"><span class="u-label">${esc(u.label)}</span><span class="u-tel">${esc(u.tel)}</span></div>` +
-      `<a class="u-act" href="tel:${esc(telHref(u.tel))}" aria-label="Appeler ${esc(u.label)}"><svg class="ic" aria-hidden="true"><use href="#i-phone"/></svg></a>` +
-      `<a class="u-act" href="sms:${esc(telHref(u.tel))}" aria-label="SMS à ${esc(u.label)}"><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg></a></div>`).join('')
+    const list = (loadUtiles().list || []).slice().sort(byLabel); // ordre alphabétique des services
+    $('utilesView').innerHTML = list.length ? list.map(u => `<div class="u-row"><span class="u-label">${esc(u.label)}</span>` +
+      telsOf(u).map(t => `<div class="u-line"><div class="u-text"><span class="u-tel">${esc(t.tel)}</span>` +
+        (t.note ? `<span class="u-note">${esc(t.note)}</span>` : '') + '</div>' +
+        `<a class="u-act" href="tel:${esc(telHref(t.tel))}" aria-label="Appeler ${esc(u.label)} ${esc(t.tel)}"><svg class="ic" aria-hidden="true"><use href="#i-phone"/></svg></a>` +
+        `<a class="u-act" href="sms:${esc(telHref(t.tel))}" aria-label="SMS à ${esc(u.label)} ${esc(t.tel)}"><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg></a></div>`).join('') +
+      '</div>').join('')
       : '<p class="hint">Aucun numéro pour l\'instant.</p>';
   }
+  const draftOf = list => list.slice().sort(byLabel).map(u => ({ label: u.label || '', tels: telsOf(u).length ? telsOf(u) : [{ tel: '', note: '' }] }));
   function openUtiles() {
     ut.unlocked = false; ut.draft = null; ut.newAdmin = null;
     $('utilesView').hidden = false; $('utilesEdit').hidden = true; $('utilesAdmin').hidden = !isAdminDevice();
@@ -2187,19 +2194,27 @@
   }
   function renderUtilesEdit() {
     $('utilesView').hidden = true; $('utilesAdmin').hidden = true; $('utilesEdit').hidden = false;
-    $('utilesEdit').innerHTML = '<p class="hint">Mode responsable : modifie, ajoute ou supprime des numéros, puis envoie à l\'équipe.</p>' +
+    $('utilesEdit').innerHTML = '<p class="hint">Mode responsable : modifie, ajoute ou supprime des services et leurs numéros, puis envoie à l\'équipe. ' +
+      'La liste est rangée par ordre alphabétique.</p>' +
       ut.draft.map((u, i) => `<div class="u-edit" data-i="${i}">` +
-        `<input class="u-input" data-f="label" value="${esc(u.label)}" placeholder="Service (ex. PC opérations)" aria-label="Service">` +
-        `<input class="u-input" data-f="tel" value="${esc(u.tel)}" placeholder="Numéro" inputmode="tel" aria-label="Numéro">` +
-        `<button type="button" data-del="${i}" aria-label="Supprimer"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg></button></div>`).join('') +
-      '<div class="actions"><button id="uAdd" type="button">+ Ajouter un numéro</button></div>' +
+        `<div class="u-edit-head"><input class="u-input" data-f="label" value="${esc(u.label)}" placeholder="Service (ex. PC opérations)" aria-label="Service">` +
+        `<button type="button" data-del="${i}" aria-label="Supprimer le service"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg></button></div>` +
+        u.tels.map((t, j) => `<div class="u-edit-tel" data-j="${j}">` +
+          `<input class="u-input" data-f="tel" value="${esc(t.tel)}" placeholder="Numéro" inputmode="tel" aria-label="Numéro">` +
+          `<input class="u-input" data-f="note" value="${esc(t.note)}" placeholder="Précision (facultatif)" aria-label="Précision">` +
+          (u.tels.length > 1 ? `<button type="button" class="link" data-deltel="${i},${j}" aria-label="Retirer ce numéro">✕</button>` : '<span></span>') + '</div>').join('') +
+        `<button type="button" class="link u-addtel" data-addtel="${i}">+ Autre numéro</button></div>`).join('') +
+      '<div class="actions"><button id="uAdd" type="button">+ Ajouter un service</button></div>' +
       '<div class="actions"><button id="uSave" type="button" class="primary">Enregistrer pour l\'équipe</button>' +
       '<button id="uCancel" class="link" type="button">Annuler</button></div>';
   }
   async function saveUtilesList() {
-    const list = ut.draft.map(u => ({ label: u.label.trim(), tel: u.tel.trim() })).filter(u => u.label || u.tel);
-    const bad = list.find(u => !u.label || (u.tel.match(/\d/g) || []).length < 2);
-    if (bad) { utilesMsg('Chaque ligne doit avoir un nom de service et un numéro.', 'err'); return; }
+    const list = ut.draft.map(u => {
+      const tels = u.tels.map(t => ({ tel: t.tel.trim(), note: t.note.trim() })).filter(t => t.tel || t.note);
+      return { label: u.label.trim(), tels, tel: tels.length ? tels[0].tel : '' };
+    }).filter(u => u.label || u.tels.length).sort(byLabel);
+    const bad = list.find(u => !u.label || !u.tels.length || u.tels.some(t => (t.tel.match(/\d/g) || []).length < 2));
+    if (bad) { utilesMsg('Chaque service doit avoir un nom et des numéros valides.', 'err'); return; }
     $('uSave').disabled = true;
     utilesMsg('Envoi à l\'équipe…');
     try {
@@ -2257,8 +2272,8 @@
       if (code !== T.normCode(b)) { utilesMsg('Les deux saisies ne correspondent pas.', 'err'); return; }
       ut.newAdmin = await T.hashSecret(a);
       store(STORAGE_ADMIN_KEY, '1');
-      ut.unlocked = true; ut.draft = (loadUtiles().list || []).map(u => Object.assign({}, u));
-      if (!ut.draft.length) ut.draft.push({ label: '', tel: '' });
+      ut.unlocked = true; ut.draft = draftOf(loadUtiles().list || []);
+      if (!ut.draft.length) ut.draft.push({ label: '', tels: [{ tel: '', note: '' }] });
       utilesMsg('Code responsable choisi : il sera enregistré avec la liste.', 'ok');
       renderUtilesEdit();
       return;
@@ -2267,20 +2282,29 @@
       const ok = await T.checkSecret($('uSecret').value, loadUtiles().admin);
       if (!ok) { utilesMsg('Code responsable incorrect.', 'err'); return; }
       store(STORAGE_ADMIN_KEY, '1');
-      ut.unlocked = true; ut.draft = (loadUtiles().list || []).map(u => Object.assign({}, u));
-      if (!ut.draft.length) ut.draft.push({ label: '', tel: '' });
+      ut.unlocked = true; ut.draft = draftOf(loadUtiles().list || []);
+      if (!ut.draft.length) ut.draft.push({ label: '', tels: [{ tel: '', note: '' }] });
       utilesMsg('');
       renderUtilesEdit();
       return;
     }
     if (!ut.unlocked) return;
-    if (id === 'uAdd') { ut.draft.push({ label: '', tel: '' }); renderUtilesEdit(); const ins = $('utilesEdit').querySelectorAll('.u-edit input[data-f="label"]'); ins[ins.length - 1].focus(); return; }
-    if (e.target.dataset.del !== undefined) { ut.draft.splice(+e.target.dataset.del, 1); renderUtilesEdit(); return; }
+    if (id === 'uAdd') { ut.draft.push({ label: '', tels: [{ tel: '', note: '' }] }); renderUtilesEdit(); const ins = $('utilesEdit').querySelectorAll('.u-edit input[data-f="label"]'); ins[ins.length - 1].focus(); return; }
+    const btn = e.target.closest('button');
+    if (btn && btn.dataset.del !== undefined) { ut.draft.splice(+btn.dataset.del, 1); renderUtilesEdit(); return; }
+    if (btn && btn.dataset.addtel !== undefined) {
+      const i = +btn.dataset.addtel; ut.draft[i].tels.push({ tel: '', note: '' }); renderUtilesEdit();
+      const ins = $('utilesEdit').querySelectorAll(`.u-edit[data-i="${i}"] input[data-f="tel"]`); ins[ins.length - 1].focus(); return;
+    }
+    if (btn && btn.dataset.deltel !== undefined) { const [i, j] = btn.dataset.deltel.split(',').map(Number); ut.draft[i].tels.splice(j, 1); renderUtilesEdit(); return; }
     if (id === 'uSave') saveUtilesList();
   });
   $('utilesSheet').addEventListener('input', e => {
     const row = e.target.closest('.u-edit');
-    if (row && ut.draft) ut.draft[+row.dataset.i][e.target.dataset.f] = e.target.value;
+    if (!row || !ut.draft) return;
+    const u = ut.draft[+row.dataset.i], line = e.target.closest('.u-edit-tel');
+    if (line) u.tels[+line.dataset.j][e.target.dataset.f] = e.target.value;
+    else if (e.target.dataset.f === 'label') u.label = e.target.value;
   });
   $('utilesSheet').addEventListener('keydown', e => {
     if (e.key === 'Enter' && e.target.id === 'uSecret' && document.getElementById('uUnlock')) $('uUnlock').click();
