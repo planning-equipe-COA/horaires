@@ -255,7 +255,20 @@
     const opts = { codes: state.codes, sheetName: name + ' ' + book.name };
     const ym = state.books && state.books.length === 1 && $('month').value.match(/^(\d{4})-(\d{2})$/);
     if (ym) { opts.year = +ym[1]; opts.month = +ym[2]; }
-    return C.parseMatrix(matrix, opts);
+    const res = C.parseMatrix(matrix, opts);
+    // Pas de date tapée sur la ligne « mise à jour » (sur les vrais tableaux, c'est =AUJOURDHUI()) : on prend la date
+    // du dernier enregistrement du fichier, gardée par Excel dans ses propriétés (heure de Paris)
+    const saved = book.wb.Props && book.wb.Props.ModifiedDate;
+    if (!res.updated && saved) {
+      const t = new Date(saved);
+      if (!isNaN(t)) {
+        const p = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(t);
+        const get = k => +p.find(x => x.type === k).value;
+        res.updated = { y: get('year'), m: get('month'), d: get('day') };
+        res.updatedFrom = 'fichier';
+      }
+    }
+    return res;
   }
   function parseSheet(index) { return parseBook(state.books[0], index); }
 

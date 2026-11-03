@@ -277,8 +277,8 @@
       // la date peut être sous l'intitulé (ligne presque vide, jamais une ligne d'en-têtes de dates)
       if ((matrix[r + 1] || []).filter(v => v != null && v !== '').length <= 3) rows.add(r + 1);
     }
-    // Une date écrite à la main l'emporte sur une date calculée par une formule (=AUJOURDHUI(), qui donne le
-    // jour où le fichier a été ouvert ou enregistré, pas celui de la modification) ; la plus récente sinon.
+    // Seules les dates écrites à la main comptent : sur les vrais tableaux, la date à côté de « mise a jour » est
+    // une formule =AUJOURDHUI() (= le jour où on ouvre le fichier, pas celui de la modification).
     const typed = [], computed = [];
     const add = (r, c, d) => { if (d && d.y) ((matrix.formulas || {})[r + ',' + c] ? computed : typed).push({ y: d.y, m: d.m, d: d.d }); };
     for (const r of rows) {
@@ -293,7 +293,7 @@
         }
       });
     }
-    const list = typed.length ? typed : computed;
+    const list = typed;
     let best = null;
     for (const d of list) if (!best || dateKey(d) > dateKey(best)) best = d;
     return best;

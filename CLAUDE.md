@@ -84,8 +84,11 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - **Date « mise à jour » du tableau** (en rouge barré sur les vrais fichiers, ligne « mise a jour » en haut) :
   `findUpdated` (core) → `result.updated` (la plus récente ; `combineResults` garde la plus récente des fichiers).
   Cherchée sur la ligne « mise à jour » et la ligne dessous si presque vide ; date Excel, texte jj/mm/aaaa ou numéro de série.
-  **Une date tapée l'emporte sur une formule** (`matrix.formulas`, ex. =AUJOURDHUI() à côté : donnait le jour d'import
-  au lieu de la date rouge barrée — signalé : « 3 novembre » au lieu du 2).
+  **Vérifié sur les vrais fichiers (nov. 2026) : la date à côté de « mise a jour » est une formule =AUJOURDHUI()**
+  (Excel affiche le jour où on ouvre le fichier ; valeur gardée = jour du dernier enregistrement). Les formules sont donc
+  ignorées (`matrix.formulas`) ; seules les dates tapées comptent. À défaut, `parseBook` prend la date du dernier
+  enregistrement du classeur (`wb.Props.ModifiedDate`, heure de Paris ; `res.updatedFrom = 'fichier'`). Une « Copie de »
+  enregistrée par l'agent porte SA date d'enregistrement, pas celle du planificateur.
   Affichée : message « Planning enregistré » après CHAQUE import (ou « Pas de date « mise à jour » trouvée »), compte rendu
   multi-fichiers, aperçu d'envoi, ligne d'état de l'onglet Équipe = « Planning d'équipe publié par X le <date de publication> · vérifié … » (formulation
   voulue par l'utilisateur pour ne pas confondre avec la date de mise à jour), tête de « Modifications du dernier

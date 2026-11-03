@@ -458,5 +458,5 @@ test('findUpdated : une date tapée l’emporte sur =AUJOURDHUI()', () => {
   m.formulas = { '0,3': true };
   assert.deepEqual(C.parseMatrix(m, { codes: C.DEFAULT_CODES }).updated, { y: 2026, m: 11, d: 2 });
   const only = [['NOVEMBRE 2026', 'mise a jour', { y: 2026, m: 11, d: 3 }]].concat(head); only.formulas = { '0,2': true };
-  assert.deepEqual(C.parseMatrix(only, { codes: C.DEFAULT_CODES }).updated, { y: 2026, m: 11, d: 3 });
+  assert.equal(C.parseMatrix(only, { codes: C.DEFAULT_CODES }).updated, null); // =AUJOURDHUI() seul : pas une vraie date
 });
