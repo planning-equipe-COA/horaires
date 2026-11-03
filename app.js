@@ -415,6 +415,7 @@
     // date « mise à jour » : tapée à la main (illisible dans les copies du tableau), facultative
     $('updRow').hidden = false;
     $('updDate').value = '';
+    $('updRow').classList.remove('filled');
     state.importAgents = res.agents;
 
     // calendrier : on montre le mois en cours s'il est dans le tableau, sinon son premier mois
@@ -1608,6 +1609,7 @@
   $('updDate').addEventListener('change', () => {
     if (!state.plan) return;
     state.plan.updated = typedUpdated();
+    $('updRow').classList.toggle('filled', !!state.plan.updated); // cadre vert une fois la date saisie
     state.plan.changesUpdated = state.plan.updated; // ce tableau vient d'être importé : c'est sa date
     savePlan();
     renderCalendar();

@@ -627,7 +627,12 @@ body[data-tab="reglages"] #calPrint { display: none; }
   .pr-tt sup { font-size: 6pt; }
 }
 
-.upd-row { margin: 8px 0 10px; display: grid; gap: 4px; }
-.upd-row label { font-weight: 600; font-size: .9rem; }
-.upd-row input { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); max-width: 12em; }
+.upd-row { margin: 10px 0; padding: 12px; display: grid; gap: 6px; border: 2px solid var(--accent); border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--card)); }
+.upd-head { display: flex; align-items: center; gap: 8px; }
+.upd-head .ic { width: 20px; height: 20px; color: var(--accent); flex: none; }
+.upd-head label { font-weight: 700; font-size: .98rem; }
+.upd-opt { margin-left: auto; font-size: .75rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
 .upd-row .hint { margin: 0; }
+.upd-row input { font: inherit; font-size: 1rem; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); width: 100%; max-width: 14em; }
+.upd-row.filled { border-color: var(--ok); }

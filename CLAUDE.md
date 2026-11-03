@@ -89,7 +89,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   donc elles portent le jour de la copie (et `wb.Props.ModifiedDate` aussi). Impossible de retrouver la vraie date.
   `findUpdated` reste dans core.js (dates tapées seulement, testé) mais l'appli ne l'affiche plus.
   **Remplacée par une saisie facultative** (demandée, non bloquante) : après chaque import, champ `#updDate` « Date de mise
-  à jour du tableau (case rouge, facultatif) » → `plan.updated` / `plan.changesUpdated` (AAAAMMJJ), publiée avec le planning
+  à jour du tableau » (encadré bleu bien visible juste sous la zone d'import, au-dessus de « Planning enregistré » ; pas
+  « case rouge » : c'est la date qui est en rouge) → `plan.updated` / `plan.changesUpdated` (AAAAMMJJ), publiée avec le planning
   d'équipe (`updated`, `typedUpdated()` au moment de l'envoi ; vide = null) et reçue par les collègues. Affichée : carte
   « Dernier planning modifié le … » (sinon « Le dernier planning a changé ») et en tête du panneau des modifications.
   Si aucune case ne change mais que la date tapée est nouvelle, l'aperçu propose « Envoyer la date à l'équipe » (signalé :
