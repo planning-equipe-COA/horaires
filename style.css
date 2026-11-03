@@ -626,3 +626,8 @@ body[data-tab="reglages"] #calPrint { display: none; }
   .pr-tt tr { break-inside: avoid; }
   .pr-tt sup { font-size: 6pt; }
 }
+
+.upd-row { margin: 8px 0 10px; display: grid; gap: 4px; }
+.upd-row label { font-weight: 600; font-size: .9rem; }
+.upd-row input { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); max-width: 12em; }
+.upd-row .hint { margin: 0; }

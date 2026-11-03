@@ -394,11 +394,12 @@
     plan.changesSeen = false;
     plan.changesAt = meta && meta.at || new Date().toISOString();
     plan.changesFrom = meta && meta.file || '';
+    plan.changesUpdated = meta && meta.updated || null; // date « mise à jour » du tableau (tapée), AAAAMMJJ
     // rien de changé (ex. on reçoit de l'équipe la version qu'on vient d'envoyer) : on garde les dernières
     // modifications au lieu de les effacer
     if (!count && before && before.changes && Object.keys(before.changes).length) {
       plan.changes = before.changes;
-      for (const f of ['changesSince', 'changesSeen', 'changesAt', 'changesFrom']) plan[f] = before[f];
+      for (const f of ['changesSince', 'changesSeen', 'changesAt', 'changesFrom', 'changesUpdated']) plan[f] = before[f];
     }
     plan.teamAt = before && before.teamAt || null;
     plan.teamBy = before && before.teamBy || null;
@@ -409,8 +410,10 @@
   }
 
   function savePlanFromImport(res) {
-    applyAgents(state.planBefore || null, res.agents, { at: new Date().toISOString(), file: state.fileName,
-      });
+    applyAgents(state.planBefore || null, res.agents, { at: new Date().toISOString(), file: state.fileName, updated: null });
+    // date « mise à jour » : tapée à la main (illisible dans les copies du tableau), facultative
+    $('updRow').hidden = false;
+    $('updDate').value = '';
     state.importAgents = res.agents;
 
     // calendrier : on montre le mois en cours s'il est dans le tableau, sinon son premier mois
@@ -571,7 +574,7 @@
       saveContacts(data.contacts || {});
       saveUtiles({ list: (data.utiles && data.utiles.list) || [], at: data.utiles && data.utiles.at, admin: data.admin || null });
       const n = applyAgents(state.plan, planToAgents(data.agents, data.remarks),
-        { at: remote.at, file: 'équipe', teamAt: remote.at, teamBy: data.by || null });
+        { at: remote.at, file: 'équipe', teamAt: remote.at, teamBy: data.by || null, updated: data.updated || null });
       openOnUsefulMonth();
       renderCalendar();
       teamMsg(`✓ Nouveau planning reçu${data.by ? ' (publié par ' + data.by + ')' : ''}` +
@@ -778,7 +781,7 @@
         previous = current;
         const full = C.mergePlan(current, agents, minKeep());
         const merged = { agents: full.agents, remarks: full.remarks, roles: newestRoles(current && current.roles, loadRoles()),
-          contacts: (current && current.contacts) || {}, ...keepShared(current) };
+          contacts: (current && current.contacts) || {}, ...keepShared(current), updated: typedUpdated() };
         n = countChanges(current, merged);
         if (current && !n) throw new Error('identique'); // quelqu'un l'a envoyé entre-temps
         return { plan: merged };
@@ -1143,6 +1146,12 @@
     return rows;
   }
 
+  // Date « mise à jour » du tableau, tapée après l'import (#updDate) : AAAAMMJJ ou null
+  function typedUpdated() { const v = $('updDate') && $('updDate').value; return /^\d{4}-\d{2}-\d{2}$/.test(v || '') ? v.replace(/-/g, '') : null; }
+  function updLabel(k, long) {
+    return utc(keyToDate(k)).toLocaleDateString('fr-FR', long ? { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }
+      : { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  }
   // ── « Modifications du dernier planning » : toute l'équipe, gardées jusqu'au planning suivant (plan.changes) ──
   function changeGroupsOf(plan) {
     return sortGroups(Object.keys((plan && plan.changes) || {}).filter(n => plan.changes[n].length)
@@ -1153,7 +1162,8 @@
     const total = groups.reduce((n, g) => n + g.items.length, 0);
     const when = plan.changesAt ? longDate(plan.changesAt) : '';
     const src = plan.changesFrom === 'équipe' ? 'reçu de l\'équipe' : 'importé';
-    let html =       `<p class="hint">Planning ${esc(src)}${when ? ' le ' + esc(when) : ''}` +
+    let html = (plan.changesUpdated ? `<p class="pl-updated">${ICON('clock')}<span>Tableau de service mis à jour le <strong>${esc(updLabel(plan.changesUpdated, true))}</strong></span></p>` : '') +
+      `<p class="hint">Planning ${esc(src)}${when ? ' le ' + esc(when) : ''}` +
       (plan.changesSince ? `, comparé au précédent (du ${esc(longDate(plan.changesSince))})` : '') + '. Ancien code → nouveau code.</p>';
     if (!groups.length) html += '<p class="muted">Aucune case n\'a changé avec le dernier planning.</p>';
     else {
@@ -1176,7 +1186,7 @@
     btn.hidden = !total;
     btn.classList.toggle('seen', !!plan.changesSeen);
     if (total) btn.innerHTML = ICON('bell') +
-      `<span class="cl-text"><strong>Le dernier planning a changé</strong><span class="cl-sub">${total} case${total > 1 ? 's' : ''} modifiée${total > 1 ? 's' : ''} · ${groups.length} agent${groups.length > 1 ? 's' : ''}</span></span>` +
+      `<span class="cl-text"><strong>${plan.changesUpdated ? 'Dernier planning modifié le ' + esc(updLabel(plan.changesUpdated)) : 'Le dernier planning a changé'}</strong><span class="cl-sub">${total} case${total > 1 ? 's' : ''} modifiée${total > 1 ? 's' : ''} · ${groups.length} agent${groups.length > 1 ? 's' : ''}</span></span>` +
       '<span class="cl-go">Voir ›</span>';
   }
 
@@ -1584,6 +1594,13 @@
   $('teamChangesBtn').addEventListener('click', openChanges);
   $('changesSheet').addEventListener('click', e => { if (e.target.closest('[data-close]')) closeChanges(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('changesSheet').hidden) closeChanges(); });
+  $('updDate').addEventListener('change', () => {
+    if (!state.plan) return;
+    state.plan.updated = typedUpdated();
+    state.plan.changesUpdated = state.plan.updated; // ce tableau vient d'être importé : c'est sa date
+    savePlan();
+    renderCalendar();
+  });
   $('calPrint').addEventListener('click', openPrint);
   $('printSheet').addEventListener('click', e => { if (e.target.closest('[data-close]')) closePrint(); });
   $('printSheet').addEventListener('change', e => {

@@ -96,6 +96,11 @@
     </label>
     <input id="file" type="file" accept=".xls,.xlsx,.xlsm,.csv" multiple hidden>
     <p id="saved" class="saved" hidden></p>
+    <div id="updRow" class="upd-row" hidden>
+      <label for="updDate">Date de mise à jour du tableau <span class="muted">(case rouge, facultatif)</span></label>
+      <input type="date" id="updDate">
+      <p class="hint">Elle n'est pas lisible dans le fichier copié : tape-la si tu veux que tes collègues la voient.</p>
+    </div>
     <div id="publishBox" class="publish" hidden>
       <p id="publishMsg" class="publish-msg"></p>
       <details id="publishList" class="publish-list" hidden><summary></summary><div id="publishListBody"></div></details>

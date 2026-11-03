@@ -88,6 +88,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   enregistrement par le planificateur, mais les fichiers que reçoit l'appli sont toujours des « Copie de… » réenregistrées,
   donc elles portent le jour de la copie (et `wb.Props.ModifiedDate` aussi). Impossible de retrouver la vraie date.
   `findUpdated` reste dans core.js (dates tapées seulement, testé) mais l'appli ne l'affiche plus.
+  **Remplacée par une saisie facultative** (demandée, non bloquante) : après chaque import, champ `#updDate` « Date de mise
+  à jour du tableau (case rouge, facultatif) » → `plan.updated` / `plan.changesUpdated` (AAAAMMJJ), publiée avec le planning
+  d'équipe (`updated`, `typedUpdated()` au moment de l'envoi ; vide = null) et reçue par les collègues. Affichée : carte
+  « Dernier planning modifié le … » (sinon « Le dernier planning a changé ») et en tête du panneau des modifications.
 - Mois : `monthFromText` lit aussi les abréviations suivies d'une année (« DEC 2026 », « NOV 2026 ») ;
   `findContext` remonte jusqu'au titre de la feuille pour le 2e bloc d'agents (sinon rangé au mauvais mois).
   Classeurs à 3 feuilles (« THEORIQUE », « PLANIFIE New TS ROA », « QUATRE Mi Temps ») : `bestSheet`
