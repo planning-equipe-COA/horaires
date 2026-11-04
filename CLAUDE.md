@@ -265,9 +265,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   synchro et au choix du nom, 1 essai/jour max, commit « Membre ajouté » sans nom ; déjà présent → rien n'est écrit).
   Copie locale `mh_members` (vidée en quittant l'équipe). Liste + compte (« 18 sur 27 agents du planning », non inscrits)
   **seulement sur le téléphone du responsable** (`mh_admin`, `#teamMembers` dans la carte équipe). Phrase d'information
-  au moment de rejoindre (« Ton nom sera ajouté à la liste des membres de l'équipe »). **Pas** de comptage des ouvertures :
-  service extérieur (GoatCounter) proposé puis écarté par l'utilisateur (il ne voulait pas de mention dans l'appli, et on
-  n'en ajoute pas sans mention). `keepShared` reporte aussi `members` et `updated` dans toutes les publications.
+  au moment de rejoindre (voir Statistiques ci-dessous). Pas de service extérieur (GoatCounter écarté) ; jamais de
+  comptage sans la phrase d'information. `keepShared` reporte aussi `members` et `updated` dans toutes les publications.
 - **Statistiques** (nov. 2026, accepté par l'utilisateur AVEC la phrase d'information, montrée à l'adhésion et, pour les
   anciens membres, dans l'encadré `#statsNotice` « OK » ; rien n'est compté avant `mh_stats_ok`) : « Ton nom et ta présence
   de la semaine apparaissent dans la liste des membres. L'appli compte aussi, sans ton nom, les vues utilisées ».
