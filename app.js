@@ -2234,6 +2234,12 @@
   });
   $('statsRefresh').addEventListener('click', () => renderStats(true));
   $('statsPrint').addEventListener('click', printStats);
+  $('statsMembers').addEventListener('click', () => { // la liste nominative est dans la carte « Code d'équipe »
+    $('teamDetails').open = true;
+    const d = $('teamMembers').querySelector('details');
+    if (d) d.open = true;
+    requestAnimationFrame(() => $('teamMembers').scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  });
   $('statsNoticeOk').addEventListener('click', () => { store('mh_stats_ok', '1'); store('mh_usage_last', '0'); renderStatsNotice(); noteOpen(); ensureMember(); });
 
   // ── Versions précédentes du planning d'équipe ─────────────────────────────
