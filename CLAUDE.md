@@ -260,26 +260,13 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   (`nameWithPhone`). Limites dites à l'utilisateur : visibles par tous ceux qui ont le code, restent
   dans l'historique chiffré. Rotation automatique du code écartée (sans intérêt) : changer le code
   quand quelqu'un quitte l'équipe.
-- **Membres de l'équipe** (nov. 2026, demandé pour montrer l'usage à la hiérarchie) : chaque téléphone qui a rejoint l'équipe
-  et choisi « Je suis » s'inscrit **une fois** dans le planning chiffré (`members` { NOM: { at } }, `ensureMember` après la
-  synchro et au choix du nom, 1 essai/jour max, commit « Membre ajouté » sans nom ; déjà présent → rien n'est écrit).
-  Copie locale `mh_members` (vidée en quittant l'équipe). Liste + compte (« 18 sur 27 agents du planning », non inscrits)
-  **seulement sur le téléphone du responsable** (`mh_admin`, `#teamMembers` dans la carte équipe). Phrase d'information
-  au moment de rejoindre (voir Statistiques ci-dessous). Pas de service extérieur (GoatCounter écarté) ; jamais de
-  comptage sans la phrase d'information. `keepShared` reporte aussi `members` et `updated` dans toutes les publications.
-- **Statistiques** (nov. 2026, accepté par l'utilisateur AVEC la phrase d'information, montrée à l'adhésion et, pour les
-  anciens membres, dans l'encadré `#statsNotice` « OK » ; rien n'est compté avant `mh_stats_ok`) : « Ton nom et ta présence
-  de la semaine apparaissent dans la liste des membres. L'appli compte aussi, sans ton nom, les vues utilisées ».
-  `members[NOM].w` = lundis (AAAAMMJJ) des semaines d'ouverture (26 max) ; `usage[lundi]` = { o ouvertures, m Mois, l Liste,
-  e Équipe, n téléphones } **sans nom**, compté localement (`mh_usage`, `noteOpen` : ouverture ou retour après 30 min,
-  `noteView`) et envoyé une fois par semaine pour les semaines finies (`ensureMember`, commit « Statistiques ») ;
-  `pubs` [{ at, n cases changées, upd }] ajouté à chaque envoi. Téléphone du responsable : ouvertures et vues non comptées
-  (démos), sauf case « Compter aussi mes ouvertures » (`mh_stats_self`). Carte « Statistiques » (`#statsCard`, Réglages,
-  seulement `mh_admin`) : inscrits, actifs par semaine, ouvertures, vues les plus regardées, plannings envoyés par mois
-  (historique GitHub filtré sur « Planning publié/restauré »), changements transmis, réactivité (date de mise à jour →
-  mise en ligne), annuaire ; aucun nom, « Imprimer / PDF ». `pub` { at, by } = dernier envoi de PLANNING (les commits
-  d'inscription/statistiques changent `at`/`by` de l'enveloppe) : affichages via `pubAtOf` / `pubByOf`. « Versions
-  précédentes » masque les commits sans planning (`OTHER_COMMITS`). `keepShared` reporte `usage`, `pubs`, `pub`.
+- **Statistiques et liste des membres : RETIRÉES** (nov. 2026, à la demande de l'utilisateur, le soir même de leur mise
+  en ligne). Plus aucun comptage (ouvertures, vues, présence), plus de liste des inscrits ; les clés locales `mh_members`,
+  `mh_usage*`, `mh_stats*` sont effacées au lancement, et `members` / `usage` / `pubs` ne sont plus reportés par
+  `keepShared` (ils disparaissent du planning chiffré à la publication suivante). Ne pas les remettre sans demande.
+  Restent : `pub` { at, by } = dernier envoi de PLANNING (les commits de numéros, d'ordre… changent `at`/`by` de
+  l'enveloppe), affiché via `pubAtOf` / `pubByOf` ; « Versions précédentes » masque les commits sans planning (`OTHER_COMMITS`).
+  Analytics extérieures (GoatCounter) écartées.
 - **Numéros utiles (opérationnels uniquement)** : icône 📞 en haut à droite (`#utilesBtn`, visible une fois
   l'équipe rejointe) → panneau depuis le bas (`#utilesSheet`) : service + numéro, Appeler / SMS.
   Cadenas visible **seulement sur le téléphone du responsable** (`mh_admin` = '1' après une saisie
