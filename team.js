@@ -169,14 +169,15 @@
     }
   }
 
-  // Versions publiées de planning.enc (historique GitHub, lecture publique) : [{ sha, date }]
-  async function listVersions(fetchFn, limit) {
+  // Versions publiées de planning.enc (historique GitHub, lecture publique) : [{ sha, date, message }]
+  async function listVersions(fetchFn, limit, page) {
     const r = DATA_REPO;
-    const res = await (fetchFn || fetch)(`https://api.github.com/repos/${r.owner}/${r.repo}/commits?path=${PLAN_FILE}&sha=${r.branch}&per_page=${limit || 15}`,
+    const res = await (fetchFn || fetch)(`https://api.github.com/repos/${r.owner}/${r.repo}/commits?path=${PLAN_FILE}&sha=${r.branch}&per_page=${limit || 15}&page=${page || 1}`,
       { headers: { Accept: 'application/vnd.github+json' }, cache: 'no-store' });
     if (!res.ok) throw new Error('reseau');
     const list = await res.json();
-    return list.map(c => ({ sha: c.sha, date: c.commit && (c.commit.committer || c.commit.author || {}).date }));
+    return list.map(c => ({ sha: c.sha, date: c.commit && (c.commit.committer || c.commit.author || {}).date,
+      message: (c.commit && c.commit.message || '').split('\n')[0] }));
   }
   // Contenu chiffré d'une version donnée
   async function readVersion(sha, fetchFn) {

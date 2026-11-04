@@ -651,3 +651,35 @@ body[data-tab="reglages"] #calPrint { display: none; }
 .team-members summary .ic { width: 18px; height: 18px; color: var(--accent); }
 .members-list { margin: 6px 0; padding-left: 18px; font-size: .9rem; }
 .members-list li { margin: 2px 0; }
+
+/* ── Statistiques (téléphone du responsable) ─────────────────────────────── */
+.stats-notice { margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; font-size: .9rem;
+  background: color-mix(in srgb, var(--accent) 12%, transparent); border-left: 4px solid var(--accent);
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.stats-notice p { margin: 0; align-self: stretch; }
+.stats-notice button { width: auto; flex: none; min-width: 6em; padding: 6px 18px; }
+.stats-notice .ic { width: 16px; height: 16px; vertical-align: -3px; color: var(--accent); }
+.st-block { border-top: 1px solid var(--line); padding: 10px 0 4px; }
+.st-block h3 { font-size: .95rem; margin: 6px 0 4px; }
+.st-big { margin: 4px 0 6px; }
+.st-big strong { font-size: 1.5rem; }
+.st-cap { margin: 8px 0 2px; font-size: .85rem; color: var(--muted); }
+.st-bars { display: flex; align-items: flex-end; gap: 4px; height: 96px; margin: 4px 0 6px; }
+.st-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; }
+.st-col i { display: block; width: 70%; max-width: 28px; background: var(--accent); border-radius: 4px 4px 0 0; }
+.st-col i.st-part { opacity: .45; }
+.st-v { font-size: .75rem; font-weight: 600; }
+.st-l { font-size: .68rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.st-hbar { display: grid; grid-template-columns: 4.5em 1fr 3em; align-items: center; gap: 8px; margin: 4px 0; font-size: .9rem; }
+.st-hbar i { display: block; height: 10px; background: var(--chip); border-radius: 5px; overflow: hidden; }
+.st-hbar b { display: block; height: 100%; background: var(--accent); }
+.st-hbar span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.st-self { margin-top: 8px; }
+@media print {
+  .pr-stats .st-block { break-inside: avoid; }
+  .pr-stats .st-bars { height: 30mm; }
+  .pr-stats .st-col i { background: #2f6fb0; }
+  .pr-stats .st-hbar b { background: #2f6fb0; }
+  .pr-stats .st-hbar i { background: #e3e8ee; }
+  .pr-stats .hint { color: #5a6677; font-size: 8.5pt; }
+}

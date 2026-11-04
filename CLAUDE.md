@@ -268,6 +268,19 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   au moment de rejoindre (« Ton nom sera ajouté à la liste des membres de l'équipe »). **Pas** de comptage des ouvertures :
   service extérieur (GoatCounter) proposé puis écarté par l'utilisateur (il ne voulait pas de mention dans l'appli, et on
   n'en ajoute pas sans mention). `keepShared` reporte aussi `members` et `updated` dans toutes les publications.
+- **Statistiques** (nov. 2026, accepté par l'utilisateur AVEC la phrase d'information, montrée à l'adhésion et, pour les
+  anciens membres, dans l'encadré `#statsNotice` « OK » ; rien n'est compté avant `mh_stats_ok`) : « Ton nom et ta présence
+  de la semaine apparaissent dans la liste des membres. L'appli compte aussi, sans ton nom, les vues utilisées ».
+  `members[NOM].w` = lundis (AAAAMMJJ) des semaines d'ouverture (26 max) ; `usage[lundi]` = { o ouvertures, m Mois, l Liste,
+  e Équipe, n téléphones } **sans nom**, compté localement (`mh_usage`, `noteOpen` : ouverture ou retour après 30 min,
+  `noteView`) et envoyé une fois par semaine pour les semaines finies (`ensureMember`, commit « Statistiques ») ;
+  `pubs` [{ at, n cases changées, upd }] ajouté à chaque envoi. Téléphone du responsable : ouvertures et vues non comptées
+  (démos), sauf case « Compter aussi mes ouvertures » (`mh_stats_self`). Carte « Statistiques » (`#statsCard`, Réglages,
+  seulement `mh_admin`) : inscrits, actifs par semaine, ouvertures, vues les plus regardées, plannings envoyés par mois
+  (historique GitHub filtré sur « Planning publié/restauré »), changements transmis, réactivité (date de mise à jour →
+  mise en ligne), annuaire ; aucun nom, « Imprimer / PDF ». `pub` { at, by } = dernier envoi de PLANNING (les commits
+  d'inscription/statistiques changent `at`/`by` de l'enveloppe) : affichages via `pubAtOf` / `pubByOf`. « Versions
+  précédentes » masque les commits sans planning (`OTHER_COMMITS`). `keepShared` reporte `usage`, `pubs`, `pub`.
 - **Numéros utiles (opérationnels uniquement)** : icône 📞 en haut à droite (`#utilesBtn`, visible une fois
   l'équipe rejointe) → panneau depuis le bas (`#utilesSheet`) : service + numéro, Appeler / SMS.
   Cadenas visible **seulement sur le téléphone du responsable** (`mh_admin` = '1' après une saisie

@@ -369,39 +369,103 @@
   // à reporter dans TOUTE publication, sinon la liste et le verrou seraient perdus
   function keepShared(current) {
     return { utiles: (current && current.utiles) || null, admin: (current && current.admin) || null,
-      members: (current && current.members) || {}, updated: (current && current.updated) || null };
+      members: (current && current.members) || {}, updated: (current && current.updated) || null,
+      usage: (current && current.usage) || {}, pubs: (current && current.pubs) || [],
+      // date et auteur du dernier envoi de PLANNING (les inscriptions, numéros… changent aussi le fichier : at/by)
+      pub: (current && (current.pub || (current.at ? { at: current.at, by: current.by || null } : null))) || null };
   }
+  // date / auteur de la dernière publication d'un planning (anciens téléphones : date du fichier)
+  const pubAtOf = p => p && (p.pubAt || p.teamAt) || null;
+  const pubByOf = p => p && (p.pubAt ? p.pubBy : p.teamBy) || null;
   // ── Membres de l'équipe : chacun est inscrit une fois (« NOM · rejoint le … ») dans le planning chiffré ;
   // seul le téléphone du responsable (mh_admin) affiche la liste et le compte. Pas de suivi des ouvertures.
   const STORAGE_MEMBERS_KEY = 'mh_members';
   function loadMembers() { try { return JSON.parse(load(STORAGE_MEMBERS_KEY)) || {}; } catch (e) { return {}; } }
   function saveMembers(m) { store(STORAGE_MEMBERS_KEY, JSON.stringify(m || {})); }
+  // ── Statistiques (annoncées aux collègues : « Ton nom et ta présence de la semaine apparaissent dans la liste
+  // des membres. L'appli compte aussi, sans ton nom, les vues utilisées ») :
+  //  · members[NOM].w = lundis (AAAAMMJJ) des semaines où l'agent a ouvert l'appli (26 au plus) ;
+  //  · usage[lundi] = { o: ouvertures, m: Mois, l: Liste, e: Équipe, n: téléphones } — totaux SANS nom,
+  //    comptés sur le téléphone et envoyés une fois par semaine (la semaine finie) ;
+  //  · pubs = [{ at, n: cases changées, upd }] à chaque envoi d'un planning.
+  // Rien n'est compté tant que l'agent n'a pas vu la phrase (mh_stats_ok). Le téléphone du responsable ne compte
+  // ni ouvertures ni vues (démos, essais), sauf s'il le demande (mh_stats_self).
+  const STORAGE_USAGE_KEY = 'mh_usage', STORAGE_STATS_KEY = 'mh_stats';
+  const OPEN_GAP = 30 * 60000; // retour sur l'appli après 30 min = nouvelle ouverture
+  function weekOf(d) { return C.isoWeek(d).monday; }
+  function addDaysKey(k, n) { const t = utc(keyToDate(k)); t.setUTCDate(t.getUTCDate() + n); return C.dateKey({ y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate() }); }
+  function statsOk() { return !!teamCode() && load('mh_stats_ok') === '1'; }
+  function countsHere() { return statsOk() && (load('mh_admin') !== '1' || load('mh_stats_self') === '1'); }
+  function loadUsage() { try { return JSON.parse(load(STORAGE_USAGE_KEY)) || {}; } catch (e) { return {}; } }
+  function loadStats() { try { return JSON.parse(load(STORAGE_STATS_KEY)) || {}; } catch (e) { return {}; } }
+  function saveStats(data) { store(STORAGE_STATS_KEY, JSON.stringify({ usage: (data && data.usage) || {}, pubs: (data && data.pubs) || [] })); }
+  function bumpUsage(field) {
+    if (!countsHere()) return;
+    const u = loadUsage(), wk = weekOf(todayDate());
+    const w = u[wk] || (u[wk] = { o: 0, m: 0, l: 0, e: 0 });
+    w[field] = (w[field] || 0) + 1;
+    store(STORAGE_USAGE_KEY, JSON.stringify(u));
+  }
+  let lastView = null;
+  function currentView() { return state.tab === 'equipe' ? 'e' : state.tab === 'planning' ? (state.cal.view === 'list' ? 'l' : 'm') : null; }
+  function noteView() {
+    const v = currentView();
+    if (v && v !== lastView) bumpUsage(v);
+    if (v) lastView = v;
+  }
+  function noteOpen() {
+    const last = +load('mh_usage_last') || 0;
+    if (Date.now() - last > OPEN_GAP) { bumpUsage('o'); lastView = null; }
+    store('mh_usage_last', String(Date.now()));
+    noteView();
+  }
   let memberBusy = false;
   async function ensureMember() {
     const me = load(STORAGE_NAME_KEY);
-    if (!teamCode() || !me || memberBusy || loadMembers()[me]) return;
+    if (!teamCode() || !me || memberBusy) return;
+    const wk = weekOf(todayDate());
+    const needMember = !loadMembers()[me];
+    const pending = Object.keys(loadUsage()).filter(k => k < wk); // semaines finies pas encore envoyées
+    const needWeek = statsOk() && (load('mh_usage_rep') !== me + '|' + wk || pending.length > 0);
+    if (!needMember && !needWeek) return;
     const tryKey = 'mh_member_try', today = C.dateKey(todayDate());
-    if (load(tryKey) === me + '|' + today) return; // au plus un essai par jour
-    store(tryKey, me + '|' + today);
+    if (load(tryKey) === me + '|' + today + '|' + needMember) return; // au plus un essai par jour
+    store(tryKey, me + '|' + today + '|' + needMember);
     memberBusy = true;
-    let members = null;
+    let members = null, usage = null;
+    const local = loadUsage();
     try {
       const key = await T.checkCode(teamCode());
       if (key.status !== 'ok') return;
       const before = await T.fetchPlan();
       const res = await T.publishPlan(teamCode(), key.token, me, current => {
         members = Object.assign({}, (current && current.members) || {});
-        if (members[me]) throw new Error('identique'); // déjà inscrit (liste locale pas encore à jour)
-        members[me] = { at: new Date().toISOString() };
+        usage = Object.assign({}, (current && current.usage) || {});
+        const mine = Object.assign({ at: new Date().toISOString() }, members[me]);
+        const had = !!members[me], seen = (mine.w || []).includes(wk);
+        if (statsOk()) mine.w = [...new Set([...(mine.w || []), wk])].sort().slice(-26);
+        for (const k of pending) {
+          const a = usage[k] || { o: 0, m: 0, l: 0, e: 0, n: 0 }, b = local[k] || {};
+          usage[k] = { o: (a.o || 0) + (b.o || 0), m: (a.m || 0) + (b.m || 0), l: (a.l || 0) + (b.l || 0), e: (a.e || 0) + (b.e || 0), n: (a.n || 0) + 1 };
+        }
+        for (const k of Object.keys(usage).sort().slice(0, -26)) delete usage[k]; // 26 semaines gardées
+        if (had && (seen || !statsOk()) && !pending.length) throw new Error('identique');
+        members[me] = mine;
         return { plan: { agents: (current && current.agents) || {}, remarks: (current && current.remarks) || {},
           roles: (current && current.roles) || loadRoles(), contacts: (current && current.contacts) || {},
-          ...keepShared(current), members } };
-      }, undefined, 'Membre ajouté');
+          ...keepShared(current), members, usage } };
+      }, undefined, needMember ? 'Membre ajouté' : 'Statistiques');
       saveMembers(members);
+      const u = loadUsage(); pending.forEach(k => delete u[k]); store(STORAGE_USAGE_KEY, JSON.stringify(u));
+      if (statsOk()) store('mh_usage_rep', me + '|' + wk);
+      saveStats(Object.assign(loadStats(), { usage }));
       if (state.plan && before && state.plan.teamAt === before.at) { state.plan.teamAt = res.at; savePlan(); }
       renderTeam();
     } catch (e) {
-      if (e.message === 'identique' && members) saveMembers(members);
+      if (e.message === 'identique' && members) {
+        saveMembers(members);
+        if (statsOk()) store('mh_usage_rep', me + '|' + wk);
+      }
     } finally { memberBusy = false; }
   }
   function renderMembers() {
@@ -423,6 +487,134 @@
       (names.length ? '<ul class="members-list">' + orderNames(names).map(n => `<li>${nameHTML(n)} <span class="muted">· rejoint le ${esc(fmt(members[n].at))}</span></li>`).join('') + '</ul>' : '') +
       (missing.length ? `<p class="hint"><strong>Pas encore inscrits (${missing.length}) :</strong> ${missing.map(n => esc(nameText(n))).join(', ')}</p>` : '') +
       '</details>';
+  }
+
+  // Avis aux agents déjà dans l'équipe avant les statistiques : rien n'est compté avant « OK »
+  function renderStatsNotice() {
+    const box = $('statsNotice');
+    if (box) box.hidden = !(teamCode() && load('mh_stats_ok') !== '1');
+  }
+  // ── Carte « Statistiques » : seulement sur le téléphone du responsable ───────
+  function statsVisible() { return !!teamCode() && load('mh_admin') === '1'; }
+  const PLAN_COMMITS = ['Planning publié', 'Planning restauré'];
+  async function loadStatsData() {
+    let data = null, history = null;
+    try {
+      const remote = await T.fetchPlan();
+      if (remote) data = await T.decrypt(remote.text, teamCode());
+    } catch (e) { /* hors ligne : copies du téléphone */ }
+    if (!data) data = Object.assign({ members: loadMembers(), contacts: loadContacts(), utiles: loadUtiles() }, loadStats());
+    try { // envois de planning d'après l'historique GitHub (3 pages de 100 commits)
+      history = [];
+      for (let p = 1; p <= 3; p++) {
+        const page = await T.listVersions(undefined, 100, p);
+        history.push(...page);
+        if (page.length < 100) break;
+      }
+      history = history.filter(v => PLAN_COMMITS.includes(v.message));
+    } catch (e) { history = null; }
+    return { data, history };
+  }
+  function weeksBack(n) {
+    const out = []; let k = weekOf(todayDate());
+    for (let i = 0; i < n; i++) { out.unshift(k); k = addDaysKey(k, -7); }
+    return out;
+  }
+  const shortDay = k => new Date(Date.UTC(+k.slice(0, 4), +k.slice(4, 6) - 1, +k.slice(6, 8))).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const localKey = iso => { const d = new Date(iso); return C.dateKey({ y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate() }); };
+  const pct = (a, b) => b ? Math.round(100 * a / b) : 0;
+  function barsHTML(items, unit) { // [{ label, v, sub }]
+    const max = Math.max(1, ...items.map(i => i.v));
+    return '<div class="st-bars">' + items.map(i => `<div class="st-col" title="${esc(i.label)} : ${i.v} ${esc(unit)}"><span class="st-v">${i.v}</span>` +
+      `<i style="height:${Math.max(3, Math.round(56 * i.v / max))}px"${i.sub ? ' class="st-part"' : ''}></i><span class="st-l">${esc(i.label)}</span></div>`).join('') + '</div>';
+  }
+  function statsHTML(sd) {
+    const data = sd.data || {}, members = data.members || {}, names = Object.keys(members);
+    const t = todayDate(), m0 = String(t.y) + String(t.m).padStart(2, '0');
+    const nm = t.m === 12 ? String(t.y + 1) + '01' : String(t.y) + String(t.m + 1).padStart(2, '0');
+    const agents = Object.keys(planView().agents || {}).filter(n => Object.keys(planView().agents[n]).some(k => k.slice(0, 6) === m0 || k.slice(0, 6) === nm));
+    const inPlan = names.filter(n => agents.includes(n)).length;
+    const weeks = weeksBack(8), thisWk = weeks[weeks.length - 1];
+    let h = '';
+    // 1. Adoption
+    h += '<div class="st-block"><h3>Utilisateurs</h3>' +
+      `<p class="st-big"><strong>${names.length}</strong> inscrit${names.length > 1 ? 's' : ''}` +
+      (agents.length ? ` <span class="muted">· ${inPlan} sur ${agents.length} agents du planning (${pct(inPlan, agents.length)} %)</span>` : '') + '</p>';
+    const total = wk => names.filter(n => members[n].at && localKey(members[n].at) < addDaysKey(wk, 7)).length;
+    h += '<p class="st-cap">Nombre d\'inscrits, semaine après semaine</p>' + barsHTML(weeks.map(w => ({ label: shortDay(w), v: total(w) })), 'inscrits');
+    // 2. Actifs (présence de la semaine)
+    const active = wk => names.filter(n => (members[n].w || []).includes(wk)).length;
+    const tracked = names.some(n => (members[n].w || []).length);
+    h += '<h3>Utilisateurs actifs par semaine</h3>' + (tracked
+      ? `<p class="st-big"><strong>${active(thisWk)}</strong> cette semaine <span class="muted">· ${active(weeks[weeks.length - 2])} la semaine dernière</span></p>` +
+        barsHTML(weeks.map(w => ({ label: shortDay(w), v: active(w), sub: w === thisWk })), 'actifs') +
+        '<p class="hint">Agents qui ont ouvert l\'appli au moins une fois dans la semaine (du lundi au dimanche ; la semaine en cours n\'est pas finie).</p>'
+      : '<p class="hint">Les premiers chiffres arrivent dès que les collègues ouvrent l\'appli.</p>');
+    h += '</div>';
+    // 3. Consultations (sans nom)
+    const usage = data.usage || {}, uw = Object.keys(usage).sort().slice(-8);
+    h += '<div class="st-block"><h3>Consultations</h3>';
+    if (uw.length) {
+      const sum = f => uw.reduce((a, k) => a + (usage[k][f] || 0), 0);
+      const views = [['m', 'Mois'], ['l', 'Liste'], ['e', 'Équipe']], vt = views.reduce((a, [f]) => a + sum(f), 0);
+      const last = usage[uw[uw.length - 1]];
+      h += `<p class="st-big"><strong>${last.o || 0}</strong> ouverture${(last.o || 0) > 1 ? 's' : ''} la semaine du ${esc(shortDay(uw[uw.length - 1]))}` +
+        ` <span class="muted">· ${last.n || 0} téléphone${(last.n || 0) > 1 ? 's' : ''}</span></p>` +
+        barsHTML(uw.map(k => ({ label: shortDay(k), v: usage[k].o || 0 })), 'ouvertures') +
+        `<p class="st-cap">Plannings les plus regardés (${uw.length} semaine${uw.length > 1 ? 's' : ''})</p>` +
+        views.map(([f, label]) => `<div class="st-hbar"><span>${label}</span><i><b style="width:${pct(sum(f), vt)}%"></b></i><span>${pct(sum(f), vt)} %</span></div>`).join('') +
+        '<p class="hint">Comptées sans nom, envoyées une fois par semaine (semaines finies). Ouverture = l\'appli ouverte, ou reprise après 30 min.</p>';
+    } else h += '<p class="hint">Les chiffres de la semaine arrivent le lundi suivant, quand les téléphones envoient leur semaine finie.</p>';
+    const self = load('mh_stats_self') === '1';
+    h += `<label class="check st-self"><input type="checkbox" id="statsSelf"${self ? ' checked' : ''}> Compter aussi mes ouvertures sur ce téléphone</label>` +
+      '<p class="hint">Décoché : tes essais et démonstrations ne faussent pas les chiffres (ta présence de la semaine compte toujours).</p></div>';
+    // 4. Plannings diffusés
+    const pubs = data.pubs || [];
+    const months = []; { let y = t.y, m = t.m; for (let i = 0; i < 6; i++) { months.unshift(String(y) + String(m).padStart(2, '0')); if (--m === 0) { m = 12; y--; } } }
+    const mOf = iso => localKey(iso).slice(0, 6);
+    const sent = sd.history ? sd.history.map(v => v.date) : pubs.map(p => p.at);
+    const mLabel = k => new Date(Date.UTC(+k.slice(0, 4), +k.slice(4, 6) - 1, 1)).toLocaleDateString('fr-FR', { month: 'short', timeZone: 'UTC' });
+    h += '<div class="st-block"><h3>Plannings diffusés</h3>' +
+      `<p class="st-big"><strong>${sent.filter(d => mOf(d) === m0).length}</strong> envoyé${sent.filter(d => mOf(d) === m0).length > 1 ? 's' : ''} à l'équipe ce mois-ci` +
+      ` <span class="muted">· ${sent.length} au total</span></p>` +
+      barsHTML(months.map(k => ({ label: mLabel(k), v: sent.filter(d => mOf(d) === k).length })), 'envois');
+    const cells = pubs.reduce((a, p) => a + (p.n || 0), 0), cellsM = pubs.filter(p => mOf(p.at) === m0).reduce((a, p) => a + (p.n || 0), 0);
+    if (pubs.length) h += `<p><strong>${cells}</strong> changement${cells > 1 ? 's' : ''} de planning transmis à toute l'équipe <span class="muted">(${cellsM} ce mois-ci)</span>, sans appel ni affichage.</p>`;
+    const delays = pubs.filter(p => p.upd).map(p => Math.round((utc(keyToDate(localKey(p.at))) - utc(keyToDate(p.upd))) / 864e5)).filter(d => d >= 0 && d < 60);
+    if (delays.length) {
+      const same = delays.filter(d => d === 0).length, avg = delays.reduce((a, d) => a + d, 0) / delays.length;
+      h += `<p>Réactivité : <strong>${pct(same, delays.length)} %</strong> des plannings mis en ligne le jour de leur mise à jour` +
+        ` <span class="muted">· ${avg < 0.05 ? 'le jour même en moyenne' : 'en moyenne ' + avg.toFixed(1).replace('.', ',') + ' jour' + (avg >= 2 ? 's' : '') + ' après'}</span></p>`;
+    }
+    if (!pubs.length) h += '<p class="hint">Changements transmis et réactivité : comptés à partir du prochain envoi.</p>';
+    h += '</div>';
+    // 5. Annuaire
+    const contacts = data.contacts || {}, shared = Object.keys(contacts).filter(n => contacts[n] && contacts[n].tel).length;
+    const ul = (data.utiles && data.utiles.list) || [], tels = ul.reduce((a, u) => a + telsOf(u).length, 0);
+    h += '<div class="st-block"><h3>Annuaire</h3>' +
+      `<p><strong>${shared}</strong> collègue${shared > 1 ? 's ont' : ' a'} partagé son numéro` + (names.length ? ` <span class="muted">(${pct(shared, names.length)} % des inscrits)</span>` : '') + '</p>' +
+      `<p><strong>${ul.length}</strong> service${ul.length > 1 ? 's' : ''} dans les numéros utiles <span class="muted">· ${tels} numéro${tels > 1 ? 's' : ''}</span></p></div>`;
+    return h;
+  }
+  let statsCache = null;
+  async function renderStats(force) {
+    const card = $('statsCard');
+    card.hidden = !statsVisible();
+    if (card.hidden || !$('statsDetails').open) return;
+    const body = $('statsBody');
+    if (!statsCache || force) {
+      body.innerHTML = '<p class="hint">Chargement…</p>';
+      statsCache = await loadStatsData();
+    }
+    body.innerHTML = statsHTML(statsCache);
+  }
+  function printStats() {
+    if (!statsCache) return;
+    $('printArea').innerHTML = '<section class="pr-page pr-stats"><header class="pr-head"><h1>Planning COA</h1><p>Statistiques d\'utilisation</p></header>' +
+      statsHTML(statsCache).replace(/<label class="check st-self">[\s\S]*?<\/p><\/div>/, '</div>') +
+      `<footer class="pr-foot">${esc(printedOn())}</footer></section>`;
+    document.body.classList.add('printing');
+    setTimeout(() => window.print(), 60);
   }
 
   function planToAgents(agents, remarks) {
@@ -458,6 +650,8 @@
     }
     plan.teamAt = before && before.teamAt || null;
     plan.teamBy = before && before.teamBy || null;
+    plan.pubAt = before && before.pubAt || null;
+    plan.pubBy = before && before.pubBy || null;
     Object.assign(plan, meta);
     state.plan = plan;
     savePlan();
@@ -527,6 +721,7 @@
 
   function renderTeam() {
     try { renderMembers(); } catch (e) { /* liste des membres : jamais bloquant */ }
+    try { renderStatsNotice(); $('statsCard').hidden = !statsVisible(); } catch (e) { /* jamais bloquant */ }
     const joined = !!teamCode();
     $('teamOut').hidden = joined;
     $('teamIn').hidden = !joined;
@@ -535,8 +730,8 @@
     if (joined) {
       const p = state.plan;
       $('teamInfo').innerHTML = p && p.teamAt
-        ? `✓ Tu es dans l'équipe. Dernier planning reçu : publié le ${esc(longDate(p.teamAt))} à ${esc(timeOf(p.teamAt))}` +
-          (p.teamBy ? ` par ${esc(p.teamBy)}` : '') + '.'
+        ? `✓ Tu es dans l'équipe. Dernier planning reçu : publié le ${esc(longDate(pubAtOf(p)))} à ${esc(timeOf(pubAtOf(p)))}` +
+          (pubByOf(p) ? ` par ${esc(pubByOf(p))}` : '') + '.'
         : '✓ Tu es dans l\'équipe. Aucun planning publié pour l\'instant.';
     }
     const p = state.plan;
@@ -544,8 +739,8 @@
     const syncOk = renderTeamAlerts();
     if (!$('teamStatus').hidden) {
       // « publié par X le … » : la date de publication, à ne pas confondre avec la date « mise à jour » du tableau
-      $('teamStatus').innerHTML = ICON('users') + esc(' Planning d\'équipe publié' + (p.teamBy ? ` par ${shown(p.teamBy)}` : '') +
-        ` le ${longDate(p.teamAt)}` + (syncOk ? ` · vérifié ${agoText(syncOk)}` : ''));
+      $('teamStatus').innerHTML = ICON('users') + esc(' Planning d\'équipe publié' + (pubByOf(p) ? ` par ${shown(pubByOf(p))}` : '') +
+        ` le ${longDate(pubAtOf(p))}` + (syncOk ? ` · vérifié ${agoText(syncOk)}` : ''));
     }
     $('importHint').textContent = joined
       ? 'Le fichier Excel reste sur ton appareil. Comme tu es dans l\'équipe, l\'appli te proposera d\'envoyer les noms et les codes à tes collègues, chiffrés avec le code d\'équipe.'
@@ -631,8 +826,10 @@
       saveContacts(data.contacts || {});
       saveUtiles({ list: (data.utiles && data.utiles.list) || [], at: data.utiles && data.utiles.at, admin: data.admin || null });
       saveMembers(data.members || {});
+      saveStats(data);
       const n = applyAgents(state.plan, planToAgents(data.agents, data.remarks),
-        { at: remote.at, file: 'équipe', teamAt: remote.at, teamBy: data.by || null, updated: data.updated || null });
+        { at: remote.at, file: 'équipe', teamAt: remote.at, teamBy: data.by || null, updated: data.updated || null,
+          pubAt: data.pub ? data.pub.at : remote.at, pubBy: data.pub ? data.pub.by : data.by || null });
       openOnUsefulMonth();
       renderCalendar();
       teamMsg(`✓ Nouveau planning reçu${data.by ? ' (publié par ' + data.by + ')' : ''}` +
@@ -674,6 +871,7 @@
         return;
       }
       store(STORAGE_TEAM_KEY, code);
+      store('mh_stats_ok', '1'); // la phrase sur les statistiques était sous le champ
       input.value = '';
       say('✓ Code accepté, récupération du planning…', 'ok');
       renderTeam();
@@ -702,6 +900,7 @@
       const exp = $('teamTokenExp').value || null;
       await T.setupKey(code, token, load(STORAGE_NAME_KEY) || '', undefined, exp);
       store(STORAGE_TEAM_KEY, code);
+      store('mh_stats_ok', '1');
       saveKeyInfo(exp);
       pendingCode = '';
       $('teamToken').value = '';
@@ -842,20 +1041,23 @@
     const agents = state.importAgents;
     const by = load(STORAGE_NAME_KEY) || '';
     let previous = null, n = 0;
+    const pubAt = new Date().toISOString();
     try {
       const token = await publishKey();
       const res = await T.publishPlan(teamCode(), token, by, current => {
         previous = current;
         const full = C.mergePlan(current, agents, minKeep());
         const merged = { agents: full.agents, remarks: full.remarks, roles: newestRoles(current && current.roles, loadRoles()),
-          contacts: (current && current.contacts) || {}, ...keepShared(current), updated: typedUpdated() };
+          contacts: (current && current.contacts) || {}, ...keepShared(current), updated: typedUpdated(), pub: { at: pubAt, by } };
         n = countChanges(current, merged);
         if (current && !n && (merged.updated || null) === (current.updated || null)) throw new Error('identique'); // déjà envoyé
+        merged.pubs = [...(merged.pubs || []), { at: new Date().toISOString(), n: current ? n : 0, upd: merged.updated || null }].slice(-300);
         return { plan: merged };
       });
       if (agents !== state.importAgents) return; // un autre réglage a déjà relancé l'envoi
       state.plan.teamAt = res.at;
       state.plan.teamBy = by;
+      state.plan.pubAt = pubAt; state.plan.pubBy = by;
       savePlan();
       renderTeam();
       publishMsg(previous && !n
@@ -879,12 +1081,15 @@
     const info = undoInfo;
     $('publishUndo').disabled = true;
     publishMsg('Annulation…');
+    const undoAt = new Date().toISOString();
     try {
       const token = await publishKey();
       const res = await T.publishPlan(teamCode(), token, info.by,
         current => ({ plan: { agents: info.previous ? info.previous.agents : {}, remarks: info.previous && info.previous.remarks || {},
-          roles: info.previous && info.previous.roles || loadRoles(), contacts: (current && current.contacts) || {}, ...keepShared(current) } }));
+          roles: info.previous && info.previous.roles || loadRoles(), contacts: (current && current.contacts) || {}, ...keepShared(current),
+          pub: { at: undoAt, by: info.by } } }));
       state.plan.teamAt = res.at;
+      state.plan.pubAt = undoAt; state.plan.pubBy = info.by;
       savePlan();
       undoInfo = null;
       $('publishUndo').hidden = true;
@@ -1224,7 +1429,7 @@
   // « Mis en ligne le 3 novembre par GUILLEN » : date de publication du planning d'équipe reçu ou envoyé (plan.teamAt)
   function onlineText(plan) {
     if (!plan || !plan.teamAt) return '';
-    return 'Mis en ligne le ' + longDate(plan.teamAt) + ' à ' + timeOf(plan.teamAt) + (plan.teamBy ? ' par ' + shown(plan.teamBy) : '');
+    return 'Mis en ligne le ' + longDate(pubAtOf(plan)) + ' à ' + timeOf(pubAtOf(plan)) + (pubByOf(plan) ? ' par ' + shown(pubByOf(plan)) : '');
   }
   // ── « Modifications du dernier planning » : toute l'équipe, gardées jusqu'au planning suivant (plan.changes) ──
   function changeGroupsOf(plan) {
@@ -1703,6 +1908,7 @@
     state.cal.view = e.currentTarget.dataset.view;
     store(STORAGE_VIEW_KEY, state.cal.view);
     renderCalendar();
+    noteView();
     if (state.cal.view === 'list') scrollToSelected();
   }));
   // Glisser-déposer des noms (poignée ☰), au doigt comme à la souris
@@ -1997,6 +2203,7 @@
     store(STORAGE_TEAM_KEY, '');
     store(STORAGE_KEY_INFO_KEY, '');
     store(STORAGE_SYNC_OK_KEY, '');
+    saveStats({}); store(STORAGE_USAGE_KEY, '{}'); store('mh_stats_ok', '');
     saveContacts({}); // plus dans l'équipe : on ne garde pas les numéros des collègues
     saveMembers({});
     saveUtiles({ list: [] });
@@ -2021,12 +2228,22 @@
   $('wOk').addEventListener('click', closeWelcome);
   $('wSkip').addEventListener('click', closeWelcome);
 
+  $('statsDetails').addEventListener('toggle', () => { if ($('statsDetails').open) renderStats(true); });
+  $('statsBody').addEventListener('change', e => {
+    if (e.target.id === 'statsSelf') store('mh_stats_self', e.target.checked ? '1' : '');
+  });
+  $('statsRefresh').addEventListener('click', () => renderStats(true));
+  $('statsPrint').addEventListener('click', printStats);
+  $('statsNoticeOk').addEventListener('click', () => { store('mh_stats_ok', '1'); store('mh_usage_last', '0'); renderStatsNotice(); noteOpen(); ensureMember(); });
+
   // ── Versions précédentes du planning d'équipe ─────────────────────────────
+  // commits qui ne changent pas les plannings : pas montrés dans « Versions précédentes »
+  const OTHER_COMMITS = ['Membre ajouté', 'Statistiques', 'Coordonnées mises à jour', 'Numéros utiles mis à jour', 'Ordre mis à jour'];
   async function loadHistory() {
     const box = $('historyList');
     box.innerHTML = '<p class="hint">Chargement…</p>';
     try {
-      const list = await T.listVersions();
+      const list = (await T.listVersions(undefined, 100)).filter(v => !OTHER_COMMITS.includes(v.message)).slice(0, 15);
       const current = state.plan && state.plan.teamAt;
       box.innerHTML = list.length ? list.map((v, i) => {
         const d = new Date(v.date);
@@ -2073,13 +2290,14 @@
       detail.insertAdjacentHTML('beforeend', '<span class="hint"> Restauration…</span>');
       try {
         const by = load(STORAGE_NAME_KEY) || '';
+        const restAt = new Date().toISOString();
         const key = await T.checkCode(teamCode());
         if (key.status !== 'ok') throw new Error('cle');
         const res = await T.publishPlan(teamCode(), key.token, by,
           current => ({ plan: { agents: data.agents || {}, remarks: data.remarks || {}, roles: newestRoles(current && current.roles, loadRoles()),
-            contacts: (current && current.contacts) || {}, ...keepShared(current) } }), undefined, 'Planning restauré');
+            contacts: (current && current.contacts) || {}, ...keepShared(current), pub: { at: restAt, by } } }), undefined, 'Planning restauré');
         applyAgents(state.plan, planToAgents(data.agents, data.remarks),
-          { at: res.at, file: 'équipe', teamAt: res.at, teamBy: by || null });
+          { at: res.at, file: 'équipe', teamAt: res.at, teamBy: by || null, pubAt: restAt, pubBy: by || null });
         renderCalendar();
         renderTeam();
         await loadHistory();
@@ -2391,7 +2609,8 @@
   $('publishUndo').addEventListener('click', undoPublish);
   // au retour sur l'appli (elle reste souvent ouverte en arrière-plan), on revérifie
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') return;
+    if (document.visibilityState !== 'visible') { store('mh_usage_last', String(Date.now())); return; }
+    noteOpen();
     if (Date.now() - lastSync > 60000) syncTeam(false);
     if (swOK && navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ type: 'check' });
     // l'appli peut rester ouverte en arrière-plan d'un jour sur l'autre : « Aujourd'hui » doit suivre
@@ -2413,6 +2632,7 @@
     } else {
       store(STORAGE_TAB_KEY, t);
       renderCalendar();
+      noteView();
     }
     window.scrollTo({ top: 0, behavior: changed ? 'auto' : 'smooth' }); // onglet déjà ouvert : remonte en haut
   }
@@ -2593,5 +2813,6 @@
   openOnUsefulMonth();
   renderCalendar();
   renderTeam();
+  noteOpen();
   syncTeam(false);
 })();
