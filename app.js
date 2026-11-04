@@ -368,7 +368,61 @@
   function saveUtiles(u) { store(STORAGE_UTILES_KEY, JSON.stringify(u || { list: [] })); }
   // à reporter dans TOUTE publication, sinon la liste et le verrou seraient perdus
   function keepShared(current) {
-    return { utiles: (current && current.utiles) || null, admin: (current && current.admin) || null };
+    return { utiles: (current && current.utiles) || null, admin: (current && current.admin) || null,
+      members: (current && current.members) || {}, updated: (current && current.updated) || null };
+  }
+  // ── Membres de l'équipe : chacun est inscrit une fois (« NOM · rejoint le … ») dans le planning chiffré ;
+  // seul le téléphone du responsable (mh_admin) affiche la liste et le compte. Pas de suivi des ouvertures.
+  const STORAGE_MEMBERS_KEY = 'mh_members';
+  function loadMembers() { try { return JSON.parse(load(STORAGE_MEMBERS_KEY)) || {}; } catch (e) { return {}; } }
+  function saveMembers(m) { store(STORAGE_MEMBERS_KEY, JSON.stringify(m || {})); }
+  let memberBusy = false;
+  async function ensureMember() {
+    const me = load(STORAGE_NAME_KEY);
+    if (!teamCode() || !me || memberBusy || loadMembers()[me]) return;
+    const tryKey = 'mh_member_try', today = C.dateKey(todayDate());
+    if (load(tryKey) === me + '|' + today) return; // au plus un essai par jour
+    store(tryKey, me + '|' + today);
+    memberBusy = true;
+    let members = null;
+    try {
+      const key = await T.checkCode(teamCode());
+      if (key.status !== 'ok') return;
+      const before = await T.fetchPlan();
+      const res = await T.publishPlan(teamCode(), key.token, me, current => {
+        members = Object.assign({}, (current && current.members) || {});
+        if (members[me]) throw new Error('identique'); // déjà inscrit (liste locale pas encore à jour)
+        members[me] = { at: new Date().toISOString() };
+        return { plan: { agents: (current && current.agents) || {}, remarks: (current && current.remarks) || {},
+          roles: (current && current.roles) || loadRoles(), contacts: (current && current.contacts) || {},
+          ...keepShared(current), members } };
+      }, undefined, 'Membre ajouté');
+      saveMembers(members);
+      if (state.plan && before && state.plan.teamAt === before.at) { state.plan.teamAt = res.at; savePlan(); }
+      renderTeam();
+    } catch (e) {
+      if (e.message === 'identique' && members) saveMembers(members);
+    } finally { memberBusy = false; }
+  }
+  function renderMembers() {
+    const box = $('teamMembers');
+    if (!box) return;
+    const show = !!teamCode() && load('mh_admin') === '1';
+    box.hidden = !show;
+    if (!show) return;
+    const members = loadMembers(), names = Object.keys(members);
+    // agents du planning ce mois-ci et le suivant (les anciens noms des mois passés ne comptent pas)
+    const t = todayDate(), m0 = String(t.y) + String(t.m).padStart(2, '0');
+    const nm = t.m === 12 ? String(t.y + 1) + '01' : String(t.y) + String(t.m + 1).padStart(2, '0');
+    const agents = Object.keys(planView().agents || {}).filter(n => Object.keys(planView().agents[n]).some(k => k.slice(0, 6) === m0 || k.slice(0, 6) === nm));
+    const missing = orderNames(agents.filter(n => !members[n]));
+    const fmt = iso => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    box.innerHTML = `<details><summary>${ICON('users')} <strong>Membres de l'équipe : ${names.length}</strong>` +
+      (agents.length ? ` <span class="muted">sur ${agents.length} agents du planning</span>` : '') + '</summary>' +
+      '<p class="hint">Visible seulement sur ton téléphone (responsable). Chacun est compté une fois quand il a rejoint l\'équipe et choisi son nom.</p>' +
+      (names.length ? '<ul class="members-list">' + orderNames(names).map(n => `<li>${nameHTML(n)} <span class="muted">· rejoint le ${esc(fmt(members[n].at))}</span></li>`).join('') + '</ul>' : '') +
+      (missing.length ? `<p class="hint"><strong>Pas encore inscrits (${missing.length}) :</strong> ${missing.map(n => esc(nameText(n))).join(', ')}</p>` : '') +
+      '</details>';
   }
 
   function planToAgents(agents, remarks) {
@@ -472,6 +526,7 @@
   }
 
   function renderTeam() {
+    try { renderMembers(); } catch (e) { /* liste des membres : jamais bloquant */ }
     const joined = !!teamCode();
     $('teamOut').hidden = joined;
     $('teamIn').hidden = !joined;
@@ -575,6 +630,7 @@
       if (data.roles && newestRoles(loadRoles(), data.roles) === data.roles) saveRoles(data.roles);
       saveContacts(data.contacts || {});
       saveUtiles({ list: (data.utiles && data.utiles.list) || [], at: data.utiles && data.utiles.at, admin: data.admin || null });
+      saveMembers(data.members || {});
       const n = applyAgents(state.plan, planToAgents(data.agents, data.remarks),
         { at: remote.at, file: 'équipe', teamAt: remote.at, teamBy: data.by || null, updated: data.updated || null });
       openOnUsefulMonth();
@@ -588,6 +644,7 @@
     } finally {
       syncing = false;
       renderTeam();
+      setTimeout(ensureMember, 500); // s'inscrire dans la liste des membres (une fois)
     }
   }
 
@@ -1941,6 +1998,7 @@
     store(STORAGE_KEY_INFO_KEY, '');
     store(STORAGE_SYNC_OK_KEY, '');
     saveContacts({}); // plus dans l'équipe : on ne garde pas les numéros des collègues
+    saveMembers({});
     saveUtiles({ list: [] });
     store(STORAGE_ADMIN_KEY, '');
     $('publishBox').hidden = true;
@@ -1954,6 +2012,7 @@
   $('wName').addEventListener('change', e => {
     if (!e.target.value) return;
     store(STORAGE_NAME_KEY, e.target.value);
+    setTimeout(ensureMember, 500);
     store('mh_name_ok', '1');
     state.cal.agent = e.target.value;
     openOnUsefulMonth();
@@ -2234,7 +2293,7 @@
       const res = await T.publishPlan(teamCode(), key.token, load(STORAGE_NAME_KEY) || '', current => {
         admin = ut.newAdmin || (current && current.admin) || null;
         return { plan: { agents: (current && current.agents) || {}, remarks: (current && current.remarks) || {},
-          roles: (current && current.roles) || loadRoles(), contacts: (current && current.contacts) || {}, utiles, admin } };
+          roles: (current && current.roles) || loadRoles(), contacts: (current && current.contacts) || {}, ...keepShared(current), utiles, admin } };
       }, undefined, 'Numéros utiles mis à jour');
       saveUtiles({ list, at: utiles.at, admin });
       if (state.plan && before && state.plan.teamAt === before.at) { state.plan.teamAt = res.at; savePlan(); renderTeam(); }
@@ -2387,6 +2446,7 @@
     state.cal.agent = e.target.value;
     renderCalendar();
     renderMyPhone();
+    ensureMember();
   });
 
   // ── Notes : gardées sur ce téléphone uniquement → sauvegarde / restauration par fichier ──

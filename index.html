@@ -27,7 +27,7 @@
     <h2>Bienvenue dans Planning COA</h2>
     <ol class="welcome-steps">
       <li id="wTeam"><strong>Récupère le planning</strong>
-        <span class="hint">Saisis ou colle les 4 mots de l'équipe : le planning arrive tout seul. Sinon, importe le tableau Excel.</span>
+        <span class="hint">Saisis ou colle les 4 mots de l'équipe : le planning arrive tout seul (ton nom sera ajouté à la liste des membres de l'équipe). Sinon, importe le tableau Excel.</span>
         <span class="w-code"><input id="wCode" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="les 4 mots de l'équipe" aria-label="Code d'équipe"><button id="wPaste" type="button"><svg class="ic" aria-hidden="true"><use href="#i-clip"/></svg> Coller</button></span>
         <span class="actions"><button id="wJoin" class="primary">Rejoindre</button><button id="wImport">J'importe le tableau</button></span>
         <span id="wMsg" class="w-msg" hidden></span>
@@ -181,7 +181,8 @@
       <div id="teamOut">
         <p class="hint">Avec le code d'équipe, le planning publié par un collègue arrive tout seul dans ton calendrier,
           et quand tu importes le nouveau tableau, l'appli te propose de l'envoyer à toute l'équipe. Le planning est chiffré avec ce code :
-          sans lui, personne ne peut le lire. Une fois l'équipe rejointe, tu pourras aussi partager ton numéro (facultatif).</p>
+          sans lui, personne ne peut le lire. Une fois l'équipe rejointe, tu pourras aussi partager ton numéro (facultatif).
+          Ton nom sera ajouté à la liste des membres de l'équipe.</p>
         <div class="row">
           <label for="teamCode">Code d'équipe</label>
           <input id="teamCode" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="ex. tarmac-cerise-boussole-neige">
@@ -190,6 +191,7 @@
       </div>
       <div id="teamIn" hidden>
         <p id="teamInfo"></p>
+        <div id="teamMembers" class="team-members" hidden></div>
         <div class="key-box">
           <p id="keyInfo" class="hint"></p>
           <div id="keyEdit" class="w-code" hidden>

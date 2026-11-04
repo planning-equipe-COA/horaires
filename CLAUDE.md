@@ -260,6 +260,14 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   (`nameWithPhone`). Limites dites à l'utilisateur : visibles par tous ceux qui ont le code, restent
   dans l'historique chiffré. Rotation automatique du code écartée (sans intérêt) : changer le code
   quand quelqu'un quitte l'équipe.
+- **Membres de l'équipe** (nov. 2026, demandé pour montrer l'usage à la hiérarchie) : chaque téléphone qui a rejoint l'équipe
+  et choisi « Je suis » s'inscrit **une fois** dans le planning chiffré (`members` { NOM: { at } }, `ensureMember` après la
+  synchro et au choix du nom, 1 essai/jour max, commit « Membre ajouté » sans nom ; déjà présent → rien n'est écrit).
+  Copie locale `mh_members` (vidée en quittant l'équipe). Liste + compte (« 18 sur 27 agents du planning », non inscrits)
+  **seulement sur le téléphone du responsable** (`mh_admin`, `#teamMembers` dans la carte équipe). Phrase d'information
+  au moment de rejoindre (« Ton nom sera ajouté à la liste des membres de l'équipe »). **Pas** de comptage des ouvertures :
+  service extérieur (GoatCounter) proposé puis écarté par l'utilisateur (il ne voulait pas de mention dans l'appli, et on
+  n'en ajoute pas sans mention). `keepShared` reporte aussi `members` et `updated` dans toutes les publications.
 - **Numéros utiles (opérationnels uniquement)** : icône 📞 en haut à droite (`#utilesBtn`, visible une fois
   l'équipe rejointe) → panneau depuis le bas (`#utilesSheet`) : service + numéro, Appeler / SMS.
   Cadenas visible **seulement sur le téléphone du responsable** (`mh_admin` = '1' après une saisie
