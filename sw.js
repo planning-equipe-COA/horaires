@@ -4,7 +4,7 @@
 // changé, toute la copie est remplacée d'un coup (jamais de mélange d'anciens et de nouveaux fichiers) et la
 // page affiche « Nouvelle version de l'appli · Afficher ».
 // Aucune donnée de planning ne passe ici : elle reste dans le localStorage de la page.
-const CACHE = 'mh-app-v65';
+const CACHE = 'mh-app-v66';
 const FILES = [
   './', 'index.html', 'app.js', 'core.js', 'team.js', 'style.css', 'xlsx.full.min.js',
   'manifest.json?v=3', 'icon-192.png?v=2', 'icon-512.png?v=2', 'apple-touch-icon.png?v=2',
@@ -23,9 +23,15 @@ self.addEventListener('activate', event => {
     .then(() => self.clients.claim()));
 });
 
+// pages de l'appli : la racine et index.html (avec ou sans ?notif=1) ; tout autre fichier du site
+// (ex. notif/worker.js) va au réseau, sinon le téléphone afficherait l'appli à la place
+function isAppPage(url) {
+  const path = new URL(url).pathname, scope = new URL(self.registration.scope).pathname;
+  return path === scope || path === scope + 'index.html';
+}
 function fromCache(request) {
-  return caches.match(request).then(hit => {
-    if (hit || request.mode !== 'navigate') return hit;
+  return caches.match(request, { ignoreSearch: request.mode === 'navigate' }).then(hit => {
+    if (hit || request.mode !== 'navigate' || !isAppPage(request.url)) return hit;
     return caches.match('./').then(page => page || caches.match('index.html'));
   });
 }
@@ -67,6 +73,7 @@ function checkForUpdate() {
 self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+  if (request.mode === 'navigate' && !isAppPage(request.url)) return; // autre page du site : directement au réseau
   if (request.mode === 'navigate') event.waitUntil(checkForUpdate());
   event.respondWith(fromCache(request).then(hit => hit || fetch(request, { cache: 'no-cache' }).then(res => {
     if (res.ok) {
