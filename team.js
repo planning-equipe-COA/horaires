@@ -145,8 +145,19 @@
   }
 
   // Planning de l'équipe : { at, text } (chiffré) ou null
-  async function fetchPlan(fetchFn) {
-    const text = await readPublic(PLAN_FILE, fetchFn);
+  // fresh : lecture par l'API publique (contenu à jour tout de suite, 60 lectures/heure par connexion) au lieu de
+  // raw.githubusercontent (cache ~5 min) — utilisée quand on ouvre l'appli depuis une notification d'envoi.
+  async function readFresh(path, fetchFn) {
+    const res = await (fetchFn || fetch)(apiUrl(path) + '?ref=' + DATA_REPO.branch + '&t=' + Date.now(),
+      { headers: { Accept: 'application/vnd.github.raw' }, cache: 'no-store' });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error('reseau');
+    return res.text();
+  }
+  async function fetchPlan(fetchFn, fresh) {
+    let text;
+    if (fresh) { try { text = await readFresh(PLAN_FILE, fetchFn); } catch (e) { text = undefined; } }
+    if (text === undefined) text = await readPublic(PLAN_FILE, fetchFn);
     return text == null ? null : { at: envelopeAt(text), text };
   }
 

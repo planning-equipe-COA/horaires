@@ -503,6 +503,7 @@
     const p = state.plan;
     $('teamStatus').hidden = !(joined && p && p.teamAt);
     const syncOk = renderTeamAlerts();
+    try { renderNotif(); } catch (e) { /* jamais bloquant */ }
     if (!$('teamStatus').hidden) {
       // « publié par X le … » : la date de publication, à ne pas confondre avec la date « mise à jour » du tableau
       $('teamStatus').innerHTML = ICON('users') + esc(' Planning d\'équipe publié' + (pubByOf(p) ? ` par ${shown(pubByOf(p))}` : '') +
@@ -572,13 +573,16 @@
   }
 
   let syncing = false, lastSync = 0;
+  let syncFresh = /[?&]notif=1/.test(location.search); // ouverte depuis une notification : lecture à jour
+  if (syncFresh) try { history.replaceState(null, '', location.pathname); } catch (e) { /* sans importance */ }
   async function syncTeam(manual) {
     const code = teamCode();
     if (!code || syncing || state.workbook) return; // pas pendant un import en cours
     syncing = true; lastSync = Date.now();
     if (manual) teamMsg('Vérification…');
     try {
-      const remote = await T.fetchPlan();
+      const remote = await T.fetchPlan(undefined, syncFresh);
+      syncFresh = false;
       store(STORAGE_SYNC_OK_KEY, String(Date.now()));
       refreshKeyInfo(false);
       if (!remote) { if (manual) teamMsg('Aucun planning publié pour l\'instant.'); return; }
@@ -828,6 +832,11 @@
         : previous
         ? `✓ Envoyé à l'équipe : ${n} case${n > 1 ? 's changent' : ' change'}. Tes collègues le recevront à l'ouverture de l'appli.`
         : `✓ Premier planning de l'équipe envoyé (${agents.length} agents).`, 'ok');
+      notifyTeam(previous && !n
+        ? 'Date de mise à jour du planning' + (merged_upd() ? ' : ' + updLabel(merged_upd()) : '') + '.'
+        : previous
+        ? `Nouveau planning en ligne${merged_upd() ? ' (mis à jour le ' + updLabel(merged_upd()) + ')' : ''} : ${n} case${n > 1 ? 's modifiées' : ' modifiée'}.`
+        : 'Le planning de l\'équipe est en ligne.');
       undoInfo = { previous, by };
       $('publishUndo').hidden = false;
       clearTimeout(undoTimer);
@@ -839,6 +848,84 @@
       $('publish').hidden = false;
     }
   }
+  const merged_upd = () => typedUpdated();
+
+  // ── Notifications (relais Cloudflare notif/worker.js) ──────────────────────
+  // Le relais ne connaît ni les noms ni le planning : il garde l'adresse technique des téléphones abonnés et
+  // relaie un message générique quand un planning est envoyé. Accès : SHA-256 du code d'équipe.
+  const NOTIF_URL = '';
+  const STORAGE_PUSH_KEY = 'mh_push';
+  const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && location.protocol !== 'file:';
+  async function notifKey() {
+    const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('planning-coa-notif|' + teamCode()));
+    return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  async function notifPost(path, body) {
+    const res = await fetch(NOTIF_URL + path, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ key: await notifKey() }, body)) });
+    if (!res.ok) throw new Error(res.status === 403 ? 'notifcle' : 'reseau');
+    return res.json();
+  }
+  async function mySubscription() {
+    if (!pushSupported()) return null;
+    try { const reg = await navigator.serviceWorker.ready; return await reg.pushManager.getSubscription(); } catch (e) { return null; }
+  }
+  async function notifyTeam(body) { // jamais bloquant
+    if (!NOTIF_URL || !teamCode()) return;
+    try {
+      const sub = await mySubscription();
+      await notifPost('/notify', { title: 'Planning COA', body, except: sub ? sub.endpoint : null });
+    } catch (e) { /* les collègues verront le planning à l'ouverture */ }
+  }
+  const b64uToBytes = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
+  async function enablePush() {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') throw new Error('refus');
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const v = await (await fetch(NOTIF_URL + '/vapid')).json();
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(v.key) });
+    }
+    await notifPost('/subscribe', { sub: sub.toJSON() });
+    store(STORAGE_PUSH_KEY, String(Date.now()));
+  }
+  async function disablePush() {
+    const sub = await mySubscription();
+    store(STORAGE_PUSH_KEY, '');
+    if (!sub) return;
+    try { await notifPost('/unsubscribe', { endpoint: sub.endpoint }); } catch (e) { /* le relais l'oubliera au prochain envoi */ }
+    await sub.unsubscribe().catch(() => {});
+  }
+  // abonnement redonné au relais une fois par semaine (relais vidé, code d'équipe changé…)
+  async function refreshPush() {
+    const at = +load(STORAGE_PUSH_KEY) || 0;
+    if (!NOTIF_URL || !teamCode() || !at || Date.now() - at < 7 * 864e5) return;
+    const sub = await mySubscription();
+    if (!sub || Notification.permission !== 'granted') { store(STORAGE_PUSH_KEY, ''); renderNotif(); return; }
+    try { await notifPost('/subscribe', { sub: sub.toJSON() }); store(STORAGE_PUSH_KEY, String(Date.now())); } catch (e) { /* réessai plus tard */ }
+  }
+  function renderNotif() {
+    const card = $('notifCard');
+    card.hidden = !(NOTIF_URL && teamCode());
+    if (card.hidden) return;
+    const on = !!load(STORAGE_PUSH_KEY);
+    let note = '', can = true;
+    if (!pushSupported()) {
+      can = false;
+      note = isIOS && !isStandalone
+        ? 'Sur iPhone, les notifications marchent seulement depuis l\'icône de l\'écran d\'accueil (Safari → Partager → « Sur l\'écran d\'accueil »), avec iOS 16.4 ou plus récent.'
+        : 'Ce téléphone ou ce navigateur ne permet pas les notifications.';
+    } else if (Notification.permission === 'denied') {
+      can = false;
+      note = 'Les notifications de l\'appli sont bloquées dans les réglages du téléphone : autorise-les là, puis reviens ici.';
+    }
+    $('notifOn').checked = on && can;
+    $('notifOn').disabled = !can;
+    $('notifNote').textContent = note;
+    $('notifNote').hidden = !note;
+  }
+
   async function undoPublish() {
     if (!undoInfo) return;
     const info = undoInfo;
@@ -856,6 +943,7 @@
       savePlan();
       undoInfo = null;
       $('publishUndo').hidden = true;
+      notifyTeam('Le dernier envoi a été annulé : retour au planning précédent.');
       publishMsg('↩︎ Envoi annulé : l\'équipe garde le planning d\'avant. Ton fichier reste sur ce téléphone seulement.', 'ok');
     } catch (e) {
       publishMsg('Annulation impossible : ' + errText(e), 'err');
@@ -1892,6 +1980,7 @@
     });
     navigator.serviceWorker.addEventListener('message', e => {
       if (e.data && e.data.type === 'update') $('updateBar').hidden = false;
+      if (e.data && e.data.type === 'check-team') { syncFresh = true; lastSync = 0; syncTeam(false); } // notification touchée
     });
   }
   $('updateGo').addEventListener('click', () => location.reload());
@@ -1988,6 +2077,28 @@
   $('wSkip').addEventListener('click', closeWelcome);
 
 
+  $('notifOn').addEventListener('change', async e => {
+    const want = e.target.checked;
+    e.target.disabled = true;
+    $('notifMsg').textContent = want ? 'Activation…' : '';
+    try {
+      if (want) { await enablePush(); $('notifMsg').textContent = '✓ Tu seras prévenu à chaque nouveau planning.'; }
+      else { await disablePush(); $('notifMsg').textContent = 'Notifications coupées sur ce téléphone.'; }
+    } catch (err) {
+      store(STORAGE_PUSH_KEY, '');
+      $('notifMsg').textContent = err.message === 'refus' ? 'Notifications refusées sur ce téléphone.'
+        : err.message === 'notifcle' ? 'Le relais n\'a pas reconnu le code d\'équipe (préviens le responsable).'
+        : 'Activation impossible pour l\'instant (réseau ?). Réessaie plus tard.';
+    }
+    renderNotif();
+  });
+  $('notifTest').addEventListener('click', async () => {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification('Planning COA', { body: 'Les notifications marchent sur ce téléphone.', icon: 'icon-192.png?v=2', tag: 'test' });
+    } catch (e) { $('notifMsg').textContent = 'Essai impossible sur ce téléphone.'; }
+  });
+
   // ── Versions précédentes du planning d'équipe ─────────────────────────────
   // commits qui ne changent pas les plannings : pas montrés dans « Versions précédentes »
   const OTHER_COMMITS = ['Membre ajouté', 'Statistiques', 'Coordonnées mises à jour', 'Numéros utiles mis à jour', 'Ordre mis à jour'];
@@ -2053,6 +2164,7 @@
         renderCalendar();
         renderTeam();
         await loadHistory();
+        notifyTeam('Une version précédente du planning a été remise en ligne.');
         teamMsg('✓ Version restaurée pour toute l\'équipe : tes collègues la recevront à l\'ouverture de l\'appli.', 'ok');
       } catch (err) {
         detail.textContent = errText(err);
@@ -2590,4 +2702,5 @@
   ['mh_members', 'mh_member_try', 'mh_usage', 'mh_usage_last', 'mh_usage_rep', 'mh_stats', 'mh_stats_ok', 'mh_stats_self']
     .forEach(k => { try { localStorage.removeItem(k); } catch (e) { /* stockage indisponible */ } });
   syncTeam(false);
+  setTimeout(refreshPush, 3000);
 })();

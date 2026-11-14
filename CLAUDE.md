@@ -229,7 +229,16 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   départ à `mh_plan`.
 - Export : case « Rappel la veille à 20 h » (`mh_alarm`, cochée par défaut) → VALARM sur les jours
   travaillés. Apple le garde à l'import ; Google Agenda ignore les alarmes importées.
-  Pas de notifications web (iPhone : impossible sans serveur).
+  **Notifications web** (nov. 2026, demandées) : relais Cloudflare Worker gratuit (`notif/worker.js`, collé par l'utilisateur
+  dans le tableau de bord, KV lié sous `SUBS`, aucun secret : clés VAPID créées au 1er appel et gardées dans KV). Accès =
+  SHA-256 de « planning-coa-notif| » + code d'équipe (`notifKey`), 1re clé reçue retenue (entrée KV `cle` ; code d'équipe
+  changé → supprimer `cle` dans KV). Routes : GET /vapid, POST /subscribe, /unsubscribe, /notify (message chiffré aes128gcm,
+  abonnés 404/410 supprimés, `except` = l'envoyeur). Appli : `NOTIF_URL` (vide = carte cachée), carte Réglages
+  « Notifications » (`#notifCard`, après Code d'équipe ; iPhone : seulement depuis l'icône d'écran d'accueil, iOS 16.4+),
+  `mh_push` (date du dernier abonnement, redonné au relais chaque semaine), `notifyTeam` après envoi, annulation,
+  restauration — message **sans nom**. sw.js : `push` → notification, clic → `./?notif=1` (ou message `check-team`) →
+  `syncFresh` : lecture par l'API publique GitHub (`readFresh`, sans le cache de 5 min de raw.githubusercontent).
+  Testé : relais sous Node (déchiffrement http_ece, signature JWT), appli avec abonnement simulé.
 - Onglet Réglages, dans l'ordre : « 👤 Je suis », import, export, « 📲 Partager l'application », « 🔑 Code d'équipe »
   (ordre voulu), « 📝 Mes notes », « 🎨 Codes et couleurs ». Cartes dépliantes `<details class="fold">` avec une
   flèche à droite (`summary::after`, marqueur natif masqué). Import ouvert tant qu'il n'y a aucun planning et dès

@@ -4,7 +4,7 @@
 // changé, toute la copie est remplacée d'un coup (jamais de mélange d'anciens et de nouveaux fichiers) et la
 // page affiche « Nouvelle version de l'appli · Afficher ».
 // Aucune donnée de planning ne passe ici : elle reste dans le localStorage de la page.
-const CACHE = 'mh-app-v64';
+const CACHE = 'mh-app-v65';
 const FILES = [
   './', 'index.html', 'app.js', 'core.js', 'team.js', 'style.css', 'xlsx.full.min.js',
   'manifest.json?v=3', 'icon-192.png?v=2', 'icon-512.png?v=2', 'apple-touch-icon.png?v=2',
@@ -80,4 +80,21 @@ self.addEventListener('fetch', event => {
 // la page le demande quand on revient sur l'appli restée ouverte en arrière-plan
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'check') event.waitUntil(checkForUpdate());
+});
+
+// Notifications : « nouveau planning en ligne » (envoyées par le relais, voir notif/worker.js)
+self.addEventListener('push', event => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (e) { data = { body: event.data && event.data.text() }; }
+  event.waitUntil(self.registration.showNotification(data.title || 'Planning COA', {
+    body: data.body || 'Nouveau planning en ligne.', icon: 'icon-192.png?v=2', badge: 'icon-192.png?v=2', tag: 'planning', renotify: true,
+  }));
+});
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(pages => {
+    const page = pages.find(p => p.url.startsWith(self.registration.scope));
+    if (page) { page.postMessage({ type: 'check-team' }); return page.focus(); }
+    return self.clients.openWindow('./?notif=1');
+  }));
 });

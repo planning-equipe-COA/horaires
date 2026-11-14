@@ -243,6 +243,18 @@
     </details>
   </section>
 
+  <section id="notifCard" class="card" data-tab="reglages" hidden>
+    <details id="notifDetails" class="fold">
+      <summary><h2><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg> Notifications</h2></summary>
+      <label class="check"><input type="checkbox" id="notifOn"> Me prévenir quand un nouveau planning est en ligne</label>
+      <p id="notifNote" class="hint" hidden></p>
+      <p id="notifMsg" class="hint" aria-live="polite"></p>
+      <p class="hint">Le message dit seulement qu'un planning a été envoyé (sans nom). Le relais qui envoie les notifications
+        garde l'adresse technique de ce téléphone, rien d'autre. Réglage propre à ce téléphone.</p>
+      <div class="actions"><button id="notifTest" type="button" class="link">Tester sur ce téléphone</button></div>
+    </details>
+  </section>
+
   <section class="card" data-tab="reglages">
     <details id="notesDetails" class="fold">
       <summary><h2><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg> Sauvegarde des notes</h2></summary>
@@ -325,6 +337,7 @@
           <li><strong>Imprimer / PDF</strong> : bouton imprimante en haut à droite.</li>
           <li><strong>Numéros utiles</strong> : bouton téléphone en haut à droite.</li>
           <li><strong>Mon numéro</strong> (facultatif) : Réglages → Code d'équipe, pour être joignable depuis l'équipe du jour.</li>
+          <li><strong>Notifications</strong> : Réglages → Notifications, pour être prévenu de chaque nouveau planning (sur iPhone : depuis l'icône de l'écran d'accueil).</li>
         </ul>
         <h3>8. Envoyer un nouveau planning</h3>
         <p>Pour celui qui reçoit le tableau Excel : Réglages → « Importer un nouveau planning » → choisir le fichier → vérifier « les cases qui changent » → indiquer la date de mise à jour (la date en rouge du tableau) → « Envoyer à l'équipe ». Une erreur ? « Annuler l'envoi » pendant 2 minutes, ou « Versions précédentes » dans Code d'équipe.</p>
