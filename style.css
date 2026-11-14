@@ -647,3 +647,21 @@ body[data-tab="reglages"] #calPrint { display: none; }
 .pl-online .ic { color: var(--accent); }
 
 
+
+/* ── Taille du texte (Réglages → Affichage, mh_text) : agrandit toute l'appli ── */
+html[data-text="l"] body { zoom: 1.12; }
+html[data-text="xl"] body { zoom: 1.25; }
+@media print { html[data-text] body { zoom: 1; } }
+
+/* ── Mode d'emploi ─────────────────────────────────────────────────────────── */
+.help h3 { font-size: .98rem; margin: 14px 0 4px; }
+.help h3:first-child { margin-top: 4px; }
+.help p, .help li { font-size: .93rem; }
+.help p { margin: 4px 0; }
+.help ul { margin: 4px 0; padding-left: 20px; }
+.help li { margin: 3px 0; }
+@media print {
+  .pr-help h3 { font-size: 11pt; margin: 4mm 0 1mm; break-after: avoid; }
+  .pr-help p, .pr-help li { font-size: 9.5pt; margin: 1mm 0; }
+  .pr-help ul { padding-left: 6mm; margin: 1mm 0; }
+}

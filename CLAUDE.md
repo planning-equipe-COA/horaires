@@ -20,6 +20,11 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - `index.html`, `style.css` — UI mobile d'abord, mode sombre. Thème au choix (Réglages → « Affichage » : Auto / Clair /
   Sombre, `mh_theme` → `html[data-theme]`, appliqué par un petit script dans le `<head>` avant le CSS ; Auto = suit
   le téléphone). Les couleurs sombres sont écrites deux fois dans style.css (media query + `[data-theme="dark"]`).
+  **Taille du texte** (Réglages → Affichage : Normale / Grande / Très grande, `mh_text` → `html[data-text="l|xl"]`, appliqué
+  dans le `<head>` comme le thème) : `zoom` 1,12 / 1,25 sur `body` (tout s'agrandit, la mise en page se recalcule ; remis à 1
+  à l'impression). **Mode d'emploi** (dernière carte de Réglages, `#helpDetails`, texte statique dans index.html, `#helpBody`) :
+  installer, rejoindre, Je suis, lire, modifications, permutations, autres fonctions, envoyer un planning, souci ;
+  « Imprimer / PDF » = une page A4 (`.pr-help`). À tenir à jour quand une fonction change.
   Carte « Sauvegarde des notes » (ex « Mes notes », renommée : on croyait y écrire les notes ; elles s'écrivent dans
   le détail d'un jour).
   **Pas d'emoji dans l'interface** (choix de l'utilisateur, nov. 2026 : « plus pro ») : icônes au trait en
@@ -77,6 +82,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
     donc saisie à la main (configuration / renouvellement : `#teamTokenExp` ; clé déjà en place : « Indiquer /
     Modifier la date » dans la carte équipe → `T.setKeyExpiry`) et gardée chiffrée dans `cle.enc` (`exp`).
     Copie locale `mh_key` { exp, checkedAt }, relue au plus une fois par jour pendant la synchro.
+  - date d'expiration de la clé non indiquée : alerte **seulement sur le téléphone du responsable** (`mh_admin`) ; la toucher
+    ouvre la carte Code d'équipe (« Indiquer la date »).
   - planning d'équipe pas vérifié depuis plus de 3 jours (`mh_sync_ok` = dernière lecture réussie chez GitHub,
     même sans nouveauté) ; toucher l'alerte relance la vérification. L'onglet Équipe affiche « vérifié il y a … ».
 - Fichiers réels : classeurs **.xlsm** à deux feuilles « MOIS AAAA THEORIQUE » et « MOIS AAAA PLANIFIE »

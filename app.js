@@ -559,6 +559,9 @@
         ? `<svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> La clé de publication de l'équipe a expiré le ${esc(fmtLongDay(exp))} : plus personne ne peut envoyer le planning. La personne qui a configuré l'équipe doit en créer une nouvelle (Réglages → Code d'équipe).`
         : `<svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> La clé de publication de l'équipe expire ${left === 0 ? 'aujourd\'hui' : left === 1 ? 'demain' : 'dans ' + left + ' jours'} (le ${esc(fmtLongDay(exp))}). Préviens la personne qui a configuré l'équipe : sans nouvelle clé, plus personne ne pourra envoyer le planning.`);
     }
+    if (joined && !exp && load('mh_admin') === '1') {
+      lines.push(`<svg class="ic" aria-hidden="true"><use href="#i-key"/></svg> Date d'expiration de la clé de publication non indiquée : l'appli ne pourra pas te prévenir avant qu'elle expire (plus aucun envoi possible ensuite). <strong>Touche ici pour l'indiquer</strong> (GitHub → Settings → Developer settings → Personal access tokens).`);
+    }
     const ok = +load(STORAGE_SYNC_OK_KEY) || 0;
     const stale = joined && ok && Date.now() - ok > STALE_DAYS * 864e5;
     if (stale) lines.push(`<svg class="ic" aria-hidden="true"><use href="#i-signal"/></svg> Planning d'équipe pas vérifié depuis ${esc(agoText(ok).replace('il y a ', ''))} (pas de connexion ?) : les derniers changements de tes collègues peuvent manquer. <strong>Touche ici pour vérifier.</strong>`);
@@ -2551,6 +2554,30 @@
     applyTheme(b.dataset.themeChoice);
   }));
   applyTheme(load('mh_theme'));
+
+  // Taille du texte : Normale / Grande / Très grande (mh_text, appliquée dès le <head>)
+  function applyText(t) {
+    if (t !== 'l' && t !== 'xl') t = 'n';
+    if (t === 'n') delete document.documentElement.dataset.text; else document.documentElement.dataset.text = t;
+    document.querySelectorAll('[data-text-choice]').forEach(b => {
+      b.setAttribute('aria-selected', String(b.dataset.textChoice === t));
+      b.setAttribute('aria-checked', String(b.dataset.textChoice === t));
+    });
+  }
+  document.querySelectorAll('[data-text-choice]').forEach(b => b.addEventListener('click', () => {
+    store('mh_text', b.dataset.textChoice === 'n' ? '' : b.dataset.textChoice);
+    applyText(b.dataset.textChoice);
+    if (state.tab === 'equipe') renderCalendar(); // tableau de l'équipe : colonnes recalculées
+  }));
+  applyText(load('mh_text'));
+
+  // Mode d'emploi : imprimer / PDF (une page A4)
+  $('helpPrint').addEventListener('click', () => {
+    $('printArea').innerHTML = '<section class="pr-page pr-help"><header class="pr-head"><h1>Planning COA</h1><p>Mode d\'emploi</p></header>' +
+      $('helpBody').innerHTML + `<footer class="pr-foot">${esc(printedOn())}</footer></section>`;
+    document.body.classList.add('printing');
+    setTimeout(() => window.print(), 60);
+  });
 
   renderCodes();
   document.body.dataset.tab = state.tab;
