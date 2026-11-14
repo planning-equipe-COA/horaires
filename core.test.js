@@ -460,3 +460,15 @@ test('findUpdated : une date tapée l’emporte sur =AUJOURDHUI()', () => {
   const only = [['NOVEMBRE 2026', 'mise a jour', { y: 2026, m: 11, d: 3 }]].concat(head); only.formulas = { '0,2': true };
   assert.equal(C.parseMatrix(only, { codes: C.DEFAULT_CODES }).updated, null); // =AUJOURDHUI() seul : pas une vraie date
 });
+
+test('codes TTV (télétravail, travaillé), DEL (délégation), F (férié, repos)', () => {
+  const codes = C.DEFAULT_CODES;
+  const def = k => codes.find(c => c.code === k);
+  assert.equal(def('TTV').label, 'Télétravail');
+  assert.equal(C.dayKind(def('TTV')), 'travail');
+  assert.equal(C.codeMinutes(def('TTV')), 420);
+  assert.equal(def('DEL').label, 'Délégation');
+  assert.equal(C.dayKind(def('DEL')), 'autre');
+  assert.equal(def('F').label, 'Férié');
+  assert.equal(C.dayKind(def('F')), 'repos');
+});

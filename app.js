@@ -12,7 +12,7 @@
   const STORAGE_SUM_KEY = 'mh_sum';
   const STORAGE_TAB_KEY = 'mh_tab'; // dernier onglet consulté : Planning ou Équipe (jamais Réglages)
   const PLAN_KEEP_DAYS = 400;
-  const CODES_VERSION = 9;
+  const CODES_VERSION = 10;
   const $ = id => document.getElementById(id);
 
   // icône au trait (voir les <symbol> en tête de index.html)
@@ -83,6 +83,14 @@
         // v9 : ABJ = Absence justifiée (s'il avait été ajouté à la main depuis « codes non reconnus »)
         if (version < 9) {
           saved.forEach(c => { if (C.normCode(c.code) === 'ABJ' && (!c.label || C.normCode(c.label) === 'ABJ')) c.label = 'Absence justifiée'; });
+        }
+        // v10 : TTV Télétravail, DEL Délégation, F Férié (s'ils avaient été ajoutés à la main sans libellé)
+        if (version < 10) {
+          const known = { TTV: ['Télétravail', ''], DEL: ['Délégation', ''], F: ['Férié', 'blanc'] };
+          saved.forEach(c => {
+            const k = known[C.normCode(c.code)];
+            if (k && (!c.label || C.normCode(c.label) === C.normCode(c.code))) { c.label = k[0]; if (!c.color) c.color = k[1]; }
+          });
         }
         if (version < CODES_VERSION) {
           store(STORAGE_CODES_VERSION_KEY, String(CODES_VERSION));

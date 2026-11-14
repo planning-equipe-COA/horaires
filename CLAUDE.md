@@ -111,7 +111,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   JS Journée de solidarité (libellé « JS », toujours sans horaires), FORM Formation (pastille
   « Form » violette, jour travaillé ; absent du vrai planning, présent dans l'exemple),
   R Repos, Tn Tombée de nuit, RF, RC, RCN, ATT Repos, RECUP Récupération, ABJ Absence justifiée (Autres,
-  CODES_VERSION 9), TTV / DEL / F encore inconnus (l'utilisateur se renseigne),
+  CODES_VERSION 9), TTV Télétravail (jour travaillé, 7 h, comme JS), DEL Délégation (Autres), F Férié (repos, blanc)
+  (CODES_VERSION 10, nov. 2026),
   RECU « Recup » (pastille « Recup » via `abbr`, blanc ; « RECU » se lisait « reçu »), CA/C Congé, EM Enfant malade,
   X affiché « X » tel quel (choix de l'utilisateur : ne pas afficher de motif), rangé dans « Autres ».
 - **Tous les codes** vont dans l'agenda, en **journée entière sans horaires** (tout le monde

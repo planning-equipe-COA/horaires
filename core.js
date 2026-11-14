@@ -24,6 +24,9 @@
     { code: 'CA', label: 'Congé', allDay: true, start: '', end: '', include: true, color: 'vert' },
     { code: 'C', label: 'Congé', allDay: true, start: '', end: '', include: true, color: 'vert' },
     { code: 'ABJ', label: 'Absence justifiée', abbr: 'ABJ', allDay: true, start: '', end: '', include: true, color: '' },
+    { code: 'TTV', label: 'Télétravail', abbr: 'TTV', allDay: true, start: '', end: '', include: true, color: '', hours: 7 },
+    { code: 'DEL', label: 'Délégation', abbr: 'DEL', allDay: true, start: '', end: '', include: true, color: '' },
+    { code: 'F', label: 'Férié', allDay: true, start: '', end: '', include: true, color: 'blanc' },
     { code: 'EM', label: 'Enfant malade', allDay: true, start: '', end: '', include: true, color: '' },
     { code: 'X', label: 'X', allDay: true, start: '', end: '', include: true, color: '' },
     { code: 'ATT', label: 'Repos', allDay: true, start: '', end: '', include: true, color: 'blanc' },
@@ -565,7 +568,7 @@
 
   // Nature d'un code pour le résumé du mois : travail (codes à horaires + JS), repos (pastille
   // blanche), congé (pastille verte), autre (EM, X, codes inconnus…)
-  const WORKED_ALL_DAY = new Set(['JS', 'FORM']); // journées travaillées sans horaire précis
+  const WORKED_ALL_DAY = new Set(['JS', 'FORM', 'TTV']); // journées travaillées sans horaire précis
   function dayKind(def) {
     if (!def) return 'autre';
     if (!def.allDay || WORKED_ALL_DAY.has(normCode(def.code))) return 'travail';
