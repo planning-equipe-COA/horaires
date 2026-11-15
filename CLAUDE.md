@@ -238,7 +238,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   `mh_push` (date du dernier abonnement, redonné au relais chaque semaine), `notifyTeam` après envoi, annulation,
   restauration — message **sans nom**. sw.js : `push` → notification, clic → `./?notif=1` (ou message `check-team`) →
   `syncFresh` : lecture par l'API publique GitHub (`readFresh`, sans le cache de 5 min de raw.githubusercontent).
-  Testé : relais sous Node (déchiffrement http_ece, signature JWT), appli avec abonnement simulé.
+  Testé : relais sous Node (déchiffrement http_ece, signature JWT), appli avec abonnement simulé, puis **en vrai sur l'iPhone
+  de l'utilisateur le 15 nov. 2026** (route POST /test = essai vers ce seul téléphone, bouton « Tester sur ce téléphone »).
+  Titre des notifications « Planning d'équipe » (l'iPhone ajoute déjà « from Planning COA »). Le code du relais se recolle à
+  la main (Cloudflare → planning-coa-notif → Modifier le code → Cmd+A/Cmd+V → Déployer) ; le collage ne marche pas sur iPhone.
 - Onglet Réglages, dans l'ordre : « 👤 Je suis », import, export, « 📲 Partager l'application », « 🔑 Code d'équipe »
   (ordre voulu), « 📝 Mes notes », « 🎨 Codes et couleurs ». Cartes dépliantes `<details class="fold">` avec une
   flèche à droite (`summary::after`, marqueur natif masqué). Import ouvert tant qu'il n'y a aucun planning et dès

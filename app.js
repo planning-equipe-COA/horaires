@@ -874,7 +874,7 @@
     if (!NOTIF_URL || !teamCode()) return;
     try {
       const sub = await mySubscription();
-      await notifPost('/notify', { title: 'Planning COA', body, except: sub ? sub.endpoint : null });
+      await notifPost('/notify', { title: 'Planning d\'équipe', body, except: sub ? sub.endpoint : null }); // iPhone ajoute « from Planning COA »
     } catch (e) { /* les collègues verront le planning à l'ouverture */ }
   }
   const b64uToBytes = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
