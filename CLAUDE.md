@@ -280,7 +280,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   deux homonymes. `loadRoles` est mis en mémoire (`rolesCache`, mis à jour par `saveRoles`).
   **Groupes de permutation** (15 nov. 2026, demandé : « les ROA peuvent changer entre eux et les COA entre COA » ; deux agents
   « en journée » à part) : pastille COA / ROA / Journée sur chaque nom de « Réorganiser les noms », modifiable **seulement
-  sur le téléphone du responsable** (`mh_admin`), lecture seule ailleurs ; `roles.group` { nom du tableau: 'roa' | 'jour' },
+  sur le téléphone du responsable** (`mh_admin`), lecture seule ailleurs (champ « code responsable » + « Déverrouiller » en tête
+  de la liste, `#roUnlock`, vérifié contre l'empreinte `utiles.admin` : l'icône iPhone n'avait pas `mh_admin`, signalé) ; `roles.group` { nom du tableau: 'roa' | 'jour' },
   absent = COA, envoyé chiffré avec `roles` (jamais de vrais noms dans le code). `agentGroup` : nom exact, sinon nom de même
   base disparu du planning (renommé), sinon COA. `swapOptions(..., { canSwap })` (core.js, testé) ne propose que le même
   groupe (« Entre ROA seulement » sous les permutations).

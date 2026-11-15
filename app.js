@@ -1848,7 +1848,7 @@
   $('calTeam').addEventListener('pointercancel', endDrag);
 
   $('calCompare').addEventListener('change', e => { state.cal.compare = e.target.value; renderCalendar(); });
-  $('calTeam').addEventListener('click', e => {
+  $('calTeam').addEventListener('click', async e => {
     const hlBtn = e.target.closest('.hl-btn');
     if (hlBtn) { state.cal.hl = state.cal.hl === hlBtn.dataset.hl ? '' : hlBtn.dataset.hl; renderCalendar(); return; }
     const id = e.target.id;
@@ -1861,6 +1861,16 @@
       input.value = ((loadRoles() || {}).alias || {})[li.dataset.name] || li.dataset.name;
       input.setAttribute('aria-label', 'Nom affiché');
       span.replaceWith(input); e.target.closest('.ro-edit').remove(); input.focus(); input.select();
+      return;
+    }
+    if (id === 'roUnlock') {
+      const msg = $('roUnlockMsg'), hash = loadUtiles().admin;
+      msg.hidden = false;
+      if (!hash) { msg.textContent = 'Aucun code responsable défini : choisis-le d\'abord dans Numéros utiles (bouton téléphone en haut, appui long 2 s).'; return; }
+      if (!(await T.checkSecret($('roSecret').value, hash))) { msg.textContent = 'Code responsable incorrect.'; return; }
+      store(STORAGE_ADMIN_KEY, '1');
+      state.orderMsg = '';
+      renderCalendar(); // pastilles modifiables, liste en cours conservée
       return;
     }
     const gb = e.target.closest('.ro-group');
@@ -2270,7 +2280,10 @@
     if (!state.groupDraft) { const m = groupMap(); state.groupDraft = {}; list.forEach(n => { state.groupDraft[n] = agentGroup(n, m); }); }
     $('calTeam').innerHTML = '<p class="hint">Maintiens la poignée ☰ et fais glisser le nom à sa place. <svg class="ic" aria-hidden="true"><use href="#i-edit"/></svg> change le nom affiché ' +
       '(par exemple pour distinguer deux homonymes). Puis touche « Terminé ».</p>' +
-      (admin ? '<p class="hint">Groupe pour les permutations : touche la pastille COA / ROA / Journée pour la changer (ROA avec ROA, COA avec COA).</p>' : '') +
+      (admin ? '<p class="hint">Groupe pour les permutations : touche la pastille COA / ROA / Journée pour la changer (ROA avec ROA, COA avec COA).</p>'
+        : '<div class="ro-unlock"><p class="hint">Groupes COA / ROA / Journée : réglés par le responsable. Responsable sur ce téléphone ? Code responsable :</p>' +
+          '<div class="ro-unlock-row"><input id="roSecret" type="password" autocomplete="off" autocapitalize="off" placeholder="code responsable" aria-label="Code responsable">' +
+          '<button id="roUnlock" type="button">Déverrouiller</button></div><p id="roUnlockMsg" class="hint" hidden></p></div>') +
       '<ol class="reorder" id="roList">' + list.map(n =>
         `<li data-name="${esc(n)}"${n === me ? ' class="me"' : ''}>` +
         `<span class="ro-handle" role="button" aria-label="Déplacer ${esc(n)}">` +

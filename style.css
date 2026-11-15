@@ -714,3 +714,7 @@ html[data-text="xl"] body { zoom: 1.25; }
 .reorder .ro-group.g-roa { background: color-mix(in srgb, var(--accent) 18%, transparent); border-color: var(--accent); color: var(--accent); }
 .reorder .ro-group.g-jour { background: var(--warn-bg); border-color: var(--warn); }
 .reorder .ro-group:disabled { cursor: default; opacity: .85; }
+.ro-unlock { margin: 6px 0 10px; }
+.ro-unlock-row { display: flex; gap: 8px; }
+.ro-unlock-row input { flex: 1; min-width: 0; }
+.ro-unlock-row button { flex: none; width: auto; }
