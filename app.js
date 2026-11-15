@@ -609,18 +609,25 @@
       store(STORAGE_SYNC_OK_KEY, String(Date.now()));
       refreshKeyInfo(false);
       if (!remote) { if (manual) teamMsg('Aucun planning publié pour l\'instant.'); return; }
-      if (state.plan && state.plan.teamAt === remote.at) { if (manual) teamMsg('✓ Ton planning est à jour.', 'ok'); return; }
-      // GitHub garde l'ancien fichier en cache ~5 min : juste après un envoi, la lecture peut rendre la version
-      // d'AVANT. Ne jamais remplacer le planning du téléphone par une publication plus ancienne que la sienne
-      // (sinon les modifications qu'on vient d'envoyer disparaissent à la réouverture).
-      if (state.plan && state.plan.teamAt && remote.at && remote.at < state.plan.teamAt) {
-        if (manual) teamMsg('✓ Ton planning est à jour (GitHub met quelques minutes à afficher le dernier envoi).', 'ok');
+      const applyShared = data => { // numéros utiles, numéros des collègues, ordre / groupes des noms
+        if (data.roles && newestRoles(loadRoles(), data.roles) === data.roles) saveRoles(data.roles);
+        saveContacts(data.contacts || {});
+        saveUtiles({ list: (data.utiles && data.utiles.list) || [], at: data.utiles && data.utiles.at, admin: data.admin || null });
+        store('mh_shared_at', remote.at || ''); // version dont viennent ces données
+      };
+      // même version que le téléphone (ou plus ancienne : GitHub garde l'ancien fichier en cache ~5 min juste après un
+      // envoi — ne JAMAIS remplacer le planning par une publication plus ancienne). Le planning ne bouge pas, mais les
+      // numéros utiles / numéros / groupes sont relus si on vérifie à la main ou s'ils manquent sur ce téléphone
+      // (bug signalé : numéros utiles « disparus » après avoir quitté puis rejoint l'équipe).
+      const same = state.plan && state.plan.teamAt === remote.at;
+      const older = state.plan && state.plan.teamAt && remote.at && remote.at < state.plan.teamAt;
+      if (same || older) {
+        if (same && (manual || load('mh_shared_at') !== remote.at)) { try { applyShared(await T.decrypt(remote.text, code)); } catch (e) { /* plus tard */ } }
+        if (manual) teamMsg(older ? '✓ Ton planning est à jour (GitHub met quelques minutes à afficher le dernier envoi).' : '✓ Ton planning est à jour.', 'ok');
         return;
       }
       const data = await T.decrypt(remote.text, code);
-      if (data.roles && newestRoles(loadRoles(), data.roles) === data.roles) saveRoles(data.roles);
-      saveContacts(data.contacts || {});
-      saveUtiles({ list: (data.utiles && data.utiles.list) || [], at: data.utiles && data.utiles.at, admin: data.admin || null });
+      applyShared(data);
       const n = applyAgents(state.plan, planToAgents(data.agents, data.remarks),
         { at: remote.at, file: 'équipe', teamAt: remote.at, teamBy: data.by || null, updated: data.updated || null,
           pubAt: data.pub ? data.pub.at : remote.at, pubBy: data.pub ? data.pub.by : data.by || null });
@@ -2133,6 +2140,8 @@
     saveContacts({}); // plus dans l'équipe : on ne garde pas les numéros des collègues
     saveUtiles({ list: [] });
     store(STORAGE_ADMIN_KEY, '');
+    store('mh_shared_at', '');
+    if (state.plan) { state.plan.teamAt = null; savePlan(); } // en rejoignant : tout est relu (numéros utiles compris)
     $('publishBox').hidden = true;
     teamMsg('Tu as quitté l\'équipe : ton calendrier reste sur ce téléphone, il ne se met plus à jour tout seul.');
     renderTeam();

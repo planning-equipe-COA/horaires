@@ -73,6 +73,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   import. **Jamais appliquer une publication plus ancienne que `plan.teamAt`** : raw.githubusercontent rend
   l'ancienne version ~5 min après un envoi (bug signalé : modifications envoyées « disparues » à la réouverture). `plan.teamAt` = date de la publication reçue (seule info en clair de l'enveloppe), `teamBy`.
   Si le code ne déchiffre plus (code changé) : il est oublié et l'agent doit saisir le nouveau.
+  **Données partagées relues même sans nouveau planning** (bug signalé 15 nov. 2026 : numéros utiles « disparus » — quitter
+  l'équipe vide `mh_utiles`/`mh_contacts`/`mh_admin` mais gardait `plan.teamAt`, donc après avoir rejoint la synchro voyait
+  « même version » et ne relisait rien) : `applyShared` (rôles, numéros, numéros utiles) quand la version est la même mais
+  que `mh_shared_at` ≠ version publiée, ou à chaque vérification manuelle ; quitter l'équipe remet `teamAt` à null.
   Lien « Renouveler la clé de publication » masqué (`#teamRenewRow`) sauf si GitHub refuse la clé (`errText` 'cle').
 - Ligne d'état de l'onglet Équipe : « Planning d'équipe publié par X le <date de publication> · vérifié … » (formulation
   voulue par l'utilisateur).
