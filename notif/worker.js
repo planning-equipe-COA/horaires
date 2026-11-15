@@ -97,6 +97,12 @@ export default {
         if (data.endpoint) await env.SUBS.delete('sub:' + (await sha256hex(String(data.endpoint))));
         return json({ ok: true });
       }
+      if (path === '/test') { // essai : un message à ce seul téléphone (bouton « Tester » de l'appli)
+        const sub = await env.SUBS.get('sub:' + (await sha256hex(String(data.endpoint || ''))), 'json');
+        if (!sub) return json({ error: 'inconnu' }, 404);
+        const res = await sendPush(sub, JSON.stringify({ title: 'Planning COA', body: 'Essai réussi : les notifications arrivent sur ce téléphone.' }), await vapidKeys(env));
+        return json({ ok: res.ok, status: res.status });
+      }
       if (path === '/notify') {
         const msg = JSON.stringify({ title: String(data.title || 'Planning COA').slice(0, 80), body: String(data.body || 'Nouveau planning en ligne').slice(0, 200) });
         const keys = await vapidKeys(env);

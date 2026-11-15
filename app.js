@@ -2093,6 +2093,18 @@
     renderNotif();
   });
   $('notifTest').addEventListener('click', async () => {
+    // abonné : vrai essai par le relais (Apple / Google → ce téléphone) ; sinon simple affichage local
+    const sub = load(STORAGE_PUSH_KEY) ? await mySubscription() : null;
+    if (sub) {
+      $('notifMsg').textContent = 'Essai envoyé par le relais : la notification doit arriver dans quelques secondes (tu peux fermer l\'appli).';
+      try {
+        const r = await notifPost('/test', { endpoint: sub.endpoint });
+        if (!r.ok) $('notifMsg').textContent = 'Le relais n\'a pas pu joindre ce téléphone (code ' + r.status + ').';
+        return;
+      } catch (e) {
+        if (e.message !== 'reseau') { $('notifMsg').textContent = 'Le relais n\'a pas reconnu ce téléphone : décoche puis recoche la case.'; return; }
+      }
+    }
     try {
       const reg = await navigator.serviceWorker.ready;
       await reg.showNotification('Planning COA', { body: 'Les notifications marchent sur ce téléphone.', icon: 'icon-192.png?v=2', tag: 'test' });
