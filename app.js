@@ -578,13 +578,7 @@
     if (!lines.length) { box.innerHTML = ''; return; }
     const text = lines.map(l => `<span class="tk-item"><svg class="ic" aria-hidden="true"><use href="#i-${l.ic}"/></svg> ${esc(l.text)}</span>`).join('');
     box.innerHTML = `<div class="tk-view"><div class="tk-track">${text}</div></div>`;
-    requestAnimationFrame(() => {
-      const view = box.querySelector('.tk-view'), track = box.querySelector('.tk-track');
-      if (!view || !track || track.scrollWidth <= view.clientWidth + 2) return; // tient sur la ligne : immobile
-      track.innerHTML = text + text; // deux copies identiques : -50 % = une copie, boucle sans à-coup
-      track.classList.add('run');
-      track.style.animationDuration = Math.max(8, Math.round(track.scrollWidth / 2 / 45)) + 's'; // ~45 px/s
-    });
+    marquee(box.querySelector('.tk-view'), box.querySelector('.tk-track'), text);
   }
 
   let syncing = false, lastSync = 0;
@@ -1064,9 +1058,8 @@
     // changements apportés par le dernier tableau importé
     const list = [...changes.values()].filter(ch => ch.key >= todayKey);
     const box = $('calChanges');
-    box.hidden = plan.changesSeen || !list.length;
-    $('teamChangesBtn').classList.toggle('dup', !box.hidden); // onglet Planning : le bandeau suffit
-    if (!box.hidden) {
+    box.hidden = true; // remplacé (nov. 2026) par la ligne qui défile #teamChangesBtn (moins de place, demandé)
+    if (!box.hidden && list.length) {
       const fmt = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
       box.innerHTML = `<strong><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg> ${list.length} jour${list.length > 1 ? 's ont' : ' a'} changé dans le nouveau planning :</strong><ul>` +
         list.slice(0, 8).map(ch => `<li>${esc(fmt(ch.key))} : ${esc(codeTitle(ch.before))} → <strong>${esc(codeTitle(ch.after))}</strong></li>`).join('') +
@@ -1318,6 +1311,8 @@
       html += `<p><strong>${total} case${total > 1 ? 's' : ''}</strong> pour ${groups.length} agent${groups.length > 1 ? 's' : ''}` +
         ' <span class="muted">(jours passés en gris)</span></p>' + r.html;
     }
+    if (groups.length && !plan.changesSeen && state.plan) html += '<div class="actions"><button id="changesSeenBtn" class="primary" type="button">J\'ai vu</button>' +
+      '<span class="hint">retire le point orange des jours modifiés</span></div>';
     $('changesBody').innerHTML = html;
     $('changesSheet').hidden = false;
     $('changesSheet').querySelector('.sheet-panel').scrollTop = 0;
@@ -1327,15 +1322,35 @@
     $('changesSheet').hidden = true;
     if ($('utilesSheet').hidden && $('daySheet').hidden && $('printSheet').hidden) document.body.classList.remove('sheet-open');
   }
+  // Ligne « dernier planning » : non vu = orange, texte qui défile (nouveau planning, changements pour moi, total,
+  // mise en ligne) ; vu = ligne grise immobile. « Voir › » ouvre le détail (#changesSheet, avec « J'ai vu »).
   function renderChangesLink(plan) {
     const groups = changeGroupsOf(plan), total = groups.reduce((n, g) => n + g.items.length, 0);
     const btn = $('teamChangesBtn');
     btn.hidden = !total;
     btn.classList.toggle('seen', !!plan.changesSeen);
-    if (total) btn.innerHTML = ICON('bell') +
-      `<span class="cl-text"><strong>${plan.changesUpdated ? 'Dernier planning modifié le ' + esc(updLabel(plan.changesUpdated)) : 'Le dernier planning a changé'}</strong><span class="cl-sub">${total} case${total > 1 ? 's' : ''} modifiée${total > 1 ? 's' : ''} · ${groups.length} agent${groups.length > 1 ? 's' : ''}</span>` +
-      (onlineText(plan) ? `<span class="cl-sub">${esc(onlineText(plan))}</span>` : '') + '</span>' +
-      '<span class="cl-go">Voir ›</span>';
+    if (!total) return;
+    const me = load(STORAGE_NAME_KEY), todayKey = C.dateKey(todayDate());
+    const mine = me ? ((plan.changes || {})[me] || []).filter(ch => ch.key >= todayKey).length : 0;
+    const upd = plan.changesUpdated ? 'modifié le ' + updLabel(plan.changesUpdated) : '';
+    const parts = plan.changesSeen
+      ? [(plan.changesUpdated ? 'Dernier planning ' + upd : 'Dernier planning'), `${total} case${total > 1 ? 's' : ''} modifiée${total > 1 ? 's' : ''}`]
+      : ['Nouveau planning' + (upd ? ' ' + upd : ''),
+        me ? (mine ? `${mine} changement${mine > 1 ? 's' : ''} pour toi` : 'rien ne change pour toi') : null,
+        `${total} case${total > 1 ? 's' : ''} au total`, onlineText(plan) || null];
+    const text = `<span class="cl-item">${parts.filter(Boolean).map(esc).join(' · ')}</span>`;
+    btn.setAttribute('aria-label', parts.filter(Boolean).join(', ') + '. Voir les modifications.');
+    btn.innerHTML = ICON('bell') + `<span class="cl-view"><span class="cl-track">${text}</span></span><span class="cl-go">Voir ›</span>`;
+    if (!plan.changesSeen) marquee(btn.querySelector('.cl-view'), btn.querySelector('.cl-track'), text);
+  }
+  // Fait défiler un texte trop long pour sa ligne (deux copies + translateX(-50 %)) ; sinon le laisse immobile
+  function marquee(view, track, html) {
+    requestAnimationFrame(() => {
+      if (!view || !track || track.scrollWidth <= view.clientWidth + 2) return;
+      track.innerHTML = html + html;
+      track.classList.add('run');
+      track.style.animationDuration = Math.max(8, Math.round(track.scrollWidth / 2 / 45)) + 's'; // ~45 px/s
+    });
   }
 
   // ── Imprimer / PDF : mon planning (seulement le mien), celui de l'équipe, ou les deux ; mois affiché ou période ──
@@ -1909,6 +1924,13 @@
     if (!btn) return;
     btn.closest('.day-swap').querySelectorAll('.swap-more').forEach(li => { li.hidden = false; });
     btn.remove();
+  });
+  $('changesBody').addEventListener('click', e => {
+    if (e.target.id !== 'changesSeenBtn' || !state.plan) return;
+    state.plan.changesSeen = true;
+    savePlan();
+    closeChanges();
+    renderCalendar();
   });
   $('calChanges').addEventListener('click', e => {
     if (e.target.id === 'calChangesExport') { goTo('export'); return; }

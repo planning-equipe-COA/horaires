@@ -225,8 +225,12 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   jours passés en gris, « Planning importé / reçu de l'équipe le … comparé au précédent ». Reste visible après « J'ai vu »,
   jusqu'au planning suivant qui change quelque chose (`applyAgents` garde `changes` si le nouveau ne change rien,
   ex. recevoir la version qu'on vient d'envoyer ; `changesAt`, `changesFrom`). Le bandeau 🔔 a « Voir toutes les modifications »
-  (bouton plein). Le lien est une **carte bien visible** (« Le dernier planning a changé · N cases modifiées » + bouton « Voir › »,
-  fond orange tant que pas vu) : en simple lien on ne voyait pas où toucher (signalé). Masquée sur Planning quand le bandeau est là (`.dup`).
+  (bouton plein). **Depuis le 15 nov. 2026 (demandé : moins de place, éviter de faire défiler)** : `#teamChangesBtn` est une
+  **ligne unique** — non vu : orange, texte qui défile (`marquee`, partagé avec `renderTicker`) « Nouveau planning modifié le … ·
+  N changements pour toi / rien ne change pour toi · N cases au total · Mis en ligne le … par … » + pastille « Voir › » ; vu :
+  grise, immobile, coupée « … ». Le grand bandeau `#calChanges` n'est plus affiché ; « J'ai vu » est en bas du panneau des
+  modifications (`#changesSeenBtn`). Le numéro du jour actuel pulse doucement (`today-pulse`, Mois et Liste ; coupé avec
+  « réduire les animations » et à l'impression). Compte à rebours de prise de service proposé puis écarté (« stressant »).
 - Jours modifiés : à chaque import, `diffSnapshot` compare chaque agent à son planning précédent ;
   bandeau « 🔔 » + point orange sur les cases jusqu'à « J'ai vu » (`changesSeen`), repris dans
   l'export. L'ancien suivi par export (`mh_snap`) n'est plus écrit ; il sert une fois de point de

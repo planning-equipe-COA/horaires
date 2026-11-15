@@ -679,3 +679,31 @@ html[data-text="xl"] body { zoom: 1.25; }
   #teamWarn .tk-track.run { animation: none; }
   #teamWarn .tk-view { text-overflow: ellipsis; }
 }
+
+/* ── Ligne « dernier planning » (#teamChangesBtn) : une ligne, texte qui défile tant que pas vu ── */
+.changes-link { padding: 7px 8px 7px 12px; gap: 8px; border-radius: 10px; }
+.changes-link .cl-view { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; font-size: .88rem;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 14px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 14px), transparent); }
+.changes-link .cl-track { display: inline-flex; }
+.changes-link .cl-item { margin-right: 32px; }
+.changes-link.seen .cl-view { text-overflow: ellipsis; color: var(--muted); -webkit-mask-image: none; mask-image: none; }
+.changes-link.seen .cl-track { display: inline; }
+.changes-link.seen .cl-item { margin-right: 0; }
+.changes-link .cl-track.run { animation: tk-scroll linear infinite; }
+.changes-link:active .cl-track.run, .changes-link:hover .cl-track.run { animation-play-state: paused; }
+.changes-link .cl-go { padding: 4px 10px; font-size: .8rem; }
+#changesBody .actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+#changesBody .actions .hint { margin: 0; }
+
+/* ── Aujourd'hui : le numéro du jour pulse doucement (repérage d'un coup d'œil) ── */
+@keyframes today-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 0%, transparent); }
+}
+.cal-cell.today .n, .cal-row.today .n { animation: today-pulse 2.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .changes-link .cl-track.run { animation: none; }
+  .changes-link .cl-view { text-overflow: ellipsis; }
+  .cal-cell.today .n, .cal-row.today .n { animation: none; }
+}
+@media print { .cal-cell.today .n, .cal-row.today .n { animation: none; } }
