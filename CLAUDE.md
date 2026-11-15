@@ -76,7 +76,11 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   Lien « Renouveler la clé de publication » masqué (`#teamRenewRow`) sauf si GitHub refuse la clé (`errText` 'cle').
 - Ligne d'état de l'onglet Équipe : « Planning d'équipe publié par X le <date de publication> · vérifié … » (formulation
   voulue par l'utilisateur).
-- **Alertes d'équipe** (nov. 2026, en haut de l'onglet Planning, `#teamWarn`, `renderTeamAlerts`) :
+- **Alertes d'équipe** (nov. 2026, en haut de l'onglet Planning, `#teamWarn`, `renderTeamAlerts`) — **bandeau d'une seule
+  ligne** (demandé : l'ancien bloc prenait trop de place), texte court qui défile s'il dépasse (`renderTicker`, deux copies +
+  `translateX(-50%)`, ~45 px/s, pause au toucher, immobile avec « réduire les animations »). Clé : visible pour le responsable
+  dès 14 jours, pour les autres seulement une fois expirée ; toucher (responsable) ouvre directement le formulaire de
+  renouvellement (`#teamSetup`) :
   - clé de publication qui expire dans 14 jours ou moins (ou expirée). GitHub n'expose PAS au navigateur
     l'en-tête `github-authentication-token-expiration` (absent d'Access-Control-Expose-Headers) : la date est
     donc saisie à la main (configuration / renouvellement : `#teamTokenExp` ; clé déjà en place : « Indiquer /

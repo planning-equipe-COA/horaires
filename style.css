@@ -665,3 +665,17 @@ html[data-text="xl"] body { zoom: 1.25; }
   .pr-help p, .pr-help li { font-size: 9.5pt; margin: 1mm 0; }
   .pr-help ul { padding-left: 6mm; margin: 1mm 0; }
 }
+
+/* ── Alertes d'équipe : bandeau d'une ligne, texte qui défile (#teamWarn) ── */
+#teamWarn { padding: 7px 12px; overflow: hidden; }
+#teamWarn .tk-view { overflow: hidden; white-space: nowrap; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 16px), transparent); mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 16px), transparent); }
+#teamWarn .tk-track { display: inline-flex; align-items: center; gap: 0; padding-left: 4px; }
+#teamWarn .tk-item { display: inline-flex; align-items: center; gap: 6px; margin-right: 28px; font-size: .88rem; }
+#teamWarn .tk-gap { display: inline-block; width: 1.5em; }
+#teamWarn .tk-track.run { animation: tk-scroll linear infinite; }
+#teamWarn:active .tk-track.run, #teamWarn:hover .tk-track.run { animation-play-state: paused; }
+@keyframes tk-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  #teamWarn .tk-track.run { animation: none; }
+  #teamWarn .tk-view { text-overflow: ellipsis; }
+}

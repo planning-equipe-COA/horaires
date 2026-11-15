@@ -553,23 +553,38 @@
       ? `<svg class="ic" aria-hidden="true"><use href="#i-key"/></svg> Clé de publication valable jusqu'au <strong>${esc(fmtLongDay(exp))}</strong>${left < 0 ? ' — <strong>expirée</strong>' : ''}. <a href="#" id="keyExpChange">Modifier la date</a>`
       : '<svg class="ic" aria-hidden="true"><use href="#i-key"/></svg> Date d\'expiration de la clé de publication non indiquée : l\'appli ne pourra pas prévenir avant qu\'elle expire. ' +
         '<a href="#" id="keyExpChange">Indiquer la date</a> <span class="muted">(GitHub l\'affiche à la création de la clé)</span>';
-    // onglet Planning : alertes
-    const lines = [];
-    if (left !== null && left <= KEY_WARN_DAYS) {
-      lines.push(left < 0
-        ? `<svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> La clé de publication de l'équipe a expiré le ${esc(fmtLongDay(exp))} : plus personne ne peut envoyer le planning. La personne qui a configuré l'équipe doit en créer une nouvelle (Réglages → Code d'équipe).`
-        : `<svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> La clé de publication de l'équipe expire ${left === 0 ? 'aujourd\'hui' : left === 1 ? 'demain' : 'dans ' + left + ' jours'} (le ${esc(fmtLongDay(exp))}). Préviens la personne qui a configuré l'équipe : sans nouvelle clé, plus personne ne pourra envoyer le planning.`);
+    // onglet Planning : alertes en bandeau d'une ligne (texte qui défile), toucher = agir
+    const lines = [], admin = load('mh_admin') === '1';
+    if (left !== null && left <= KEY_WARN_DAYS && (admin || left < 0)) {
+      const when = left < 0 ? 'a expiré le ' + fmtLongDay(exp) : left === 0 ? 'expire aujourd\'hui' : left === 1 ? 'expire demain' : 'expire dans ' + left + ' jours';
+      lines.push({ ic: 'alert', text: admin
+        ? `Clé de publication : ${when}. Touche ici pour la renouveler.`
+        : `Envoi du planning impossible : la clé de publication ${when}. Le responsable doit la renouveler.` });
     }
-    if (joined && !exp && load('mh_admin') === '1') {
-      lines.push(`<svg class="ic" aria-hidden="true"><use href="#i-key"/></svg> Date d'expiration de la clé de publication non indiquée : l'appli ne pourra pas te prévenir avant qu'elle expire (plus aucun envoi possible ensuite). <strong>Touche ici pour l'indiquer</strong> (GitHub → Settings → Developer settings → Personal access tokens).`);
-    }
+    if (joined && !exp && admin) lines.push({ ic: 'key', text: 'Date d\'expiration de la clé de publication non indiquée. Touche ici pour l\'indiquer.' });
     const ok = +load(STORAGE_SYNC_OK_KEY) || 0;
     const stale = joined && ok && Date.now() - ok > STALE_DAYS * 864e5;
-    if (stale) lines.push(`<svg class="ic" aria-hidden="true"><use href="#i-signal"/></svg> Planning d'équipe pas vérifié depuis ${esc(agoText(ok).replace('il y a ', ''))} (pas de connexion ?) : les derniers changements de tes collègues peuvent manquer. <strong>Touche ici pour vérifier.</strong>`);
+    if (stale) lines.push({ ic: 'signal', text: `Planning pas vérifié depuis ${agoText(ok).replace('il y a ', '')} (pas de connexion ?). Touche ici pour vérifier.` });
     $('teamWarn').hidden = !lines.length;
     $('teamWarn').dataset.act = stale ? 'sync' : 'key';
-    $('teamWarn').innerHTML = lines.map(l => `<p>${l}</p>`).join('');
+    $('teamWarn').setAttribute('aria-label', lines.map(l => l.text).join(' '));
+    renderTicker(lines);
     return ok;
+  }
+
+  // Bandeau d'une ligne : icône fixe + texte qui défile s'il est trop long (immobile si « réduire les animations »)
+  function renderTicker(lines) {
+    const box = $('teamWarn');
+    if (!lines.length) { box.innerHTML = ''; return; }
+    const text = lines.map(l => `<span class="tk-item"><svg class="ic" aria-hidden="true"><use href="#i-${l.ic}"/></svg> ${esc(l.text)}</span>`).join('');
+    box.innerHTML = `<div class="tk-view"><div class="tk-track">${text}</div></div>`;
+    requestAnimationFrame(() => {
+      const view = box.querySelector('.tk-view'), track = box.querySelector('.tk-track');
+      if (!view || !track || track.scrollWidth <= view.clientWidth + 2) return; // tient sur la ligne : immobile
+      track.innerHTML = text + text; // deux copies identiques : -50 % = une copie, boucle sans à-coup
+      track.classList.add('run');
+      track.style.animationDuration = Math.max(8, Math.round(track.scrollWidth / 2 / 45)) + 's'; // ~45 px/s
+    });
   }
 
   let syncing = false, lastSync = 0;
@@ -2037,15 +2052,19 @@
   // alertes en haut du planning : vérifier maintenant, ou aller voir la clé
   const teamWarnGo = async () => {
     if ($('teamWarn').dataset.act === 'sync') {
-      $('teamWarn').innerHTML = '<p><svg class="ic" aria-hidden="true"><use href="#i-signal"/></svg> Vérification…</p>';
+      renderTicker([{ ic: 'signal', text: 'Vérification…' }]);
       lastSync = 0;
       await syncTeam(true);
       renderTeam();
-      if ($('teamWarn').dataset.act === 'sync') $('teamWarn').insertAdjacentHTML('beforeend', '<p>Pas de réponse : réessaie quand tu auras du réseau.</p>');
+      if ($('teamWarn').dataset.act === 'sync') renderTicker([{ ic: 'signal', text: 'Pas de réponse : réessaie quand tu auras du réseau.' }]);
       return;
     }
     setTab('reglages'); $('teamDetails').open = true;
-    requestAnimationFrame(() => $('teamDetails').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    // responsable, clé bientôt expirée : formulaire de renouvellement ouvert directement
+    const k = loadKeyInfo().exp, l = keyDaysLeft(k);
+    const renew = load('mh_admin') === '1' && l !== null && l <= KEY_WARN_DAYS;
+    if (renew) $('teamSetup').hidden = false;
+    requestAnimationFrame(() => (renew ? $('teamSetup') : $('teamDetails')).scrollIntoView({ behavior: 'smooth', block: 'start' }));
   };
   $('teamWarn').addEventListener('click', teamWarnGo);
   $('teamWarn').addEventListener('keydown', e => { if (e.key === 'Enter') teamWarnGo(); });
