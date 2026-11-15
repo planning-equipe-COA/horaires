@@ -792,6 +792,7 @@
       (c.overHours ? 30 : 0) + (c.run >= o.maxDays ? 10 : 0) + extra;
     for (const name of Object.keys(agents)) {
       if (name === me) continue;
+      if (o.canSwap && !o.canSwap(name)) continue; // ex. ROA avec ROA, COA avec COA
       const theirs = agents[name], their = theirs[key];
       if (!their) continue;
       if (kind(their) === 'travail') {

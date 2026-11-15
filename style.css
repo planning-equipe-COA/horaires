@@ -707,3 +707,10 @@ html[data-text="xl"] body { zoom: 1.25; }
   .cal-cell.today .n, .cal-row.today .n { animation: none; }
 }
 @media print { .cal-cell.today .n, .cal-row.today .n { animation: none; } }
+
+/* ── Groupe de permutation dans « Réorganiser les noms » (COA / ROA / Journée) ── */
+.reorder .ro-group { flex: none; min-width: 4.6em; padding: 3px 8px; border-radius: 999px; font: inherit; font-size: .76rem; font-weight: 600;
+  border: 1px solid var(--line); background: var(--chip); color: var(--text); cursor: pointer; }
+.reorder .ro-group.g-roa { background: color-mix(in srgb, var(--accent) 18%, transparent); border-color: var(--accent); color: var(--accent); }
+.reorder .ro-group.g-jour { background: var(--warn-bg); border-color: var(--warn); }
+.reorder .ro-group:disabled { cursor: default; opacity: .85; }

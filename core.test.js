@@ -472,3 +472,13 @@ test('codes TTV (télétravail, travaillé), DEL (délégation), F (férié, rep
   assert.equal(def('F').label, 'Férié');
   assert.equal(C.dayKind(def('F')), 'repos');
 });
+
+test('swapOptions : canSwap limite aux collègues du même groupe (ROA / COA)', () => {
+  const codes = C.DEFAULT_CODES;
+  const plan = { agents: {
+    A: { '20270104': 'M' }, B: { '20270104': 'S' }, Z: { '20270104': 'S' } } };
+  const all = C.swapOptions(plan, 'A', '20270104', codes, {});
+  assert.deepEqual(all.options.map(o => o.name).sort(), ['B', 'Z']);
+  const same = C.swapOptions(plan, 'A', '20270104', codes, { canSwap: n => n !== 'Z' });
+  assert.deepEqual(same.options.map(o => o.name), ['B']);
+});

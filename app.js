@@ -308,6 +308,20 @@
     return rolesCache;
   }
   function saveRoles(r) { rolesCache = r || null; store(STORAGE_ROLES_KEY, JSON.stringify(r)); }
+  // Groupes pour les permutations (demandé : ROA avec ROA, COA avec COA ; « Journée » à part) :
+  // roles.group = { nom du tableau: 'roa' | 'jour' }, absent = COA. Réglé dans « Réorganiser les noms »
+  // (responsable seulement), envoyé chiffré avec roles. Jamais de vrais noms dans ce code.
+  const GROUPS = { coa: 'COA', roa: 'ROA', jour: 'Journée' };
+  function groupMap() { return Object.assign({}, (loadRoles() || {}).group || {}); }
+  function agentGroup(n, map) {
+    map = map || groupMap();
+    if (map[n]) return map[n];
+    // nom écrit autrement dans un nouveau tableau (« NOM (2) » devenu « NOM (1) »…) : on reprend le groupe d'un nom
+    // de même base qui n'existe plus dans le planning (s'il existe encore, c'est un homonyme : pas le même agent)
+    const base = C.splitName(n).base, names = planView().agents || {};
+    const hits = Object.keys(map).filter(k => C.splitName(k).base === base && !names[k]);
+    return hits.length === 1 ? map[hits[0]] : 'coa';
+  }
   function newestRoles(a, b) { if (!a) return b || null; if (!b) return a; return (a.at || '') >= (b.at || '') ? a : b; }
   // menus de noms : ordre alphabétique simple (les rôles ne regroupent que le tableau Équipe)
   // Nom affiché : le nom du tableau, ou celui choisi dans « Réorganiser les noms » (✏️), envoyé chiffré
@@ -1222,7 +1236,8 @@
   // Permutations possibles un jour travaillé, de la meilleure à la moins intéressante (C.swapOptions)
   const SWAP_SHOWN = 6;
   function swapHTML(plan, name, k, code, isMe) {
-    const r = C.swapOptions(plan, name, k, state.codes, { today: C.dateKey(todayDate()) });
+    const gmap = groupMap(), g = agentGroup(name, gmap);
+    const r = C.swapOptions(plan, name, k, state.codes, { today: C.dateKey(todayDate()), canSwap: n => agentGroup(n, gmap) === g });
     const n = r.options.length;
     if (isMe) state.swapCtx = { k, code, options: r.options };
     const fmt = key => utc(keyToDate(key)).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -1248,6 +1263,7 @@
       if (n > SWAP_SHOWN) html += `<button class="link swap-all" type="button">Voir les ${n - SWAP_SHOWN} autres</button>`;
     } else html += '<p class="muted">Aucune permutation qui respecte les règles ci-dessous.</p>';
     if (r.free.length) html += `<p class="muted">En repos ce jour-là, sans jour à rendre trouvé : ${r.free.map(f => nameWithPhone(f)).join(', ')}</p>`;
+    html += `<p class="hint">Entre ${esc(GROUPS[g])} seulement (groupes réglés par le responsable dans Équipe → Réorganiser les noms).</p>`;
     html += '<p class="hint">Classement : 11 h de repos ou plus d\'abord, puis même jour, jour rendu proche, même horaire. ' +
       'Semaine de plus de 48 h classée après. Jamais moins de 9 h de repos, plus de 6 jours ni plus de 3 nuits d\'affilée, ni plus de 3 jours par semaine pour un mi-temps (toi et ton collègue). Jour rendu : jusqu\'à un mois avant ou après.</p></details>';
     return html;
@@ -1836,7 +1852,7 @@
     const hlBtn = e.target.closest('.hl-btn');
     if (hlBtn) { state.cal.hl = state.cal.hl === hlBtn.dataset.hl ? '' : hlBtn.dataset.hl; renderCalendar(); return; }
     const id = e.target.id;
-    if (id === 'ttReorder') { state.reorder = true; state.reorderList = null; state.orderMsg = ''; renderCalendar(); return; }
+    if (id === 'ttReorder') { state.reorder = true; state.reorderList = null; state.groupDraft = null; state.orderMsg = ''; renderCalendar(); return; }
     if (e.target.closest('.ro-edit')) {
       const li = e.target.closest('li'), span = li.querySelector('.ro-name');
       if (!span) return;
@@ -1847,9 +1863,18 @@
       span.replaceWith(input); e.target.closest('.ro-edit').remove(); input.focus(); input.select();
       return;
     }
+    const gb = e.target.closest('.ro-group');
+    if (gb && !gb.disabled) {
+      const order = ['coa', 'roa', 'jour'], n = gb.dataset.group;
+      const next = order[(order.indexOf(state.groupDraft[n] || 'coa') + 1) % order.length];
+      state.groupDraft[n] = next;
+      gb.className = 'ro-group g-' + next; gb.textContent = GROUPS[next];
+      gb.setAttribute('aria-label', 'Groupe de ' + shown(n) + ' : ' + GROUPS[next]);
+      return;
+    }
     if (id === 'roDone') { saveOrder(state.reorderList.slice()); return; }
     if (id === 'roReset') { saveOrder(null); return; }
-    if (id === 'roCancel') { state.reorder = false; state.reorderList = null; renderCalendar(); return; }
+    if (id === 'roCancel') { state.reorder = false; state.reorderList = null; state.groupDraft = null; renderCalendar(); return; }
     const cell = e.target.closest('[data-key]');
     if (!cell) return;
     state.cal.selected = cell.dataset.key;
@@ -2241,14 +2266,17 @@
   }
   function renderReorder(names, me) {
     if (!state.reorderList) state.reorderList = teamOrder(names, me);
-    const list = state.reorderList;
+    const list = state.reorderList, admin = load('mh_admin') === '1';
+    if (!state.groupDraft) { const m = groupMap(); state.groupDraft = {}; list.forEach(n => { state.groupDraft[n] = agentGroup(n, m); }); }
     $('calTeam').innerHTML = '<p class="hint">Maintiens la poignée ☰ et fais glisser le nom à sa place. <svg class="ic" aria-hidden="true"><use href="#i-edit"/></svg> change le nom affiché ' +
       '(par exemple pour distinguer deux homonymes). Puis touche « Terminé ».</p>' +
+      (admin ? '<p class="hint">Groupe pour les permutations : touche la pastille COA / ROA / Journée pour la changer (ROA avec ROA, COA avec COA).</p>' : '') +
       '<ol class="reorder" id="roList">' + list.map(n =>
         `<li data-name="${esc(n)}"${n === me ? ' class="me"' : ''}>` +
         `<span class="ro-handle" role="button" aria-label="Déplacer ${esc(n)}">` +
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>' +
         `<span class="ro-name">${nameHTML(n)}</span>` +
+        `<button class="ro-group g-${state.groupDraft[n] || 'coa'}" type="button" data-group="${esc(n)}"${admin ? '' : ' disabled'} aria-label="Groupe de ${esc(shown(n))} : ${GROUPS[state.groupDraft[n] || 'coa']}">${GROUPS[state.groupDraft[n] || 'coa']}</button>` +
         `<button class="ro-edit link" type="button" aria-label="Renommer ${esc(shown(n))}"><svg class="ic" aria-hidden="true"><use href="#i-edit"/></svg></button></li>`).join('') +
       '</ol><div class="actions"><button id="roDone" class="primary" type="button">Terminé</button>' +
       '<button id="roReset" type="button">Par défaut</button><button id="roCancel" class="link" type="button">Annuler</button></div>';
@@ -2268,9 +2296,13 @@
   async function saveOrder(order) {
     const prev = loadRoles() || {};
     const alias = aliasDraft();
-    const updated = { np: order ? '' : prev.np || '', order: order || [], alias, at: new Date().toISOString() };
+    let group = Object.assign({}, prev.group || {});
+    if (state.groupDraft && load('mh_admin') === '1') {
+      Object.keys(state.groupDraft).forEach(n => { if (state.groupDraft[n] === 'coa') delete group[n]; else group[n] = state.groupDraft[n]; });
+    }
+    const updated = { np: order ? '' : prev.np || '', order: order || [], alias, group, at: new Date().toISOString() };
     saveRoles(updated);
-    state.reorder = false; state.reorderList = null;
+    state.reorder = false; state.reorderList = null; state.groupDraft = null;
     state.orderMsg = order ? '✓ Ordre enregistré.' : '✓ Ordre par défaut rétabli.';
     renderCalendar();
     if (!teamCode()) return;

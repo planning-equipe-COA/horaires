@@ -278,6 +278,12 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   `mh_roles.alias` { nom du tableau: nom affiché }, envoyé chiffré avec `roles` ; les clés du planning restent les
   noms du tableau (« NOM (2) ») ; vide, nom d'origine ou nom court automatique = retiré. Demandé pour distinguer
   deux homonymes. `loadRoles` est mis en mémoire (`rolesCache`, mis à jour par `saveRoles`).
+  **Groupes de permutation** (15 nov. 2026, demandé : « les ROA peuvent changer entre eux et les COA entre COA » ; deux agents
+  « en journée » à part) : pastille COA / ROA / Journée sur chaque nom de « Réorganiser les noms », modifiable **seulement
+  sur le téléphone du responsable** (`mh_admin`), lecture seule ailleurs ; `roles.group` { nom du tableau: 'roa' | 'jour' },
+  absent = COA, envoyé chiffré avec `roles` (jamais de vrais noms dans le code). `agentGroup` : nom exact, sinon nom de même
+  base disparu du planning (renommé), sinon COA. `swapOptions(..., { canSwap })` (core.js, testé) ne propose que le même
+  groupe (« Entre ROA seulement » sous les permutations).
   Menus de noms toujours alphabétiques (sur le nom affiché). Retirés à la demande de l'utilisateur : carte « Rôles des
   agents » (ROA/COA) puis « toucher un nom = fin de liste » (`mh_roles.np` encore lu par défaut).
 - **Numéros de téléphone (volontaires)** : carte équipe → « 📞 Mon numéro » (pour `mh_name`), Partager /
