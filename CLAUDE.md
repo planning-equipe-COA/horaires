@@ -233,7 +233,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   dans le tableau de bord, KV lié sous `SUBS`, aucun secret : clés VAPID créées au 1er appel et gardées dans KV). Accès =
   SHA-256 de « planning-coa-notif| » + code d'équipe (`notifKey`), 1re clé reçue retenue (entrée KV `cle` ; code d'équipe
   changé → supprimer `cle` dans KV). Routes : GET /vapid, POST /subscribe, /unsubscribe, /notify (message chiffré aes128gcm,
-  abonnés 404/410 supprimés, `except` = l'envoyeur). Appli : `NOTIF_URL` (vide = carte cachée), carte Réglages
+  abonnés 404/410 supprimés, `except` = l'envoyeur). Appli : `NOTIF_URL` = https://planning-coa-notif.k8ggjsddnp.workers.dev (branché le 15 nov. 2026 ; vide = carte cachée), carte Réglages
   « Notifications » (`#notifCard`, après Code d'équipe ; iPhone : seulement depuis l'icône d'écran d'accueil, iOS 16.4+),
   `mh_push` (date du dernier abonnement, redonné au relais chaque semaine), `notifyTeam` après envoi, annulation,
   restauration — message **sans nom**. sw.js : `push` → notification, clic → `./?notif=1` (ou message `check-team`) →

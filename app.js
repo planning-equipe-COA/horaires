@@ -853,7 +853,7 @@
   // ── Notifications (relais Cloudflare notif/worker.js) ──────────────────────
   // Le relais ne connaît ni les noms ni le planning : il garde l'adresse technique des téléphones abonnés et
   // relaie un message générique quand un planning est envoyé. Accès : SHA-256 du code d'équipe.
-  const NOTIF_URL = '';
+  const NOTIF_URL = 'https://planning-coa-notif.k8ggjsddnp.workers.dev';
   const STORAGE_PUSH_KEY = 'mh_push';
   const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && location.protocol !== 'file:';
   async function notifKey() {
