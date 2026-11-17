@@ -1424,7 +1424,7 @@
       const unit = html.repeat(n);
       track.innerHTML = unit + unit;
       track.classList.add('run');
-      track.style.animationDuration = Math.max(8, Math.round(track.scrollWidth / 2 / 45)) + 's'; // ~45 px/s
+      track.style.animationDuration = Math.max(14, Math.round(track.scrollWidth / 2 / 22)) + 's'; // ~22 px/s (45 : « trop vite », signalé)
     });
   }
 

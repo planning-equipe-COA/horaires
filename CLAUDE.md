@@ -85,7 +85,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   voulue par l'utilisateur).
 - **Alertes d'équipe** (nov. 2026, en haut de l'onglet Planning, `#teamWarn`, `renderTeamAlerts`) — **bandeau d'une seule
   ligne** (demandé : l'ancien bloc prenait trop de place), texte court qui défile s'il dépasse (`renderTicker`, deux copies +
-  `translateX(-50%)`, ~45 px/s, pause au toucher, immobile avec « réduire les animations »). Clé : visible pour le responsable
+  `translateX(-50%)`, ~22 px/s (45 jugé trop vite), pause au toucher, immobile avec « réduire les animations »). Clé : visible pour le responsable
   dès 14 jours, pour les autres seulement une fois expirée ; toucher (responsable) ouvre directement le formulaire de
   renouvellement (`#teamSetup`) :
   - clé de publication qui expire dans 14 jours ou moins (ou expirée). GitHub n'expose PAS au navigateur
