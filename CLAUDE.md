@@ -362,6 +362,11 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   visible dans cet onglet, ouvre directement `printLeave`) → une page A4 portrait : compteur, tableau des périodes (jours,
   remarques : au planning, tombée de nuit incluse, déjà 3 COA), l'année affichée en 12 petits mois (posé vert plein, Tn
   pointillé, congé au planning vert clair, repos hachuré, férié souligné rouge).
+  **CA ou RC** (demandé : « on peut poser des RC après des CA ») : boutons « Je pose : CA / RC » au-dessus du mois (`#leaveMode`,
+  `mh_leave_mode`) ; `mh_leave.days[k]` = 1 (CA) ou 'RC' ; toucher / glisser / période posent le type choisi (toucher un CA en
+  mode RC le change en RC). RC = bleu canard (#1f8a9e), petite mention « RC » sur la case, **non décomptées** des 26 jours
+  (`leaveCounts`), comptées à part (« + N RC posées »), dans les périodes (« 2 jours CA + 3 RC »), la demande et l'impression.
+  Les propositions posent des CA.
   Hypothèses à confirmer : année civile, repos non décomptés.
 - Écarté par l'utilisateur : « Partager → Planning COA » sur Android.
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.

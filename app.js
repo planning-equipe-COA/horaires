@@ -2682,7 +2682,13 @@
     return set;
   }
   // un repos du planning (R, RF… mais pas la tombée de nuit) posé par erreur n'est pas décompté
-  function leaveCounts(k, days) { const c = days[k]; return !(c && c !== 'TN' && kindOf(c) === 'repos'); }
+  function leaveCounts(k, days) { const c = days[k]; return leave.days[k] !== 'RC' && !(c && c !== 'TN' && kindOf(c) === 'repos'); }
+  // CA ou RC (demandé : « on peut poser des RC après des CA ») : leave.days[k] = 1 (CA) ou 'RC' ; les RC ne sont pas
+  // décomptées des 26 jours. Le bouton « Je pose : CA / RC » choisit ce que posent le toucher, le glisser et les périodes.
+  const isRC = k => leave.days[k] === 'RC';
+  state.leave.mode = load('mh_leave_mode') === 'RC' ? 'RC' : 'CA';
+  const modeVal = () => (state.leave.mode === 'RC' ? 'RC' : 1);
+  const rcCount = (keys) => keys.filter(isRC).length;
   // COA (hors moi) déjà en congé ce jour-là d'après le planning
   function coaOff(k, me, gmap) {
     const agents = planView().agents || {};
@@ -2725,6 +2731,11 @@
     animateCount($('leaveUsed'), used);
     $('leaveLeft').textContent = left >= 0 ? `${left} jour${left > 1 ? 's' : ''} restant${left > 1 ? 's' : ''}` : `${-left} jour${-left > 1 ? 's' : ''} de trop`;
     $('leaveCounter').classList.toggle('over', left < 0);
+    const rcs = rcCount(Object.keys(leave.days).filter(k => k.slice(0, 4) === String(y)));
+    $('leaveRc').hidden = !rcs;
+    $('leaveRc').textContent = `+ ${rcs} RC posée${rcs > 1 ? 's' : ''} (non décomptée${rcs > 1 ? 's' : ''} des ${LEAVE_MAX} jours)`;
+    $('leaveMode').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === state.leave.mode)));
+    $('leaveCard').dataset.mode = state.leave.mode;
     $('leaveBar').style.width = Math.min(100, used / LEAVE_MAX * 100) + '%';
     // grille du mois
     $('leaveTitle').textContent = utc({ y, m, d: 1 }).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
@@ -2740,13 +2751,14 @@
         if (k < todayKey) cls.push('past');
         if (C.holidayName(k)) cls.push('holiday');
         if (kind) cls.push('lv-on', 'lv-' + kind);
-        if (kind && !leaveCounts(k, days)) cls.push('lv-free');
+        if (isRC(k)) cls.push('lv-rc');
+        else if (kind && !leaveCounts(k, days)) cls.push('lv-free');
         if (off + (kind ? 1 : 0) > LEAVE_COA_MAX || (!kind && off >= LEAVE_COA_MAX)) cls.push('lv-full');
         if (k === state.leave.pop) cls.push('lv-pop');
-        const label = `${d.d}${code ? ' : ' + codeLabel(code) : ''}${kind === 'pose' ? ', congé posé' : kind === 'tn' ? ', tombée de nuit incluse' : kind === 'plan' ? ', congé au planning' : ''}${off ? `, ${off} COA en congé` : ''}`;
+        const label = `${d.d}${code ? ' : ' + codeLabel(code) : ''}${isRC(k) ? ', RC posée' : kind === 'pose' ? ', congé posé' : kind === 'tn' ? ', tombée de nuit incluse' : kind === 'plan' ? ', congé au planning' : ''}${off ? `, ${off} COA en congé` : ''}`;
         html += `<button class="${cls.join(' ')}" data-key="${k}" aria-pressed="${kind === 'pose'}" aria-label="${esc(label)}">` +
           `<span class="n">${d.d}</span>${code ? chip(code) : '<span class="chip lv-blank">·</span>'}` +
-          (off ? `<span class="lv-n" aria-hidden="true">${off}</span>` : '') + '</button>';
+          (off ? `<span class="lv-n" aria-hidden="true">${off}</span>` : '') + (isRC(k) ? '<span class="lv-rcb" aria-hidden="true">RC</span>' : '') + '</button>';
       }
     }
     $('leaveGrid').innerHTML = html;
@@ -2764,7 +2776,9 @@
       const onlyPlan = p.keys.every(k => set.get(k) === 'plan');
       const full = isCoa && p.keys.filter(k => set.get(k) === 'pose' && coaOff(k, me, gmap) + 1 > LEAVE_COA_MAX);
       const range = p.from === p.to ? fmtLeave(p.from, { weekday: 'long' }) : `du ${fmtLeave(p.from)} au ${fmtLeave(p.to)}`;
-      return `<li class="${onlyPlan ? 'lv-planned' : ''}"><div><strong>${esc(range)}</strong> · ${n} jour${n > 1 ? 's' : ''}` +
+      const rc = rcCount(p.keys);
+      return `<li class="${onlyPlan ? 'lv-planned' : ''}"><div><strong>${esc(range)}</strong> · ${n} jour${n > 1 ? 's' : ''}${rc ? ' CA' : ''}` +
+        (rc ? ` <span class="lv-tag rc">+ ${rc} RC</span>` : '') +
         (onlyPlan ? ' <span class="lv-tag ok">au planning</span>' : '') +
         (tn ? ` <span class="lv-tag">tombée de nuit incluse</span>` : '') +
         (full && full.length ? `<br><span class="lv-warn">Déjà ${LEAVE_COA_MAX} COA en congé : ${full.map(k => esc(fmtLeave(k, { weekday: undefined }))).join(', ')}</span>` : '') +
@@ -2793,7 +2807,8 @@
     const y = state.leave.y;
     const used = [...set.keys()].filter(k => k.slice(0, 4) === String(y) && leaveCounts(k, days)).length;
     if (added && used > LEAVE_MAX) { warn = true; lines.push(`Attention : ${used} jours posés en ${y}, plus que les ${LEAVE_MAX} jours.`); }
-    if (added && changedKeys.length === 1 && !leaveCounts(changedKeys[0], days)) lines.push('Jour de repos au planning : il n\'est pas décompté.');
+    if (added && changedKeys.some(isRC)) lines.push('RC posée : elle n\'est pas décomptée des 26 jours de congés.');
+    else if (added && changedKeys.length === 1 && !leaveCounts(changedKeys[0], days)) lines.push('Jour de repos au planning : il n\'est pas décompté.');
     state.leave.msg = lines.length ? { html: lines.join('<br>'), warn } : null;
   }
   function leaveToggle(k) {
@@ -2801,8 +2816,8 @@
     if (kind === 'tn') { state.leave.msg = { html: 'Cette tombée de nuit suit tes congés : elle est incluse d\'office. Retire le dernier jour de congé pour l\'enlever.' }; renderLeave(); return; }
     if (kind === 'plan') { state.leave.msg = { html: 'Congé déjà inscrit au planning : il est compté dans tes 26 jours.' }; renderLeave(); return; }
     state.leave.setBefore = set;
-    const add = !leave.days[k];
-    if (add) leave.days[k] = 1; else delete leave.days[k];
+    const add = leave.days[k] !== modeVal();
+    if (add) leave.days[k] = modeVal(); else delete leave.days[k];
     saveLeave();
     state.leave.pop = add ? k : '';
     leaveAfter([k], add);
@@ -2816,8 +2831,9 @@
     state.leave.setBefore = leaveSet();
     const days = leaveMine();
     // en posant une période, les repos du planning (R, RF…) ne sont pas posés : ils restent repos
-    const target = add ? keys.filter(k => leaveCounts(k, days) && kindOf(days[k]) !== 'conge') : keys;
-    target.forEach(k => { if (add) leave.days[k] = 1; else delete leave.days[k]; });
+    const isRest = k => days[k] && days[k] !== 'TN' && kindOf(days[k]) === 'repos';
+    const target = add ? keys.filter(k => !isRest(k) && kindOf(days[k]) !== 'conge') : keys;
+    target.forEach(k => { if (add) leave.days[k] = modeVal(); else delete leave.days[k]; });
     saveLeave();
     const d = keyToDate(from); state.leave.y = d.y; state.leave.m = d.m;
     leaveAfter(target, add);
@@ -2831,10 +2847,17 @@
     return `Demande de congés${me ? ' – ' + shown(me) : ''}\n` + periods.map(p => {
       const n = p.keys.filter(k => leaveCounts(k, days)).length;
       const r = p.from === p.to ? 'le ' + fmtLeave(p.from, { weekday: 'long', year: 'numeric' }) : `du ${fmtLeave(p.from, { weekday: 'long' })} au ${fmtLeave(p.to, { weekday: 'long', year: 'numeric' })}`;
-      return `• ${r} (${n} jour${n > 1 ? 's' : ''}${p.keys.some(k => set.get(k) === 'tn') ? ', tombée de nuit incluse' : ''})`;
-    }).join('\n') + `\nTotal ${y} : ${total} jour${total > 1 ? 's' : ''} sur ${LEAVE_MAX}.`;
+      const rc = rcCount(p.keys);
+      return `• ${r} (${n ? `${n} jour${n > 1 ? 's' : ''} de CA` : ''}${n && rc ? ' + ' : ''}${rc ? `${rc} RC` : ''}${p.keys.some(k => set.get(k) === 'tn') ? ', tombée de nuit incluse' : ''})`;
+    }).join('\n') + `\nTotal ${y} : ${total} jour${total > 1 ? 's' : ''} de CA sur ${LEAVE_MAX}.`;
   }
   $('leaveGrid').addEventListener('click', e => { const b = e.target.closest('.lv-cell[data-key]'); if (b) leaveToggle(b.dataset.key); });
+  $('leaveMode').addEventListener('click', e => {
+    const b = e.target.closest('button[data-mode]'); if (!b) return;
+    state.leave.mode = b.dataset.mode; store('mh_leave_mode', b.dataset.mode);
+    state.leave.msg = { html: b.dataset.mode === 'RC' ? 'Tu poses maintenant des <strong>RC</strong> (non décomptées des 26 jours).' : 'Tu poses maintenant des <strong>CA</strong>.' };
+    renderLeave();
+  });
   $('leavePrev').addEventListener('click', () => leaveMove(-1));
   $('leaveNext').addEventListener('click', () => leaveMove(1));
   $('leaveToday').addEventListener('click', () => { state.leave.y = today.y; state.leave.m = today.m; state.leave.msg = null; renderLeave(); });
@@ -2882,7 +2905,7 @@
       timer = setTimeout(() => {
         timer = null;
         const kind = leaveSet().get(start.key);
-        drag = { from: start.key, to: start.key, add: kind !== 'pose' };
+        drag = { from: start.key, to: start.key, add: kind !== 'pose' || leave.days[start.key] !== modeVal() };
         grid.classList.add('lv-dragging');
         if (navigator.vibrate) navigator.vibrate(15);
         paint();
@@ -2994,6 +3017,7 @@
       const n = p.keys.filter(k => leaveCounts(k, days)).length;
       const notes = [];
       if (p.keys.every(k => set.get(k) === 'plan')) notes.push('au planning');
+      if (rcCount(p.keys)) notes.push(`dont ${rcCount(p.keys)} RC (non décomptée${rcCount(p.keys) > 1 ? 's' : ''})`);
       if (p.keys.some(k => set.get(k) === 'tn')) notes.push('tombée de nuit incluse');
       const full = isCoa ? p.keys.filter(k => set.get(k) === 'pose' && coaOff(k, me, gmap) + 1 > LEAVE_COA_MAX) : [];
       if (full.length) notes.push(`déjà ${LEAVE_COA_MAX} COA en congé le ${full.map(k => fmtLeave(k, { weekday: undefined })).join(', ')}`);
@@ -3009,7 +3033,8 @@
           if (!d) return '<td></td>';
           const k = C.dateKey(d), kind = set.get(k), cls = [];
           if (kind) cls.push('pl-' + kind);
-          if (kind && !leaveCounts(k, days)) cls.push('pl-free');
+          if (isRC(k)) cls.push('pl-rc');
+          else if (kind && !leaveCounts(k, days)) cls.push('pl-free');
           if (C.holidayName(k)) cls.push('pl-hol');
           return `<td class="${cls.join(' ')}">${d.d}</td>`;
         }).join('') + '</tr>';
@@ -3018,11 +3043,12 @@
     }
     $('printArea').innerHTML = `<section class="pr-page pr-leave"><header class="pr-head"><h1>Mes congés ${y}</h1>` +
       `<p>${me ? esc(nameText(me)) : ''}</p></header>` +
-      `<p class="pl-count"><strong>${used}</strong> / ${LEAVE_MAX} jours posés · ${used <= LEAVE_MAX ? `${LEAVE_MAX - used} restant${LEAVE_MAX - used > 1 ? 's' : ''}` : `${used - LEAVE_MAX} de trop`}</p>` +
+      `<p class="pl-count"><strong>${used}</strong> / ${LEAVE_MAX} jours de CA posés · ${used <= LEAVE_MAX ? `${LEAVE_MAX - used} restant${LEAVE_MAX - used > 1 ? 's' : ''}` : `${used - LEAVE_MAX} de trop`}` +
+      (rcCount(Object.keys(leave.days).filter(k => k.slice(0, 4) === String(y))) ? ` · + ${rcCount(Object.keys(leave.days).filter(k => k.slice(0, 4) === String(y)))} RC` : '') + '</p>' +
       (rows ? `<table class="pl-list"><thead><tr><th>Période</th><th>Jours</th><th>Remarques</th></tr></thead><tbody>${rows}</tbody></table>` : '<p>Aucun congé posé.</p>') +
       `<div class="pl-year">${months}</div>` +
       '<p class="pr-legend"><span><i class="pl-key pl-pose"></i> posé</span><span><i class="pl-key pl-tn"></i> tombée de nuit incluse</span>' +
-      '<span><i class="pl-key pl-plan"></i> congé au planning</span><span><i class="pl-key pl-pose pl-free"></i> repos (non décompté)</span><span class="pl-holk">12</span> férié</p>' +
+      '<span><i class="pl-key pl-rc"></i> RC</span><span><i class="pl-key pl-plan"></i> congé au planning</span><span><i class="pl-key pl-pose pl-free"></i> repos (non décompté)</span><span class="pl-holk">12</span> férié</p>' +
       `<footer class="pr-foot">Prévisionnel gardé sur le téléphone (non envoyé à l'équipe) · ${esc(printedOn())}</footer></section>`;
     document.body.classList.add('printing');
     setTimeout(() => window.print(), 60);
