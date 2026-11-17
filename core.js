@@ -46,6 +46,30 @@
     rose: { emoji: '🩷', css: 'hotpink' }, // pas de rond rose dans les emoji : cœur rose (agenda du téléphone)
   };
 
+  // Effectif prévu par vacation et par groupe (demandé, nov. 2026) : COA 3 matins, 2 soirs, 1 nuit ; ROA 1 de chaque.
+  // Au-delà = alerte (agent en trop sur la vacation). Le groupe « jour » n'est pas compté.
+  const STAFF_LIMITS = { coa: { M: 3, S: 2, N: 1 }, roa: { M: 1, S: 1, N: 1 } };
+  // [{ key, group, code, count, max }] pour les jours demandés
+  function staffAlerts(plan, groupOf, keys, limits) {
+    limits = limits || STAFF_LIMITS;
+    const agents = (plan && plan.agents) || {}, out = [];
+    for (const k of keys) {
+      const count = {};
+      for (const n of Object.keys(agents)) {
+        const code = normCode(agents[n][k] || '');
+        const g = groupOf ? groupOf(n) : 'coa';
+        if (!limits[g] || limits[g][code] == null) continue;
+        const id = g + '|' + code;
+        count[id] = (count[id] || 0) + 1;
+      }
+      for (const id of Object.keys(count)) {
+        const [g, code] = id.split('|'), max = limits[g][code];
+        if (count[id] > max) out.push({ key: k, group: g, code, count: count[id], max });
+      }
+    }
+    return out;
+  }
+
   function eventTitle(def) {
     const col = COLORS[def.color];
     return (col ? col.emoji + ' ' : '') + (def.label || def.code);
@@ -950,5 +974,5 @@
     return lines.join('\r\n') + '\r\n';
   }
 
-  return { DEFAULT_CODES, COLORS, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, codeMinutes, isoWeek, monthHours, monthSummary, frenchHolidays, holidayName, teamOfDay, swapOptions, planStats, contractOf, splitName, parseMatrix, combineResults, bestSheet, GROUPS, groupOf, orderAgents, unmatchedRules, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
+  return { DEFAULT_CODES, COLORS, STAFF_LIMITS, staffAlerts, eventTitle, snapshotOf, diffSnapshot, mergeSnapshot, mergePlan, monthGrid, sameShift, dayKind, codeMinutes, isoWeek, monthHours, monthSummary, frenchHolidays, holidayName, teamOfDay, swapOptions, planStats, contractOf, splitName, parseMatrix, combineResults, bestSheet, GROUPS, groupOf, orderAgents, unmatchedRules, sheetToMatrix, buildEvents, buildICS, normCode, dateKey, slug };
 });

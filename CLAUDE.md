@@ -290,6 +290,11 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   absent = COA, envoyé chiffré avec `roles` (jamais de vrais noms dans le code). `agentGroup` : nom exact, sinon nom de même
   base disparu du planning (renommé), sinon COA. `swapOptions(..., { canSwap })` (core.js, testé) ne propose que le même
   groupe (« Entre ROA seulement » sous les permutations).
+  **Effectif dépassé** (17 nov. 2026, demandé) : `C.staffAlerts(plan, groupOf, keys)` (core.js, testé), limites `STAFF_LIMITS`
+  COA 3 matins / 2 soirs / 1 nuit, ROA 1 / 1 / 1, groupe « jour » ignoré ; alerte seulement au-delà (pas en dessous : non
+  demandé). Affichée : ligne du bandeau `#teamWarn` (31 prochains jours, toucher → onglet Équipe + détail du 1er jour),
+  colonne de date soulignée en rouge dans la vue Équipe (`th.staff`, détail au survol), encadré rouge dans le détail du jour
+  (`.day-staff`). Dépend des groupes réglés par le responsable (sinon les ROA comptent comme COA).
   Menus de noms toujours alphabétiques (sur le nom affiché). Retirés à la demande de l'utilisateur : carte « Rôles des
   agents » (ROA/COA) puis « toucher un nom = fin de liste » (`mh_roles.np` encore lu par défaut).
 - **Numéros de téléphone (volontaires)** : carte équipe → « 📞 Mon numéro » (pour `mh_name`), Partager /

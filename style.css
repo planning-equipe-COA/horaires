@@ -720,3 +720,8 @@ html[data-text="xl"] body { zoom: 1.25; }
 .ro-unlock-row { display: flex; gap: 8px; }
 .ro-unlock-row input { flex: 1; min-width: 0; }
 .ro-unlock-row button { flex: none; width: auto; }
+
+/* ── Effectif dépassé (COA 3/2/1, ROA 1/1/1) ── */
+.team-table th.staff { box-shadow: inset 0 -3px 0 #e5484d; color: #e5484d; }
+.day-staff { margin: 4px 0 8px; padding: 6px 10px; border-radius: 8px; font-size: .9rem; background: color-mix(in srgb, #e5484d 14%, transparent); color: inherit; }
+.day-staff .ic { color: #e5484d; width: 15px; height: 15px; vertical-align: -2px; }

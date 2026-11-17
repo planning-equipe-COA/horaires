@@ -482,3 +482,16 @@ test('swapOptions : canSwap limite aux collègues du même groupe (ROA / COA)', 
   const same = C.swapOptions(plan, 'A', '20270104', codes, { canSwap: n => n !== 'Z' });
   assert.deepEqual(same.options.map(o => o.name), ['B']);
 });
+
+test('staffAlerts : COA 3 M / 2 S / 1 N, ROA 1 de chaque, « jour » ignoré', () => {
+  const k = '20261118';
+  const agents = {};
+  ['a', 'b', 'c', 'd'].forEach(n => { agents[n] = { [k]: 'M' }; });       // 4 matins COA (3 prévus)
+  ['e', 'f'].forEach(n => { agents[n] = { [k]: 'S' }; });                  // 2 soirs COA : ok
+  ['g', 'h'].forEach(n => { agents[n] = { [k]: 'N' }; });                  // 2 nuits COA (1 prévue)
+  agents.r1 = { [k]: 'M' }; agents.r2 = { [k]: 'M' };                       // 2 matins ROA (1 prévu)
+  agents.j1 = { [k]: 'M' };                                                 // journée : ignoré
+  const grp = n => n.startsWith('r') ? 'roa' : n.startsWith('j') ? 'jour' : 'coa';
+  const res = C.staffAlerts({ agents }, grp, [k]).map(a => `${a.group} ${a.code} ${a.count}/${a.max}`).sort();
+  assert.deepEqual(res, ['coa M 4/3', 'coa N 2/1', 'roa M 2/1']);
+});

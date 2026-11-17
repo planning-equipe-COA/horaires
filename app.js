@@ -322,6 +322,17 @@
     const hits = Object.keys(map).filter(k => C.splitName(k).base === base && !names[k]);
     return hits.length === 1 ? map[hits[0]] : 'coa';
   }
+  // Effectif dépassé (COA 3 M / 2 S / 1 N, ROA 1 / 1 / 1) : agents en trop sur une vacation
+  const STAFF_WORD = { M: ['matin', 'matins'], S: ['soir', 'soirs'], N: ['nuit', 'nuits'] };
+  function staffAlertsFor(keys) {
+    const gmap = groupMap();
+    return C.staffAlerts(planView(), n => agentGroup(n, gmap), keys);
+  }
+  function staffText(a, withDay) {
+    const w = STAFF_WORD[a.code] || [a.code, a.code];
+    const day = withDay ? utc(keyToDate(a.key)).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }) + ' : ' : '';
+    return `${day}${a.count} ${w[1]} ${GROUPS[a.group]} (${a.max} prévu${a.max > 1 ? 's' : ''})`;
+  }
   function newestRoles(a, b) { if (!a) return b || null; if (!b) return a; return (a.at || '') >= (b.at || '') ? a : b; }
   // menus de noms : ordre alphabétique simple (les rôles ne regroupent que le tableau Équipe)
   // Nom affiché : le nom du tableau, ou celui choisi dans « Réorganiser les noms » (✏️), envoyé chiffré
@@ -579,8 +590,20 @@
     const ok = +load(STORAGE_SYNC_OK_KEY) || 0;
     const stale = joined && ok && Date.now() - ok > STALE_DAYS * 864e5;
     if (stale) lines.push({ ic: 'signal', text: `Planning pas vérifié depuis ${agoText(ok).replace('il y a ', '')} (pas de connexion ?). Touche ici pour vérifier.` });
+    // effectif dépassé dans les 31 prochains jours (seulement si un planning est sur le téléphone)
+    let staffKey = '';
+    if (state.plan) {
+      const keys = [], t = utc(todayDate());
+      for (let i = 0; i < 31; i++) { const d = new Date(t); d.setUTCDate(t.getUTCDate() + i); keys.push(C.dateKey({ y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate() })); }
+      const al = staffAlertsFor(keys);
+      if (al.length) {
+        staffKey = al[0].key;
+        lines.push({ ic: 'users', text: 'Effectif dépassé : ' + al.slice(0, 4).map(a => staffText(a, true)).join(' · ') + (al.length > 4 ? ` · et ${al.length - 4} autre${al.length > 5 ? 's' : ''}` : '') + '. Touche ici pour voir.' });
+      }
+    }
     $('teamWarn').hidden = !lines.length;
-    $('teamWarn').dataset.act = stale ? 'sync' : 'key';
+    $('teamWarn').dataset.act = stale ? 'sync' : lines.some(l => l.ic === 'alert' || l.ic === 'key') ? 'key' : staffKey ? 'staff' : 'key';
+    $('teamWarn').dataset.key = staffKey;
     $('teamWarn').setAttribute('aria-label', lines.map(l => l.text).join(' '));
     renderTicker(lines);
     return ok;
@@ -589,6 +612,9 @@
   // Bandeau d'une ligne : icône fixe + texte qui défile s'il est trop long (immobile si « réduire les animations »)
   function renderTicker(lines) {
     const box = $('teamWarn');
+    const sig = lines.map(l => l.text).join('|');
+    if (box.dataset.sig === sig && box.innerHTML) return; // inchangé : on ne relance pas le défilement
+    box.dataset.sig = sig;
     if (!lines.length) { box.innerHTML = ''; return; }
     const text = lines.map(l => `<span class="tk-item"><svg class="ic" aria-hidden="true"><use href="#i-${l.ic}"/></svg> ${esc(l.text)}</span>`).join('');
     box.innerHTML = `<div class="tk-view"><div class="tk-track">${text}</div></div>`;
@@ -989,6 +1015,7 @@
   const EMPTY_PLAN = { agents: {}, changes: {}, changesSeen: true, at: 'vide' };
   function planView() { return state.plan || EMPTY_PLAN; }
   function renderCalendar() {
+    try { if (state.plan) renderTeamAlerts(); } catch (e) { /* alertes : jamais bloquant */ }
     $('calPrint').hidden = !(state.plan && Object.keys(state.plan.agents || {}).length); // Imprimer / PDF
     const plan = planView();
     const names = orderNames(Object.keys(plan.agents));
@@ -1212,6 +1239,8 @@
       html += `<div class="cal-day-head"><strong>${esc(title)}</strong>` +
         (code ? ` ${chip(code)} <span>${esc(codeLabel(code))}</span>` : ' <span class="muted">pas de planning</span>') + '</div>';
     }
+    const over = staffAlertsFor([k]);
+    if (over.length) html += `<p class="day-staff"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> Effectif dépassé : ${esc(over.map(a => staffText(a)).join(', '))}</p>`;
     const holiday = C.holidayName(k);
     if (holiday) html += `<p class="day-holiday"><svg class="ic" aria-hidden="true"><use href="#i-flag"/></svg> Férié : ${esc(holiday)}</p>`;
     const remark = ((plan.remarks || {})[name] || {})[k];
@@ -1540,10 +1569,12 @@
     const width = `style="width:${(8.6 + dates.length * 2.3).toFixed(1)}em"`;
     const cols = '<colgroup><col style="width:8.6em">' + dates.map(() => '<col style="width:2.3em">').join('') + '</colgroup>';
     let head = `<table class="team-table" ${width}>${cols}<thead><tr><th class="tt-name"></th>`;
+    const staff = {};
+    staffAlertsFor(keys).forEach(a => { (staff[a.key] = staff[a.key] || []).push(staffText(a)); });
     for (const d of dates) {
       const k = C.dateKey(d), wd = utc(d).getUTCDay();
-      const cls = [wd === 0 || wd === 6 ? 'we' : '', k === todayKey ? 'today' : '', k === state.cal.selected ? 'sel' : '', C.holidayName(k) ? 'hol' : ''].filter(Boolean).join(' ');
-      head += `<th class="${cls}" data-key="${k}"><span>${WEEKDAYS[(wd + 6) % 7].slice(0, 1).toUpperCase()}</span>${d.d}</th>`;
+      const cls = [wd === 0 || wd === 6 ? 'we' : '', k === todayKey ? 'today' : '', k === state.cal.selected ? 'sel' : '', C.holidayName(k) ? 'hol' : '', staff[k] ? 'staff' : ''].filter(Boolean).join(' ');
+      head += `<th class="${cls}" data-key="${k}"${staff[k] ? ` title="Effectif dépassé : ${esc(staff[k].join(', '))}"` : ''}><span>${WEEKDAYS[(wd + 6) % 7].slice(0, 1).toUpperCase()}</span>${d.d}</th>`;
     }
     head += '</tr></thead></table>';
     let html = `<table class="team-table${hl ? ' hl-on' : ''}" ${width}>${cols}<tbody>`;
@@ -2115,6 +2146,13 @@
   });
   // alertes en haut du planning : vérifier maintenant, ou aller voir la clé
   const teamWarnGo = async () => {
+    if ($('teamWarn').dataset.act === 'staff' && $('teamWarn').dataset.key) { // premier jour en surnombre, onglet Équipe
+      const k = $('teamWarn').dataset.key, d = keyToDate(k);
+      state.cal.y = d.y; state.cal.m = d.m; state.cal.selected = k;
+      setTab('equipe');
+      openDay(k);
+      return;
+    }
     if ($('teamWarn').dataset.act === 'sync') {
       renderTicker([{ ic: 'signal', text: 'Vérification…' }]);
       lastSync = 0;
