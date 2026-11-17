@@ -1254,8 +1254,17 @@
     if (over.length) html += `<p class="day-staff"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> Effectif à vérifier : ${esc(over.map(a => staffText(a)).join(', '))}</p>`;
     const holiday = C.holidayName(k);
     if (holiday) html += `<p class="day-holiday"><svg class="ic" aria-hidden="true"><use href="#i-flag"/></svg> Férié : ${esc(holiday)}</p>`;
-    const remark = ((plan.remarks || {})[name] || {})[k];
-    if (remark) html += `<p class="day-remark"><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg> <span class="muted">Commentaire sur le planning :</span> ${esc(remark)}</p>`;
+    if (teamMode) {
+      // onglet Équipe : les commentaires de TOUS les agents ce jour-là (les bulles du tableau ; pas de survol sur téléphone)
+      const rem = plan.remarks || {}, me = load(STORAGE_NAME_KEY);
+      const list = Object.keys(rem).filter(n => rem[n] && rem[n][k])
+        .sort((a, b) => (b === me) - (a === me) || nameText(a).localeCompare(nameText(b), 'fr'));
+      if (list.length) html += `<div class="day-remarks"><p class="day-sub"><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg> Commentaire${list.length > 1 ? 's' : ''} sur le planning</p>` +
+        list.map(n => `<p class="day-remark"><strong>${nameHTML(n)}</strong>${(plan.agents[n] || {})[k] ? ' ' + chip(plan.agents[n][k]) : ''} — ${esc(rem[n][k])}</p>`).join('') + '</div>';
+    } else {
+      const remark = ((plan.remarks || {})[name] || {})[k];
+      if (remark) html += `<p class="day-remark"><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg> <span class="muted">Commentaire sur le planning :</span> ${esc(remark)}</p>`;
+    }
     const ch = ((plan.changes || {})[name] || []).find(c => c.key === k);
     if (ch && !plan.changesSeen) html += `<p class="was">Avant le nouveau planning : ${esc(codeTitle(ch.before))}</p>`;
 

@@ -220,7 +220,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   Commentaires de cases Excel (`cell.c` → `matrix.notes` → `entry.note`) gardés dans
   `plan.remarks` { NOM: { AAAAMMJJ: texte } } (fusionnés comme les codes, publiés avec le planning
   d'équipe), signalés partout : message après import (« 💬 N commentaires lus »), 💬 sur la case
-  (Mois, Équipe), texte sous la ligne (Liste) et dans « Aujourd'hui / Demain », détail du jour.
+  (Mois, Équipe), texte sous la ligne (Liste) et dans « Aujourd'hui / Demain », détail du jour. Onglet Équipe : le détail du jour
+  liste les commentaires de **tous** les agents ce jour-là (`.day-remarks` ; signalé : les bulles ne montraient rien au toucher).
   Accueil au premier lancement (`mh_welcome`, `mh_name_ok`) : récupérer le planning (champ code
   d'équipe + « 📋 Coller » + « Rejoindre », ou import), puis choisir son nom ; jamais montré à qui
   avait déjà planning + nom.
