@@ -777,3 +777,41 @@ html[data-text="xl"] body { zoom: 1.25; }
 .lv-del { border: 0; background: none; color: var(--muted); padding: 6px; }
 .leave-share { margin-top: 12px; width: 100%; }
 @media (prefers-reduced-motion: reduce) { .lv-pop, .leave-msg, .leave-list li { animation: none; } .lc-bar { transition: none; } }
+.leave-grid { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.leave-grid .lv-cell { -webkit-touch-callout: none; }
+.leave-grid.lv-dragging .lv-cell.lv-drag { background: color-mix(in srgb, #2e8b47 32%, var(--card)); box-shadow: inset 0 0 0 2px #2e8b47; transform: scale(.94); transition: transform .12s, background .12s; }
+.leave-grid.lv-dragging-del .lv-cell.lv-drag { background: color-mix(in srgb, var(--error) 18%, var(--card)); box-shadow: inset 0 0 0 2px var(--error); }
+.leave-tip { margin: 6px 0 0; font-size: .78rem; }
+.leave-sug summary { display: flex; align-items: center; gap: 6px; }
+.leave-sug summary .ic { color: var(--accent); }
+.leave-sug[open] summary .ic { animation: sugSpin 1.2s ease-out; }
+@keyframes sugSpin { 0% { transform: rotate(0) scale(.6); } 60% { transform: rotate(200deg) scale(1.2); } 100% { transform: rotate(180deg) scale(1); } }
+.sug-n { display: inline-flex; gap: 6px; }
+.sug-n button { min-width: 2.6em; padding: 5px 10px; border-radius: 999px; font-weight: 700; }
+.sug-n button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.sug-list li { animation: lvIn .35s ease-out both; animation-delay: calc(var(--i, 0) * 70ms); }
+.sug-gain { color: var(--ok); font-weight: 700; }
+button.sug-go { flex: none; width: auto; padding: 7px 14px; margin: 0; }
+.sug-list li > div { flex: 1; min-width: 0; }
+@media (prefers-reduced-motion: reduce) { .leave-sug[open] summary .ic, .sug-list li { animation: none; } .leave-grid.lv-dragging .lv-cell.lv-drag { transform: none; transition: none; } }
+
+/* Congés en paysage (téléphone couché) : calendrier à droite, toujours visible ; compteur et listes à gauche */
+@media (orientation: landscape) and (max-height: 540px) {
+  body[data-tab="conges"] main { max-width: 1100px; padding-top: 8px; }
+  body[data-tab="conges"] .app-head { display: none; }
+  #leaveCard { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); column-gap: 18px; align-items: start; }
+  #leaveCard > * { grid-column: 1; }
+  #leaveCard > .leave-cal { grid-column: 2; grid-row: 1 / span 30; position: sticky; top: 6px; }
+  #leaveCard .leave-counter { margin-top: 6px; }
+  .leave-cal .cal-head { margin-bottom: 4px; }
+  .leave-cal .cal-head h2 { font-size: 1.05rem; }
+  .leave-grid { gap: 3px; }
+  .leave-grid .cal-wd { font-size: .62rem; padding-bottom: 0; }
+  .leave-grid .cal-cell { min-height: 0; padding: 2px 2px 3px; gap: 1px; font-size: .78rem; }
+  .leave-grid .cal-cell .n { line-height: 1.3; }
+  .leave-grid .chip { font-size: .66rem; line-height: 1.4; }
+  .leave-tip { display: none; }
+  body[data-tab="conges"] .tabbar { padding-top: 2px; padding-bottom: calc(2px + env(safe-area-inset-bottom)); }
+  body[data-tab="conges"] .tab span:not(.tab-dot) { display: none; }
+  body[data-tab="conges"] .tab svg { width: 22px; height: 22px; }
+}

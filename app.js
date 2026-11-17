@@ -2771,6 +2771,7 @@
         `</div>${onlyPlan ? '' : `<button type="button" class="lv-del" data-from="${p.from}" data-to="${p.to}" aria-label="Retirer cette période"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg></button>`}</li>`;
     }).join('') : '<li class="lv-empty">Aucun congé en ' + y + '. Touche un jour pour le poser.</li>';
     $('leaveShare').disabled = !periods.some(p => p.keys.some(k => set.get(k) !== 'plan'));
+    renderLeaveSug();
   }
   function leaveMove(delta) {
     let { y, m } = state.leave; m += delta;
@@ -2843,6 +2844,7 @@
     $('leaveGrid').addEventListener('touchend', e => {
       if (x0 == null) return;
       const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+      if (state.leave.dragging && state.leave.dragging()) return;
       if (Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) leaveMove(dx < 0 ? 1 : -1);
     }, { passive: true });
   }
@@ -2861,6 +2863,125 @@
     try { await navigator.clipboard.writeText(text); state.leave.msg = { html: 'Demande copiée : colle-la dans un SMS ou un mail.' }; }
     catch (e) { state.leave.msg = { html: esc(text).replace(/\n/g, '<br>') }; }
     renderLeave();
+  });
+
+  // ── Appui long puis glisser : prendre plusieurs jours d'un geste (demandé). Le premier jour décide : poser ou retirer.
+  {
+    const grid = $('leaveGrid');
+    let timer = null, start = null, drag = null, skipClick = false;
+    const cellAt = (x, y) => { const el = document.elementFromPoint(x, y); return el && el.closest && el.closest('#leaveGrid .lv-cell[data-key]'); };
+    const paint = () => {
+      const [a, b] = [drag.from, drag.to].sort();
+      grid.querySelectorAll('.lv-cell[data-key]').forEach(c => c.classList.toggle('lv-drag', c.dataset.key >= a && c.dataset.key <= b));
+      grid.classList.toggle('lv-dragging-del', !drag.add);
+    };
+    const stop = () => { clearTimeout(timer); timer = null; start = null; };
+    grid.addEventListener('pointerdown', e => {
+      const c = e.target.closest('.lv-cell[data-key]'); if (!c || e.button > 0) return;
+      start = { x: e.clientX, y: e.clientY, key: c.dataset.key };
+      timer = setTimeout(() => {
+        timer = null;
+        const kind = leaveSet().get(start.key);
+        drag = { from: start.key, to: start.key, add: kind !== 'pose' };
+        grid.classList.add('lv-dragging');
+        if (navigator.vibrate) navigator.vibrate(15);
+        paint();
+      }, 380);
+    });
+    grid.addEventListener('pointermove', e => {
+      if (timer && start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) stop(); // on fait défiler : pas d'appui long
+      if (!drag) return;
+      const c = cellAt(e.clientX, e.clientY);
+      if (c && c.dataset.key !== drag.to) { drag.to = c.dataset.key; paint(); }
+    });
+    const end = () => {
+      stop();
+      if (!drag) return;
+      const d = drag; drag = null; skipClick = true; setTimeout(() => { skipClick = false; }, 400);
+      grid.classList.remove('lv-dragging', 'lv-dragging-del');
+      if (d.from === d.to) { leaveToggle(d.from); return; }
+      leaveRange(d.from, d.to, d.add, true);
+    };
+    grid.addEventListener('pointerup', end);
+    grid.addEventListener('pointercancel', () => { if (drag) end(); else stop(); });
+    // pendant le glisser, la page ne défile pas (iPhone : il faut bloquer touchmove)
+    grid.addEventListener('touchmove', e => { if (drag) e.preventDefault(); }, { passive: false });
+    grid.addEventListener('contextmenu', e => e.preventDefault());
+    grid.addEventListener('click', e => { if (skipClick) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+    state.leave.dragging = () => !!drag || skipClick;
+  }
+
+  // ── Propositions (demandé « comme une IA ») : calcul local d'après mon planning, rien n'est envoyé.
+  // Pour N jours travaillés posés à la suite : longueur du repos d'affilée obtenu (repos du planning et congés autour),
+  // coût = jours posés + tombée de nuit incluse d'office. Classement : repos / coût, puis longueur ; jours à 3 COA écartés.
+  state.leave.sugN = +load('mh_leave_n') || 3;
+  function leaveSuggest(n) {
+    const days = leaveMine(), set = leaveSet(), me = load(STORAGE_NAME_KEY), gmap = groupMap();
+    const isCoa = !!me && agentGroup(me, gmap) === 'coa';
+    const from0 = shiftKey(C.dateKey(todayDate()), 1);
+    const work = k => kindOf(days[k]) === 'travail';
+    const off = k => set.has(k) || (days[k] && !work(k));
+    const keys = Object.keys(days).filter(k => k >= from0 && work(k) && !set.has(k)).sort();
+    const cands = [];
+    for (let i = 0; i < keys.length; i++) {
+      const P = [keys[i]];
+      for (let k = shiftKey(keys[i], 1), guard = 0; P.length < n && guard < 40; k = shiftKey(k, 1), guard++) {
+        if (!days[k] || set.has(k)) break; // planning inconnu ou déjà en congé : on s'arrête
+        if (work(k)) P.push(k);
+      }
+      if (P.length < n) continue;
+      if (isCoa && P.some(k => coaOff(k, me, gmap) >= LEAVE_COA_MAX)) continue;
+      const inP = new Set(P);
+      let cost = P.length;
+      for (const k of P) { for (let t = shiftKey(k, 1); !inP.has(t) && days[t] === 'TN' && !set.has(t); t = shiftKey(t, 1)) { cost++; inP.add(t); } }
+      let a = P[0], b = P[P.length - 1];
+      for (let g = 0; g < 30 && off(shiftKey(a, -1)) && shiftKey(a, -1) >= from0; g++) a = shiftKey(a, -1);
+      for (let g = 0; g < 30 && (off(shiftKey(b, 1)) || inP.has(shiftKey(b, 1))); g++) b = shiftKey(b, 1);
+      const len = Math.round((utc(keyToDate(b)) - utc(keyToDate(a))) / 864e5) + 1;
+      const y = P[0].slice(0, 4);
+      const used = [...set.keys()].filter(k => k.slice(0, 4) === y && leaveCounts(k, days)).length;
+      if (used + cost > LEAVE_MAX) continue;
+      cands.push({ P, cost, a, b, len, ratio: len / cost });
+    }
+    cands.sort((x, y) => y.ratio - x.ratio || y.len - x.len || (x.a < y.a ? -1 : 1));
+    const out = [];
+    for (const c of cands) {
+      if (out.some(o => !(c.b < o.a || c.a > o.b))) continue; // pas deux propositions qui se chevauchent
+      out.push(c); if (out.length >= 4) break;
+    }
+    return out;
+  }
+  function renderLeaveSug() {
+    const n = state.leave.sugN;
+    $('leaveSugN').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.n === n)));
+    if (!$('leaveSugBox').open) return;
+    const list = leaveSuggest(n);
+    const range = (a, b) => a === b ? fmtLeave(a, { weekday: 'long' }) : `du ${fmtLeave(a)} au ${fmtLeave(b)}`;
+    $('leaveSug').innerHTML = list.length ? list.map((c, i) =>
+      `<li style="--i:${i}"><div><strong>${esc(range(c.a, c.b))}</strong><br>` +
+      `<span class="sug-gain">${c.len} jours de repos d'affilée</span> pour ${c.cost} jour${c.cost > 1 ? 's' : ''} posé${c.cost > 1 ? 's' : ''}` +
+      (c.cost > c.P.length ? ' <span class="lv-tag">tombée de nuit incluse</span>' : '') +
+      `<br><span class="muted">À poser : ${c.P.map((k, j) => esc(fmtLeave(k, j && k.slice(4, 6) === c.P[j - 1].slice(4, 6) ? { month: undefined } : {}))).join(', ')}</span></div>` +
+      `<button type="button" class="primary sug-go" data-p="${c.P.join(',')}">Poser</button></li>`).join('')
+      : '<li class="lv-empty">Aucune proposition : planning pas encore connu sur assez de jours, ou plus assez de jours à poser.</li>';
+  }
+  $('leaveSugBox').addEventListener('toggle', renderLeaveSug);
+  $('leaveSugN').addEventListener('click', e => {
+    const b = e.target.closest('button[data-n]'); if (!b) return;
+    state.leave.sugN = +b.dataset.n; store('mh_leave_n', b.dataset.n); renderLeaveSug();
+  });
+  $('leaveSug').addEventListener('click', e => {
+    const b = e.target.closest('.sug-go'); if (!b) return;
+    const P = b.dataset.p.split(',');
+    state.leave.setBefore = leaveSet();
+    P.forEach(k => { leave.days[k] = 1; });
+    saveLeave();
+    const d = keyToDate(P[0]); state.leave.y = d.y; state.leave.m = d.m;
+    leaveAfter(P, true);
+    state.leave.msg = { html: `${P.length} jour${P.length > 1 ? 's' : ''} posé${P.length > 1 ? 's' : ''}.` + (state.leave.msg ? '<br>' + state.leave.msg.html : ''), warn: state.leave.msg && state.leave.msg.warn };
+    state.leave.pop = P[0];
+    renderLeave();
+    $('leaveCard').querySelector('.leave-cal').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   });
 
   function setTab(t) {

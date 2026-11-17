@@ -351,6 +351,13 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   **3 COA max en congé le même jour = simple information** (`coaOff` : CA/C des autres COA d'après le planning + moi > 3 →
   cadre rouge, pastille du nombre de COA déjà en congé sur chaque jour). Périodes regroupées à travers les repos
   (`leavePeriods`), corbeille par période, « Envoyer ma demande » (texte via feuille de partage, sinon copie).
+  **Appui long (380 ms) puis glisser** = plusieurs jours d'un geste (Pointer Events + `touchmove` bloqué pendant le glisser ;
+  le 1er jour décide poser / retirer ; bouger avant 380 ms = défilement normal ; glisser de mois désactivé pendant ce temps).
+  **Propositions** (demandé « comme une IA » ; calcul local, `leaveSuggest`) : pour 1 / 3 / 5 / 10 jours travaillés posés à la
+  suite (`mh_leave_n`), repos d'affilée obtenu (repos et congés autour) ÷ coût (posés + tombée de nuit incluse), jours à 3 COA
+  écartés, budget de 26 respecté, 4 propositions sans chevauchement, bouton « Poser ». **Paysage** (`orientation: landscape`,
+  hauteur ≤ 540 px) : calendrier à droite (`.leave-cal`, sticky, cases compactes), compteur et listes à gauche, en-tête de
+  l'appli masqué, onglets sans libellés (signalé : on ne voyait pas jour, date et décompte ensemble).
   Hypothèses à confirmer : année civile, repos non décomptés.
 - Écarté par l'utilisateur : « Partager → Planning COA » sur Android.
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.
