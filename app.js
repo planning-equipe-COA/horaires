@@ -1321,7 +1321,7 @@
     if (r.free.length) html += `<p class="muted">En repos ce jour-là, sans jour à rendre trouvé : ${r.free.map(f => nameWithPhone(f)).join(', ')}</p>`;
     html += `<p class="hint">Entre ${esc(GROUPS[g])} seulement (groupes réglés par le responsable dans Équipe → Réorganiser les noms).</p>`;
     html += '<p class="hint">Classement : 11 h de repos ou plus d\'abord, puis même jour, jour rendu proche, même horaire. ' +
-      'Semaine de plus de 48 h classée après. Jamais moins de 9 h de repos, plus de 6 jours ni plus de 3 nuits d\'affilée, ni plus de 3 jours par semaine pour un mi-temps (toi et ton collègue). Jour rendu : jusqu\'à un mois avant ou après.</p></details>';
+      'Semaine de plus de 48 h classée après. Jamais (pour toi comme pour ton collègue) : moins de 9 h entre deux vacations, un soir suivi d\'un matin, plus de 6 jours ni plus de 3 nuits d\'affilée, plus de 3 jours par semaine pour un temps partiel (½ ou 32 h), plus de 6 jours par semaine pour un plein temps. Jour rendu : jusqu\'à un mois avant ou après.</p></details>';
     return html;
   }
 

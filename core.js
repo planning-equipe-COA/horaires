@@ -738,12 +738,13 @@
   function swapCheck(days, changed, map) {
     const span = k => shiftSpan(map.get(days[k]));
     const night = k => days[k] === 'N';
-    let minGap = Infinity, maxRun = 0, nights = 0, weekMin = 0, weekDays = 0;
+    let minGap = Infinity, maxRun = 0, nights = 0, weekMin = 0, weekDays = 0, soirMatin = false;
     const seenWeeks = new Set();
     for (const k of changed) {
       for (const [a, b] of [[shiftKey(k, -1), k], [k, shiftKey(k, 1)]]) {
         const sa = span(a), sb = span(b);
         if (sa && sb) minGap = Math.min(minGap, sb[0] + 1440 - sa[1]);
+        if (normCode(days[a] || '') === 'S' && normCode(days[b] || '') === 'M') soirMatin = true; // interdit
       }
       if (span(k)) {
         let run = 1;
@@ -770,7 +771,7 @@
         weekDays = Math.max(weekDays, n);
       }
     }
-    return { minGap, maxRun, nights, weekMin, weekDays };
+    return { minGap, maxRun, nights, weekMin, weekDays, soirMatin };
   }
 
   // Contrat lu dans le nom du tableau : « NOM 1/2 T (1) » = mi-temps (3 jours travaillés par semaine au
@@ -803,11 +804,12 @@
   //  - deux jours : un collègue en repos prend mon service, et je prends le sien un jour où il
   //    travaille et où je suis en repos (au plus `window` jours d'écart, pas avant `today`).
   // Écarté (pour l'un ou l'autre) : repos < `minRest` (9 h), plus de `maxDays` jours d'affilée ou de
-  // `maxNights` nuits d'affilée, plus de 3 jours dans la semaine pour un mi-temps. Moins bien classé : repos < `comfortRest` (11 h), semaine au-delà de
+  // `maxNights` nuits d'affilée, plus de 3 jours dans la semaine pour un temps partiel (1/2 T ou 32), plus de
+  // `maxWeekDays` (6) jours dans la semaine pour un plein temps, un soir suivi d'un matin. Moins bien classé : repos < `comfortRest` (11 h), semaine au-delà de
   // `weekHours` heures (ou des 32 h d'un agent à 32 h), série de `maxDays` jours (« ATTENTION » sur le tableau), jour rendu lointain, autre horaire.
   // Rend { options: [{ type, name, code, back?, backCode?, gap, run, nights, weekMin, score }], free: [...] }
   function swapOptions(plan, me, key, codes, opts) {
-    const o = Object.assign({ minRest: 540, comfortRest: 660, maxDays: 6, maxNights: 3, weekHours: 48, window: 31, perAgent: 3, today: '' }, opts);
+    const o = Object.assign({ minRest: 540, comfortRest: 660, maxDays: 6, maxWeekDays: 6, maxNights: 3, weekHours: 48, window: 31, perAgent: 3, today: '' }, opts);
     const map = new Map(codes.map(c => [normCode(c.code), c]));
     const kind = c => dayKind(map.get(c));
     const agents = (plan && plan.agents) || {};
@@ -819,14 +821,17 @@
     // vérifie un agent, avec son contrat (mi-temps : 3 jours par semaine au plus ; 32 h : au-delà = classé après)
     const check = (name, days, changes) => {
       const c = swapCheck(Object.assign({}, days, changes), Object.keys(changes), map), ct = contractOf(name);
-      c.halfOver = ct.half && c.weekDays > 3;
+      // règles (nov. 2026) : temps partiel (« 1/2 T » ou « 32 ») 3 jours par semaine au plus, plein temps 6 au plus
+      c.halfOver = (ct.half || ct.hours === 32) && c.weekDays > 3;
+      c.fullOver = !ct.half && ct.hours !== 32 && c.weekDays > o.maxWeekDays;
       c.overHours = ct.hours && c.weekMin > ct.hours * 60 ? ct.hours : 0;
       return c;
     };
     const both = (a, b) => ({ gap: Math.min(a.minGap, b.minGap), run: Math.max(a.maxRun, b.maxRun),
       nights: Math.max(a.nights, b.nights), weekMin: Math.max(a.weekMin, b.weekMin),
-      halfOver: a.halfOver || b.halfOver, overHours: a.overHours || b.overHours });
-    const allowed = c => c.gap >= o.minRest && c.run <= o.maxDays && c.nights <= o.maxNights && !c.halfOver;
+      halfOver: a.halfOver || b.halfOver, fullOver: a.fullOver || b.fullOver, soirMatin: a.soirMatin || b.soirMatin,
+      overHours: a.overHours || b.overHours });
+    const allowed = c => c.gap >= o.minRest && c.run <= o.maxDays && c.nights <= o.maxNights && !c.halfOver && !c.fullOver && !c.soirMatin;
     const score = (c, extra) => (c.gap < o.comfortRest ? 100 : 0) + (c.weekMin > o.weekHours * 60 ? 50 : 0) +
       (c.overHours ? 30 : 0) + (c.run >= o.maxDays ? 10 : 0) + extra;
     for (const name of Object.keys(agents)) {

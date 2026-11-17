@@ -396,7 +396,7 @@ test('swapOptions : 3 nuits d’affilée au plus ; planStats', () => {
   assert.deepEqual(st.unknown, { ZZ: 1 });
 });
 
-test('contrats : mi-temps 3 jours par semaine au plus, 32 h classé après ; ABJ connu', () => {
+test('contrats : temps partiel (1/2 T ou 32) 3 jours par semaine au plus ; ABJ connu', () => {
   const codes = C.DEFAULT_CODES;
   assert.deepEqual(C.contractOf('DUPONT 1/2 T (1)'), { half: true, hours: null });
   assert.deepEqual(C.contractOf('DUPONT 32'), { half: false, hours: 32 });
@@ -417,9 +417,8 @@ test('contrats : mi-temps 3 jours par semaine au plus, 32 h classé après ; ABJ
   const on15 = n => r.options.find(o => o.name === n && o.back === k(15));
   assert.ok(r.options.some(o => o.name.startsWith('MITEMPS') && o.back === k(5)));
   assert.ok(!on15('MITEMPS 1/2 T (1)'));                            // 4 jours dans la semaine : écarté
-  const a = on15('A 32'), p = on15('PLEIN');
-  assert.equal(a.overHours, 32);                                   // 36 h > 32 h : proposé, marqué
-  assert.ok(r.options.indexOf(p) < r.options.indexOf(a));          // et classé après
+  assert.ok(!on15('A 32'));                                         // 32 h = temps partiel : 3 jours max (nov. 2026), écarté
+  assert.ok(on15('PLEIN'));                                         // plein temps : 4 jours, proposé
 });
 
 test('noms affichés : mention de contrat retirée du nom et rendue en badge', () => {
@@ -499,4 +498,25 @@ test('staffAlerts : COA 3 M / 2 S / 1 N, ROA 1 de chaque, « jour » ignoré', (
   assert.deepEqual(all, ['manque roa N 0/1', 'manque roa S 0/1', 'trop coa M 4/3', 'trop coa N 2/1', 'trop roa M 2/1']);
   // jour hors du tableau (personne n'a de code) : aucun manque
   assert.deepEqual(C.staffAlerts({ agents }, grp, ['20261130'], null, { missing: true }), []);
+});
+
+test('swapOptions : soir puis matin écarté ; temps partiel 32 : 3 jours par semaine ; plein temps : 6', () => {
+  const codes = C.DEFAULT_CODES;
+  // semaine du lundi 4 janvier 2027
+  const wk = ['20270104', '20270105', '20270106', '20270107', '20270108', '20270109', '20270110'];
+  // moi : M le mardi 5 ; B : S le lundi 4 et R le mardi 5 → B prendrait mon matin après son soir : écarté
+  const plan1 = { agents: { A: { '20270105': 'M', '20270106': 'R' }, B: { '20270104': 'S', '20270105': 'R', '20270106': 'M' } } };
+  const r1 = C.swapOptions(plan1, 'A', '20270105', codes, { today: '20270101' });
+  assert.ok(!r1.options.some(o => o.name === 'B' && o.code === 'R'), 'soir → matin');
+  // agent à 32 h qui travaille déjà 3 jours cette semaine : ne peut pas prendre un 4e
+  const plan2 = { agents: { A: { '20270108': 'J', '20270104': 'R', '20270111': 'R' }, 'P 32': { '20270104': 'J', '20270105': 'J', '20270106': 'J', '20270108': 'R', '20270111': 'J' } } };
+  const r2 = C.swapOptions(plan2, 'A', '20270108', codes, { today: '20270101' });
+  // seul échange possible : il me rend un de ses jours de la même semaine (il reste à 3 jours)
+  assert.ok(r2.options.filter(o => o.name === 'P 32').every(o => o.back >= '20270104' && o.back <= '20270110'));
+  // plein temps qui travaille déjà 6 jours (pas d'affilée) : pas de 7e
+  const full = {}; ['20270104', '20270105', '20270106', '20270108', '20270109', '20270110'].forEach(k => { full[k] = 'J'; });
+  full['20270107'] = 'R';
+  const plan3 = { agents: { A: { '20270107': 'J', '20270111': 'R' }, F: Object.assign({ '20270111': 'J' }, full) } };
+  const r3 = C.swapOptions(plan3, 'A', '20270107', codes, { today: '20270101' });
+  assert.equal(r3.options.filter(o => o.name === 'F' && o.type === 'meme-jour').length, 0);
 });

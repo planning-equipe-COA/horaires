@@ -120,8 +120,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   Classeurs à 3 feuilles (« THEORIQUE », « PLANIFIE New TS ROA », « QUATRE Mi Temps ») : `bestSheet`
   garde la plus complète (« QUATRE Mi Temps », confirmé par l'utilisateur). Noms avec suffixes de contrat
   **gardés tels quels** (ils portent le contrat, `contractOf`) : « 1/2 T » = mi-temps, 3 jours travaillés
-  par semaine au plus (permutation écartée au-delà) ; « 32 » = 32 h par semaine (au-delà : classée après,
-  « au-delà des 32 h du contrat ») ; « 80% » ignoré.
+  par semaine au plus (permutation écartée au-delà) ; « 32 » = 32 h par semaine, **aussi temps partiel : 3 jours par semaine
+  au plus** (infos de l'utilisateur, 17 nov. 2026 ; avant : seulement classé après) ; « 80% » ignoré. Plein temps : 6 jours
+  par semaine (lun.→dim.) au plus (`maxWeekDays`, écarté au-delà). **Soir suivi d'un matin interdit** (`soirMatin`, écarté).
+  9 h minimum entre deux vacations (inchangé).
 - Format réel : deux blocs d'agents, en-têtes « lu ma … di » puis numéros de jour (05 … 31, 01),
   mois dans un titre « OCTOBRE 2026 » ou le nom de la feuille, colonnes code/remarque à droite.
   Les homonymes dans deux blocs aux mêmes dates deviennent « NOM (2) ».
