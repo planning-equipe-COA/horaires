@@ -688,9 +688,7 @@ html[data-text="xl"] body { zoom: 1.25; }
   -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 14px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 14px), transparent); }
 .changes-link .cl-track { display: inline-flex; }
 .changes-link .cl-item { margin-right: 32px; }
-.changes-link.seen .cl-view { text-overflow: ellipsis; color: var(--muted); -webkit-mask-image: none; mask-image: none; }
-.changes-link.seen .cl-track { display: inline; }
-.changes-link.seen .cl-item { margin-right: 0; }
+.changes-link.seen .cl-view { color: var(--muted); }
 .changes-link .cl-track.run { animation: tk-scroll linear infinite; }
 .changes-link:active .cl-track.run, .changes-link:hover .cl-track.run { animation-play-state: paused; }
 .changes-link .cl-go { padding: 4px 10px; font-size: .8rem; }

@@ -50,6 +50,9 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - `exemple-planning.xls` — planning fictif pour essayer.
 
 ## Règles
+- **Consigne de l'utilisateur (17 nov. 2026) : « tout ce qui peut être dynamique, le faire dorénavant »** — bandeaux qui
+  défilent, petites animations ; toujours avec repli immobile si « réduire les animations » (`prefers-reduced-motion`) et à
+  l'impression. Les bandeaux (`#teamWarn`, `#teamChangesBtn`, vu ou non) défilent en permanence via `marquee`.
 - **Confidentialité** : le fichier Excel est lu dans le navigateur et n'est jamais envoyé (texte sous
   l'import `#importHint` adapté selon que l'agent a rejoint l'équipe ou non).
   Ne jamais ajouter d'analytics ni de vrai planning dans ce dépôt (il est public).

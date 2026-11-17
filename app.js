@@ -1404,13 +1404,16 @@
     const text = `<span class="cl-item">${parts.filter(Boolean).map(esc).join(' · ')}</span>`;
     btn.setAttribute('aria-label', parts.filter(Boolean).join(', ') + '. Voir les modifications.');
     btn.innerHTML = ICON('bell') + `<span class="cl-view"><span class="cl-track">${text}</span></span><span class="cl-go">Voir ›</span>`;
-    if (!plan.changesSeen) marquee(btn.querySelector('.cl-view'), btn.querySelector('.cl-track'), text);
+    marquee(btn.querySelector('.cl-view'), btn.querySelector('.cl-track'), text); // vu ou non : défile
   }
-  // Fait défiler un texte trop long pour sa ligne (deux copies + translateX(-50 %)) ; sinon le laisse immobile
+  // Fait défiler le texte en boucle, toujours (demandé : bandeaux « dynamiques »), même s'il tient sur la ligne :
+  // le motif est répété jusqu'à dépasser la largeur, puis doublé (translateX(-50 %) = un motif, sans à-coup).
   function marquee(view, track, html) {
     requestAnimationFrame(() => {
-      if (!view || !track || track.scrollWidth <= view.clientWidth + 2) return;
-      track.innerHTML = html + html;
+      if (!view || !track) return;
+      const one = track.scrollWidth || 1, n = Math.max(1, Math.ceil((view.clientWidth + 40) / one));
+      const unit = html.repeat(n);
+      track.innerHTML = unit + unit;
       track.classList.add('run');
       track.style.animationDuration = Math.max(8, Math.round(track.scrollWidth / 2 / 45)) + 's'; // ~45 px/s
     });
