@@ -13,7 +13,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - `core.js` — logique pure, module UMD : lecture de la grille (`parseMatrix`, `sheetToMatrix`),
   codes par défaut (`DEFAULT_CODES`), événements (`buildEvents`), export (`buildICS`).
 - `app.js` — interface (IIFE), réglages dans localStorage (`mh_codes`, `mh_codes_v`, `mh_name`,
-  `mh_plan`, `mh_tab`). **`mh_name` = l'utilisateur (« Je suis »)** : choisi seulement à l'accueil ou dans
+  `mh_plan`, `mh_tab`, `mh_leave`). **`mh_name` = l'utilisateur (« Je suis »)** : choisi seulement à l'accueil ou dans
   Réglages → « 👤 Je suis » (`#meName`). Regarder le planning d'un collègue (`#calAgent`) ne le change JAMAIS
   (avant nov. 2026 il suivait le dernier planning consulté : numéro ou envois risquaient de partir au nom
   d'un collègue). Aucun nom n'est choisi tout seul à l'import.
@@ -342,5 +342,15 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   en A4 paysage (`@page team`, lignes = `teamRowsFor`, partagé avec la vue Équipe). Mois sans aucun code : pas de page.
   PDF = fenêtre d'impression du téléphone (Android « Enregistrer au format PDF », iPhone Partager → Fichiers).
   Couleurs forcées (`print-color-adjust: exact`), thème clair imposé dans `#printArea`.
+- **Onglet « Congés »** (17 nov. 2026, demandé ; 4e onglet entre Équipe et Réglages, `#leaveCard` `data-tab="conges"`,
+  `renderLeave`, mémorisé dans `mh_tab`) : pose de vacances **seulement sur le téléphone** (`mh_leave` = { days: { AAAAMMJJ: 1 } },
+  jamais envoyé : « tout le monde n'utilise pas l'appli »). Toucher un jour = poser / retirer ; « Poser une période » (Du … au …,
+  les repos du planning ne sont pas posés). Règles de l'utilisateur : **26 jours** par année civile (compteur animé, barre ;
+  décomptés : jours posés + tombée de nuit incluse + congés CA/C déjà au planning, sauf repos R/RF… posés par erreur) ;
+  **tombée de nuit qui suit une période de vacances incluse d'office** (`leaveSet`, calculée, pas stockée ; cadre pointillé) ;
+  **3 COA max en congé le même jour = simple information** (`coaOff` : CA/C des autres COA d'après le planning + moi > 3 →
+  cadre rouge, pastille du nombre de COA déjà en congé sur chaque jour). Périodes regroupées à travers les repos
+  (`leavePeriods`), corbeille par période, « Envoyer ma demande » (texte via feuille de partage, sinon copie).
+  Hypothèses à confirmer : année civile, repos non décomptés.
 - Écarté par l'utilisateur : « Partager → Planning COA » sur Android.
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.

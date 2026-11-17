@@ -140,7 +140,7 @@
   const today = todayDate();
   const state = { workbook: null, fileName: '', result: null, codes: loadCodes(), events: [],
     plan: loadPlan(), planBefore: undefined,
-    tab: load(STORAGE_TAB_KEY) === 'equipe' || load(STORAGE_VIEW_KEY) === 'team' ? 'equipe' : 'planning',
+    tab: load(STORAGE_TAB_KEY) === 'conges' ? 'conges' : load(STORAGE_TAB_KEY) === 'equipe' || load(STORAGE_VIEW_KEY) === 'team' ? 'equipe' : 'planning',
     cal: { y: today.y, m: today.m, agent: load(STORAGE_NAME_KEY) || '', selected: C.dateKey(today),
       view: load(STORAGE_VIEW_KEY) === 'list' ? 'list' : 'month', // onglet Planning : Mois ou Liste
       sum: load(STORAGE_SUM_KEY) === 'year' ? 'year' : 'month', compare: '', hl: '' } };
@@ -1026,6 +1026,7 @@
   const EMPTY_PLAN = { agents: {}, changes: {}, changesSeen: true, at: 'vide' };
   function planView() { return state.plan || EMPTY_PLAN; }
   function renderCalendar() {
+    try { if (state.tab === 'conges') renderLeave(); } catch (e) { /* congés : jamais bloquant */ }
     try { if (state.plan) renderTeamAlerts(); } catch (e) { /* alertes : jamais bloquant */ }
     $('calPrint').hidden = !(state.plan && Object.keys(state.plan.agents || {}).length); // Imprimer / PDF
     const plan = planView();
@@ -2650,14 +2651,227 @@
 
   // ── Onglets : Planning · Équipe · Réglages ────────────────────────────────
   // Visibilité gérée par le CSS (body[data-tab] + attributs data-tab des cartes, classes only-planning / only-equipe)
+  // ── Congés (onglet « Congés », nov. 2026) : pose de vacances sur le téléphone seulement (mh_leave, jamais envoyé :
+  // « tout le monde n'utilise pas l'appli »). Règles de l'utilisateur : 26 jours à poser (année civile), 3 COA en congé
+  // au plus le même jour (simple information), une tombée de nuit qui suit des vacances est incluse d'office.
+  const STORAGE_LEAVE_KEY = 'mh_leave';
+  const LEAVE_MAX = 26, LEAVE_COA_MAX = 3;
+  function loadLeave() {
+    try { const v = JSON.parse(load(STORAGE_LEAVE_KEY)); if (v && v.days && typeof v.days === 'object') return v; } catch (e) { /* vide */ }
+    return { days: {} };
+  }
+  const leave = loadLeave();
+  state.leave = { y: today.y, m: today.m, msg: null, pop: '' };
+  function saveLeave() { leave.at = Date.now(); store(STORAGE_LEAVE_KEY, JSON.stringify(leave)); }
+  function shiftKey(k, n) {
+    const d = utc(keyToDate(k)); d.setUTCDate(d.getUTCDate() + n);
+    return C.dateKey({ y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate() });
+  }
+  function leaveMine() { const me = load(STORAGE_NAME_KEY); return (me && planView().agents[me]) || {}; }
+  const kindOf = code => code ? C.dayKind(defOf(code)) : '';
+  // Tous les jours de congé : posés ('pose'), tombée de nuit ajoutée d'office ('tn'), congés déjà au planning ('plan')
+  function leaveSet() {
+    const days = leaveMine(), set = new Map();
+    Object.keys(leave.days).forEach(k => set.set(k, 'pose'));
+    Object.keys(days).forEach(k => { if (!set.has(k) && kindOf(days[k]) === 'conge') set.set(k, 'plan'); });
+    // tombée de nuit juste après la fin d'une période de vacances : incluse dans les vacances
+    for (const k of [...set.keys()]) {
+      let n = shiftKey(k, 1);
+      while (!set.has(n) && days[n] === 'TN') { set.set(n, 'tn'); n = shiftKey(n, 1); }
+    }
+    return set;
+  }
+  // un repos du planning (R, RF… mais pas la tombée de nuit) posé par erreur n'est pas décompté
+  function leaveCounts(k, days) { const c = days[k]; return !(c && c !== 'TN' && kindOf(c) === 'repos'); }
+  // COA (hors moi) déjà en congé ce jour-là d'après le planning
+  function coaOff(k, me, gmap) {
+    const agents = planView().agents || {};
+    return Object.keys(agents).filter(n => n !== me && kindOf(agents[n][k]) === 'conge' && agentGroup(n, gmap) === 'coa').length;
+  }
+  // périodes : jours de congé qui se suivent, en traversant les repos du planning (week-end, R…)
+  function leavePeriods(set, days, y) {
+    const keys = [...set.keys()].filter(k => !y || k.slice(0, 4) === String(y)).sort();
+    const out = [];
+    for (const k of keys) {
+      const last = out[out.length - 1];
+      let joined = false;
+      if (last) {
+        let n = shiftKey(last.to, 1), gap = [];
+        while (n < k && kindOf(days[n]) === 'repos' && gap.length < 5) { gap.push(n); n = shiftKey(n, 1); }
+        if (n === k) { last.to = k; last.keys.push(k); joined = true; }
+      }
+      if (!joined) out.push({ from: k, to: k, keys: [k] });
+    }
+    return out;
+  }
+  const fmtLeave = (k, opt) => utc(keyToDate(k)).toLocaleDateString('fr-FR', Object.assign({ weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }, opt || {}));
+  function animateCount(el, to) {
+    const from = +el.dataset.v || 0; el.dataset.v = to;
+    if (from === to || matchMedia('(prefers-reduced-motion: reduce)').matches) { el.textContent = to; return; }
+    const t0 = performance.now(), dur = 450;
+    const step = t => { const p = Math.min(1, (t - t0) / dur); el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }
+  function renderLeave() {
+    const { y, m } = state.leave;
+    const me = load(STORAGE_NAME_KEY), days = leaveMine(), gmap = groupMap();
+    const isCoa = !!me && agentGroup(me, gmap) === 'coa';
+    const set = leaveSet(), todayKey = C.dateKey(todayDate());
+    $('leaveNoName').hidden = !!(me && planView().agents[me]);
+    // compteur de l'année affichée
+    const yearKeys = [...set.keys()].filter(k => k.slice(0, 4) === String(y) && leaveCounts(k, days));
+    const used = yearKeys.length, left = LEAVE_MAX - used;
+    $('leaveYear').textContent = y;
+    animateCount($('leaveUsed'), used);
+    $('leaveLeft').textContent = left >= 0 ? `${left} jour${left > 1 ? 's' : ''} restant${left > 1 ? 's' : ''}` : `${-left} jour${-left > 1 ? 's' : ''} de trop`;
+    $('leaveCounter').classList.toggle('over', left < 0);
+    $('leaveBar').style.width = Math.min(100, used / LEAVE_MAX * 100) + '%';
+    // grille du mois
+    $('leaveTitle').textContent = utc({ y, m, d: 1 }).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    $('leaveToday').hidden = y === today.y && m === today.m;
+    let html = WEEKDAYS.map(w => `<div class="cal-wd">${w}</div>`).join('');
+    for (const week of C.monthGrid(y, m)) {
+      for (const d of week) {
+        if (!d) { html += '<div class="cal-cell blank"></div>'; continue; }
+        const k = C.dateKey(d), code = days[k], kind = set.get(k);
+        const off = isCoa ? coaOff(k, me, gmap) : 0;
+        const cls = ['cal-cell', 'lv-cell'];
+        if (k === todayKey) cls.push('today');
+        if (k < todayKey) cls.push('past');
+        if (C.holidayName(k)) cls.push('holiday');
+        if (kind) cls.push('lv-on', 'lv-' + kind);
+        if (kind && !leaveCounts(k, days)) cls.push('lv-free');
+        if (off + (kind ? 1 : 0) > LEAVE_COA_MAX || (!kind && off >= LEAVE_COA_MAX)) cls.push('lv-full');
+        if (k === state.leave.pop) cls.push('lv-pop');
+        const label = `${d.d}${code ? ' : ' + codeLabel(code) : ''}${kind === 'pose' ? ', congé posé' : kind === 'tn' ? ', tombée de nuit incluse' : kind === 'plan' ? ', congé au planning' : ''}${off ? `, ${off} COA en congé` : ''}`;
+        html += `<button class="${cls.join(' ')}" data-key="${k}" aria-pressed="${kind === 'pose'}" aria-label="${esc(label)}">` +
+          `<span class="n">${d.d}</span>${code ? chip(code) : '<span class="chip lv-blank">·</span>'}` +
+          (off ? `<span class="lv-n" aria-hidden="true">${off}</span>` : '') + '</button>';
+      }
+    }
+    $('leaveGrid').innerHTML = html;
+    state.leave.pop = '';
+    $('leaveCoaLegend').hidden = !isCoa;
+    // message après un toucher
+    const msg = state.leave.msg;
+    $('leaveMsg').hidden = !msg;
+    if (msg) { $('leaveMsg').className = 'leave-msg ' + (msg.warn ? 'warn' : ''); $('leaveMsg').innerHTML = msg.html; }
+    // périodes de l'année
+    const periods = leavePeriods(set, days, y);
+    $('leaveList').innerHTML = periods.length ? periods.map(p => {
+      const n = p.keys.filter(k => leaveCounts(k, days)).length;
+      const tn = p.keys.filter(k => set.get(k) === 'tn').length;
+      const onlyPlan = p.keys.every(k => set.get(k) === 'plan');
+      const full = isCoa && p.keys.filter(k => set.get(k) === 'pose' && coaOff(k, me, gmap) + 1 > LEAVE_COA_MAX);
+      const range = p.from === p.to ? fmtLeave(p.from, { weekday: 'long' }) : `du ${fmtLeave(p.from)} au ${fmtLeave(p.to)}`;
+      return `<li class="${onlyPlan ? 'lv-planned' : ''}"><div><strong>${esc(range)}</strong> · ${n} jour${n > 1 ? 's' : ''}` +
+        (onlyPlan ? ' <span class="lv-tag ok">au planning</span>' : '') +
+        (tn ? ` <span class="lv-tag">tombée de nuit incluse</span>` : '') +
+        (full && full.length ? `<br><span class="lv-warn">Déjà ${LEAVE_COA_MAX} COA en congé : ${full.map(k => esc(fmtLeave(k, { weekday: undefined }))).join(', ')}</span>` : '') +
+        `</div>${onlyPlan ? '' : `<button type="button" class="lv-del" data-from="${p.from}" data-to="${p.to}" aria-label="Retirer cette période"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg></button>`}</li>`;
+    }).join('') : '<li class="lv-empty">Aucun congé en ' + y + '. Touche un jour pour le poser.</li>';
+    $('leaveShare').disabled = !periods.some(p => p.keys.some(k => set.get(k) !== 'plan'));
+  }
+  function leaveMove(delta) {
+    let { y, m } = state.leave; m += delta;
+    if (m < 1) { m = 12; y--; } else if (m > 12) { m = 1; y++; }
+    state.leave.y = y; state.leave.m = m; state.leave.msg = null; renderLeave();
+  }
+  // poser / retirer un jour ; messages : tombée de nuit ajoutée, 3 COA déjà en congé, plus de 26 jours
+  function leaveAfter(changedKeys, added) {
+    const me = load(STORAGE_NAME_KEY), days = leaveMine(), gmap = groupMap();
+    const before = state.leave.setBefore, set = leaveSet();
+    const lines = [];
+    const tnNew = [...set.keys()].filter(k => set.get(k) === 'tn' && !(before && before.get(k) === 'tn'));
+    if (tnNew.length) lines.push(`Tombée de nuit du ${tnNew.map(k => esc(fmtLeave(k))).join(', ')} ajoutée : elle suit tes congés, elle en fait partie.`);
+    let warn = false;
+    if (added && me && agentGroup(me, gmap) === 'coa') {
+      const full = changedKeys.filter(k => coaOff(k, me, gmap) + 1 > LEAVE_COA_MAX);
+      if (full.length) { warn = true; lines.push(`Pour info : ${LEAVE_COA_MAX} COA sont déjà en congé le ${full.slice(0, 4).map(k => esc(fmtLeave(k))).join(', ')}${full.length > 4 ? '…' : ''}.`); }
+    }
+    const y = state.leave.y;
+    const used = [...set.keys()].filter(k => k.slice(0, 4) === String(y) && leaveCounts(k, days)).length;
+    if (added && used > LEAVE_MAX) { warn = true; lines.push(`Attention : ${used} jours posés en ${y}, plus que les ${LEAVE_MAX} jours.`); }
+    if (added && changedKeys.length === 1 && !leaveCounts(changedKeys[0], days)) lines.push('Jour de repos au planning : il n\'est pas décompté.');
+    state.leave.msg = lines.length ? { html: lines.join('<br>'), warn } : null;
+  }
+  function leaveToggle(k) {
+    const set = leaveSet(), kind = set.get(k);
+    if (kind === 'tn') { state.leave.msg = { html: 'Cette tombée de nuit suit tes congés : elle est incluse d\'office. Retire le dernier jour de congé pour l\'enlever.' }; renderLeave(); return; }
+    if (kind === 'plan') { state.leave.msg = { html: 'Congé déjà inscrit au planning : il est compté dans tes 26 jours.' }; renderLeave(); return; }
+    state.leave.setBefore = set;
+    const add = !leave.days[k];
+    if (add) leave.days[k] = 1; else delete leave.days[k];
+    saveLeave();
+    state.leave.pop = add ? k : '';
+    leaveAfter([k], add);
+    renderLeave();
+  }
+  function leaveRange(from, to, add) {
+    if (!from || !to) return;
+    if (to < from) [from, to] = [to, from];
+    const keys = [];
+    for (let k = from, i = 0; k <= to && i < 120; k = shiftKey(k, 1), i++) keys.push(k);
+    state.leave.setBefore = leaveSet();
+    const days = leaveMine();
+    // en posant une période, les repos du planning (R, RF…) ne sont pas posés : ils restent repos
+    const target = add ? keys.filter(k => leaveCounts(k, days) && kindOf(days[k]) !== 'conge') : keys;
+    target.forEach(k => { if (add) leave.days[k] = 1; else delete leave.days[k]; });
+    saveLeave();
+    const d = keyToDate(from); state.leave.y = d.y; state.leave.m = d.m;
+    leaveAfter(target, add);
+    if (!state.leave.msg && add) state.leave.msg = { html: `${target.length} jour${target.length > 1 ? 's' : ''} posé${target.length > 1 ? 's' : ''}.` };
+    renderLeave();
+  }
+  function leaveText() {
+    const me = load(STORAGE_NAME_KEY), days = leaveMine(), set = leaveSet(), y = state.leave.y;
+    const periods = leavePeriods(set, days, y).filter(p => p.keys.some(k => set.get(k) !== 'plan'));
+    const total = [...set.keys()].filter(k => k.slice(0, 4) === String(y) && leaveCounts(k, days)).length;
+    return `Demande de congés${me ? ' – ' + shown(me) : ''}\n` + periods.map(p => {
+      const n = p.keys.filter(k => leaveCounts(k, days)).length;
+      const r = p.from === p.to ? 'le ' + fmtLeave(p.from, { weekday: 'long', year: 'numeric' }) : `du ${fmtLeave(p.from, { weekday: 'long' })} au ${fmtLeave(p.to, { weekday: 'long', year: 'numeric' })}`;
+      return `• ${r} (${n} jour${n > 1 ? 's' : ''}${p.keys.some(k => set.get(k) === 'tn') ? ', tombée de nuit incluse' : ''})`;
+    }).join('\n') + `\nTotal ${y} : ${total} jour${total > 1 ? 's' : ''} sur ${LEAVE_MAX}.`;
+  }
+  $('leaveGrid').addEventListener('click', e => { const b = e.target.closest('.lv-cell[data-key]'); if (b) leaveToggle(b.dataset.key); });
+  $('leavePrev').addEventListener('click', () => leaveMove(-1));
+  $('leaveNext').addEventListener('click', () => leaveMove(1));
+  $('leaveToday').addEventListener('click', () => { state.leave.y = today.y; state.leave.m = today.m; state.leave.msg = null; renderLeave(); });
+  {
+    let x0 = null, y0 = null;
+    $('leaveGrid').addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+    $('leaveGrid').addEventListener('touchend', e => {
+      if (x0 == null) return;
+      const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) leaveMove(dx < 0 ? 1 : -1);
+    }, { passive: true });
+  }
+  const isoToKey = v => (v || '').replace(/-/g, '');
+  $('leaveAdd').addEventListener('click', () => leaveRange(isoToKey($('leaveFrom').value), isoToKey($('leaveTo').value || $('leaveFrom').value), true));
+  $('leaveDel').addEventListener('click', () => leaveRange(isoToKey($('leaveFrom').value), isoToKey($('leaveTo').value || $('leaveFrom').value), false));
+  $('leaveList').addEventListener('click', e => {
+    const b = e.target.closest('.lv-del'); if (!b) return;
+    state.leave.setBefore = leaveSet();
+    for (let k = b.dataset.from; k <= b.dataset.to; k = shiftKey(k, 1)) delete leave.days[k];
+    saveLeave(); state.leave.msg = { html: 'Période retirée.' }; renderLeave();
+  });
+  $('leaveShare').addEventListener('click', async () => {
+    const text = leaveText();
+    if (navigator.share) { try { await navigator.share({ text }); } catch (e) { /* annulé */ } return; }
+    try { await navigator.clipboard.writeText(text); state.leave.msg = { html: 'Demande copiée : colle-la dans un SMS ou un mail.' }; }
+    catch (e) { state.leave.msg = { html: esc(text).replace(/\n/g, '<br>') }; }
+    renderLeave();
+  });
+
   function setTab(t) {
-    if (!['planning', 'equipe', 'reglages'].includes(t)) t = 'planning';
+    if (!['planning', 'equipe', 'conges', 'reglages'].includes(t)) t = 'planning';
     const changed = state.tab !== t;
     closeDay();
     state.tab = t;
     document.body.dataset.tab = t;
     document.querySelectorAll('.tab[data-tab-btn]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tabBtn === t)));
-    if (t === 'reglages') {
+    if (t === 'conges') { store(STORAGE_TAB_KEY, t); state.leave.msg = null; renderLeave(); }
+    else if (t === 'reglages') {
       renderNotesCard();
       if ($('importDetails').open) ensureXLSX().catch(() => {});
     } else {

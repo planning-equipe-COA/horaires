@@ -80,6 +80,35 @@
     </div>
   </section>
 
+  <section id="leaveCard" class="card leave" data-tab="conges">
+    <h2 class="leave-h">Mes congés</h2>
+    <p class="hint">Touche les jours à poser. Gardé seulement sur ce téléphone : rien n'est envoyé à l'équipe.</p>
+    <p id="leaveNoName" class="remind" hidden>Choisis ton nom dans Réglages → « Je suis » pour voir ton planning ici.</p>
+    <div id="leaveCounter" class="leave-counter" aria-live="polite">
+      <div class="lc-top"><span class="lc-num"><strong id="leaveUsed" data-v="0">0</strong> / 26 jours posés en <span id="leaveYear"></span></span><span id="leaveLeft" class="lc-left"></span></div>
+      <div class="lc-track"><div id="leaveBar" class="lc-bar"></div></div>
+    </div>
+    <div class="cal-head">
+      <h2 id="leaveTitle"></h2>
+      <button id="leaveToday" class="today-pill" type="button">Aujourd'hui</button>
+      <button id="leavePrev" class="cal-nav" type="button" aria-label="Mois précédent">‹</button>
+      <button id="leaveNext" class="cal-nav" type="button" aria-label="Mois suivant">›</button>
+    </div>
+    <div id="leaveGrid" class="cal-grid leave-grid"></div>
+    <p id="leaveMsg" class="leave-msg" role="status" hidden></p>
+    <p class="hint leave-legend"><span class="lg lg-pose"></span> posé <span class="lg lg-tn"></span> tombée de nuit incluse <span class="lg lg-plan"></span> au planning
+      <span id="leaveCoaLegend"><span class="lv-n lg-n">2</span> COA déjà en congé · <span class="lg lg-full"></span> 3 COA ou plus</span></p>
+    <details class="leave-range">
+      <summary>Poser une période</summary>
+      <div class="lr-row"><label>Du <input id="leaveFrom" type="date"></label><label>au <input id="leaveTo" type="date"></label></div>
+      <div class="lr-row"><button id="leaveAdd" type="button" class="primary">Poser</button><button id="leaveDel" type="button">Retirer</button></div>
+      <p class="hint">Les repos du planning (R, RF…) restent des repos et ne sont pas décomptés.</p>
+    </details>
+    <h3 class="leave-sub">Mes périodes</h3>
+    <ul id="leaveList" class="leave-list"></ul>
+    <button id="leaveShare" type="button" class="primary leave-share"><svg class="ic" aria-hidden="true"><use href="#i-send"/></svg> Envoyer ma demande</button>
+  </section>
+
   <section id="meCard" class="card me-card" data-tab="reglages" hidden>
     <label class="me-row" for="meName"><span class="me-label"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg> Je suis</span>
       <select id="meName" aria-label="Ton nom"></select></label>
@@ -333,6 +362,7 @@
         <p>Toucher un de ses jours travaillés → « Permutations possibles » (classées de la meilleure à la moins bonne, avec les règles de repos) → « Proposer » prépare un SMS au collègue. Seulement entre agents du même groupe (ROA avec ROA, COA avec COA).</p>
         <h3>7. Autres fonctions</h3>
         <ul>
+          <li><strong>Congés</strong> : onglet Congés, toucher les jours à poser (ou « Poser une période »). Compteur des 26 jours, tombée de nuit qui suit les vacances ajoutée d'office, info quand 3 COA sont déjà en congé ; « Envoyer ma demande » prépare le message. Gardé seulement sur le téléphone, pas envoyé à l'équipe.</li>
           <li><strong>Agenda du téléphone</strong> : Réglages → Exporter vers l'agenda (réimporter met à jour sans doublon).</li>
           <li><strong>Effectif à vérifier</strong> : une alerte rouge signale les jours où il y a trop ou pas assez d'agents sur une vacation (COA : 3 matins, 2 soirs, 1 nuit ; ROA : 1 de chaque).</li>
           <li><strong>Imprimer / PDF</strong> : bouton imprimante en haut à droite.</li>
@@ -369,6 +399,9 @@
     <button class="tab" type="button" role="tab" data-tab-btn="equipe" aria-selected="false">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="16.8" cy="9.6" r="2.6"/><path d="M15.7 14.6c2.4-.2 4.3 1.3 4.8 4.4"/></svg>
       <span>Équipe</span></button>
+    <button class="tab" type="button" role="tab" data-tab-btn="conges" aria-selected="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.8"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M5.6 18.4l1.6-1.6M16.8 7.2l1.6-1.6"/></svg>
+      <span>Congés</span></button>
     <button class="tab" type="button" role="tab" data-tab-btn="reglages" aria-selected="false">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17.5 7H20M4 17h3.5M12 17h8"/><circle cx="15.2" cy="7" r="2.3"/><circle cx="9.7" cy="17" r="2.3"/></svg>
       <span>Réglages</span><span id="settingsDot" class="tab-dot" hidden></span></button>
