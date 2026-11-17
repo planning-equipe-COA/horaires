@@ -53,6 +53,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
 - **Consigne de l'utilisateur (17 nov. 2026) : « tout ce qui peut être dynamique, le faire dorénavant »** — bandeaux qui
   défilent, petites animations ; toujours avec repli immobile si « réduire les animations » (`prefers-reduced-motion`) et à
   l'impression. Les bandeaux (`#teamWarn`, `#teamChangesBtn`, vu ou non) défilent en permanence via `marquee`.
+  `marquee` ne calcule la vitesse que bandeau visible (ResizeObserver, `buildMarquee`) : construit caché (autre onglet ouvert
+  au lancement), il défilait « extrêmement vite » (largeur 0 → texte répété 40 fois en 14 s, signalé le 17 nov. 2026).
 - **Confidentialité** : le fichier Excel est lu dans le navigateur et n'est jamais envoyé (texte sous
   l'import `#importHint` adapté selon que l'agent a rejoint l'équipe ou non).
   Ne jamais ajouter d'analytics ni de vrai planning dans ce dépôt (il est public).
@@ -351,8 +353,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   **3 COA max en congé le même jour = simple information** (`coaOff` : CA/C des autres COA d'après le planning + moi > 3 →
   cadre rouge, pastille du nombre de COA déjà en congé sur chaque jour). Périodes regroupées à travers les repos
   (`leavePeriods`), corbeille par période, « Envoyer ma demande » (texte via feuille de partage, sinon copie).
-  **Appui long (380 ms) puis glisser** = plusieurs jours d'un geste (Pointer Events + `touchmove` bloqué pendant le glisser ;
-  le 1er jour décide poser / retirer ; bouger avant 380 ms = défilement normal ; glisser de mois désactivé pendant ce temps).
+  **Appui long (300 ms) puis glisser** = plusieurs jours d'un geste (suivi par événements tactiles touchstart/move/end, souris
+  sur ordinateur ; `touchmove` bloqué pendant le glisser ; le 1er jour décide poser / retirer ; bouger avant 300 ms =
+  défilement normal). **Changer de mois en glissant : seulement un geste vif (< 300 ms, > 70 px), jamais après un appui long**
+  (signalé : le glisser changeait souvent de mois ; flèches ‹ › toujours là).
   **Propositions** (demandé « comme une IA » ; calcul local, `leaveSuggest`) : pour 1 / 3 / 5 / 10 jours travaillés posés à la
   suite (`mh_leave_n`), repos d'affilée obtenu (repos et congés autour) ÷ coût (posés + tombée de nuit incluse), jours à 3 COA
   écartés, budget de 26 respecté, 4 propositions sans chevauchement, bouton « Poser ». **Paysage** (`orientation: landscape`,

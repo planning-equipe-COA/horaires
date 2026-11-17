@@ -1418,15 +1418,32 @@
   }
   // Fait défiler le texte en boucle, toujours (demandé : bandeaux « dynamiques »), même s'il tient sur la ligne :
   // le motif est répété jusqu'à dépasser la largeur, puis doublé (translateX(-50 %) = un motif, sans à-coup).
+  // Bandeau qui défile. Calculé seulement quand il est visible : caché (autre onglet, au lancement), sa largeur vaut 0,
+  // le texte était alors répété 40 fois pour une durée de 14 s → défilement « extrêmement rapide » (signalé).
+  // Un ResizeObserver le recalcule dès qu'il apparaît ou change de largeur (rotation de l'écran).
+  const marqueeRO = typeof ResizeObserver === 'function' ? new ResizeObserver(entries => entries.forEach(en => {
+    const v = en.target, w = Math.round(v.clientWidth);
+    if (w && v._mq && v._mq.w !== w) buildMarquee(v);
+  })) : null;
+  function buildMarquee(view) {
+    const { track, html } = view._mq;
+    const w = view.clientWidth;
+    if (!w) return; // caché : on attend qu'il s'affiche
+    view._mq.w = Math.round(w);
+    track.classList.remove('run');
+    track.innerHTML = html;
+    const one = track.scrollWidth || w, n = Math.max(1, Math.ceil((w + 40) / one));
+    const unit = html.repeat(n);
+    track.innerHTML = unit + unit;
+    track.style.animationDuration = Math.max(14, Math.round(track.scrollWidth / 2 / 22)) + 's'; // ~22 px/s (45 : « trop vite », signalé)
+    void track.offsetWidth; // relance l'animation depuis le début
+    track.classList.add('run');
+  }
   function marquee(view, track, html) {
-    requestAnimationFrame(() => {
-      if (!view || !track) return;
-      const one = track.scrollWidth || 1, n = Math.max(1, Math.ceil((view.clientWidth + 40) / one));
-      const unit = html.repeat(n);
-      track.innerHTML = unit + unit;
-      track.classList.add('run');
-      track.style.animationDuration = Math.max(14, Math.round(track.scrollWidth / 2 / 22)) + 's'; // ~22 px/s (45 : « trop vite », signalé)
-    });
+    if (!view || !track) return;
+    view._mq = { track, html, w: 0 };
+    if (marqueeRO) marqueeRO.observe(view);
+    requestAnimationFrame(() => { if (view._mq && view._mq.track === track) buildMarquee(view); });
   }
 
   // ── Imprimer / PDF : mon planning (seulement le mien), celui de l'équipe, ou les deux ; mois affiché ou période ──
@@ -2862,13 +2879,16 @@
   $('leaveNext').addEventListener('click', () => leaveMove(1));
   $('leaveToday').addEventListener('click', () => { state.leave.y = today.y; state.leave.m = today.m; state.leave.msg = null; renderLeave(); });
   {
-    let x0 = null, y0 = null;
-    $('leaveGrid').addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+    // glisser pour changer de mois : seulement un geste vif (< 300 ms) et ample, jamais après un appui long
+    // (signalé : en voulant prendre plusieurs jours, le mois changeait souvent ; les flèches ‹ › restent)
+    let x0 = null, y0 = null, t0 = 0, wasDrag = false;
+    $('leaveGrid').addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now(); wasDrag = false; }, { passive: true });
+    $('leaveGrid').addEventListener('touchmove', () => { if (state.leave.dragging && state.leave.dragging()) wasDrag = true; }, { passive: true });
     $('leaveGrid').addEventListener('touchend', e => {
       if (x0 == null) return;
       const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
-      if (state.leave.dragging && state.leave.dragging()) return;
-      if (Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) leaveMove(dx < 0 ? 1 : -1);
+      if (wasDrag || (state.leave.dragging && state.leave.dragging()) || Date.now() - t0 > 300) return;
+      if (Math.abs(dx) > 70 && Math.abs(dx) > 2 * Math.abs(dy)) leaveMove(dx < 0 ? 1 : -1);
     }, { passive: true });
   }
   const isoToKey = v => (v || '').replace(/-/g, '');
@@ -2889,6 +2909,8 @@
   });
 
   // ── Appui long puis glisser : prendre plusieurs jours d'un geste (demandé). Le premier jour décide : poser ou retirer.
+  // Suivi au doigt par les événements tactiles (l'iPhone peut annuler les Pointer Events en cours de glisser : on
+  // l'ignore pendant un glisser et on finit au lever du doigt). Signalé : le glisser changeait souvent de mois.
   {
     const grid = $('leaveGrid');
     let timer = null, start = null, drag = null, skipClick = false;
@@ -2899,9 +2921,10 @@
       grid.classList.toggle('lv-dragging-del', !drag.add);
     };
     const stop = () => { clearTimeout(timer); timer = null; start = null; };
-    grid.addEventListener('pointerdown', e => {
-      const c = e.target.closest('.lv-cell[data-key]'); if (!c || e.button > 0) return;
-      start = { x: e.clientX, y: e.clientY, key: c.dataset.key };
+    const begin = (x, y, target) => {
+      const c = target.closest && target.closest('.lv-cell[data-key]'); if (!c) return;
+      stop();
+      start = { x, y, key: c.dataset.key, t: Date.now() };
       timer = setTimeout(() => {
         timer = null;
         const kind = leaveSet().get(start.key);
@@ -2909,29 +2932,36 @@
         grid.classList.add('lv-dragging');
         if (navigator.vibrate) navigator.vibrate(15);
         paint();
-      }, 380);
-    });
-    grid.addEventListener('pointermove', e => {
-      if (timer && start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) stop(); // on fait défiler : pas d'appui long
+      }, 300);
+    };
+    const move = (x, y) => {
+      if (timer && start && Math.hypot(x - start.x, y - start.y) > 12) stop(); // on fait défiler : pas d'appui long
       if (!drag) return;
-      const c = cellAt(e.clientX, e.clientY);
+      const c = cellAt(x, y);
       if (c && c.dataset.key !== drag.to) { drag.to = c.dataset.key; paint(); }
-    });
+    };
     const end = () => {
       stop();
       if (!drag) return;
-      const d = drag; drag = null; skipClick = true; setTimeout(() => { skipClick = false; }, 400);
+      const d = drag; drag = null; skipClick = true; setTimeout(() => { skipClick = false; }, 450);
       grid.classList.remove('lv-dragging', 'lv-dragging-del');
+      grid.querySelectorAll('.lv-drag').forEach(c => c.classList.remove('lv-drag'));
       if (d.from === d.to) { leaveToggle(d.from); return; }
       leaveRange(d.from, d.to, d.add, true);
     };
-    grid.addEventListener('pointerup', end);
-    grid.addEventListener('pointercancel', () => { if (drag) end(); else stop(); });
-    // pendant le glisser, la page ne défile pas (iPhone : il faut bloquer touchmove)
-    grid.addEventListener('touchmove', e => { if (drag) e.preventDefault(); }, { passive: false });
+    // doigt (iPhone, Android)
+    grid.addEventListener('touchstart', e => { if (e.touches.length === 1) begin(e.touches[0].clientX, e.touches[0].clientY, e.target); else stop(); }, { passive: true });
+    grid.addEventListener('touchmove', e => { const t = e.touches[0]; move(t.clientX, t.clientY); if (drag) e.preventDefault(); }, { passive: false });
+    grid.addEventListener('touchend', end);
+    grid.addEventListener('touchcancel', end);
+    // souris (ordinateur)
+    grid.addEventListener('mousedown', e => { if (e.button === 0) begin(e.clientX, e.clientY, e.target); });
+    window.addEventListener('mousemove', e => { if (timer || drag) move(e.clientX, e.clientY); });
+    window.addEventListener('mouseup', () => { if (timer || drag) end(); });
     grid.addEventListener('contextmenu', e => e.preventDefault());
     grid.addEventListener('click', e => { if (skipClick) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
     state.leave.dragging = () => !!drag || skipClick;
+    state.leave.touchStart = () => start && start.t;
   }
 
   // ── Propositions (demandé « comme une IA ») : calcul local d'après mon planning, rien n'est envoyé.
