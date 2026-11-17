@@ -358,6 +358,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   écartés, budget de 26 respecté, 4 propositions sans chevauchement, bouton « Poser ». **Paysage** (`orientation: landscape`,
   hauteur ≤ 540 px) : calendrier à droite (`.leave-cal`, sticky, cases compactes), compteur et listes à gauche, en-tête de
   l'appli masqué, onglets sans libellés (signalé : on ne voyait pas jour, date et décompte ensemble).
+  **Imprimer / PDF** (demandé) : bouton `#leavePrint` à côté de « Envoyer ma demande » et bouton imprimante du haut (`#calPrint`,
+  visible dans cet onglet, ouvre directement `printLeave`) → une page A4 portrait : compteur, tableau des périodes (jours,
+  remarques : au planning, tombée de nuit incluse, déjà 3 COA), l'année affichée en 12 petits mois (posé vert plein, Tn
+  pointillé, congé au planning vert clair, repos hachuré, férié souligné rouge).
   Hypothèses à confirmer : année civile, repos non décomptés.
 - Écarté par l'utilisateur : « Partager → Planning COA » sur Android.
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.

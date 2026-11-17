@@ -1844,7 +1844,7 @@
     renderCalendar();
     if (teamCode() && state.importAgents) schedulePublish(); // la date seule peut justifier un envoi
   });
-  $('calPrint').addEventListener('click', openPrint);
+  $('calPrint').addEventListener('click', () => (state.tab === 'conges' ? printLeave() : openPrint()));
   $('printSheet').addEventListener('click', e => { if (e.target.closest('[data-close]')) closePrint(); });
   $('printSheet').addEventListener('change', e => {
     if (e.target.name === 'prWhen') { $('prRange').hidden = e.target.value !== 'range'; $('prMsg').hidden = true; }
@@ -2983,6 +2983,51 @@
     renderLeave();
     $('leaveCard').querySelector('.leave-cal').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   });
+
+  // ── Congés : imprimer / PDF (une page A4 : compteur, périodes, l'année entière en 12 petits mois)
+  function printLeave() {
+    const me = load(STORAGE_NAME_KEY), days = leaveMine(), set = leaveSet(), y = state.leave.y, gmap = groupMap();
+    const isCoa = !!me && agentGroup(me, gmap) === 'coa';
+    const used = [...set.keys()].filter(k => k.slice(0, 4) === String(y) && leaveCounts(k, days)).length;
+    const periods = leavePeriods(set, days, y);
+    const rows = periods.map(p => {
+      const n = p.keys.filter(k => leaveCounts(k, days)).length;
+      const notes = [];
+      if (p.keys.every(k => set.get(k) === 'plan')) notes.push('au planning');
+      if (p.keys.some(k => set.get(k) === 'tn')) notes.push('tombée de nuit incluse');
+      const full = isCoa ? p.keys.filter(k => set.get(k) === 'pose' && coaOff(k, me, gmap) + 1 > LEAVE_COA_MAX) : [];
+      if (full.length) notes.push(`déjà ${LEAVE_COA_MAX} COA en congé le ${full.map(k => fmtLeave(k, { weekday: undefined })).join(', ')}`);
+      const r = p.from === p.to ? fmtLeave(p.from, { weekday: 'long' }) : `du ${fmtLeave(p.from, { weekday: 'long' })} au ${fmtLeave(p.to, { weekday: 'long' })}`;
+      return `<tr><td>${esc(r)}</td><td class="pl-n">${n}</td><td>${esc(notes.join(' · '))}</td></tr>`;
+    }).join('');
+    let months = '';
+    for (let m = 1; m <= 12; m++) {
+      let t = `<div class="pl-month"><h3>${esc(utc({ y, m, d: 1 }).toLocaleDateString('fr-FR', { month: 'long', timeZone: 'UTC' }))}</h3><table><tr>` +
+        WEEKDAYS.map(w => `<th>${w[0].toUpperCase()}</th>`).join('') + '</tr>';
+      for (const week of C.monthGrid(y, m)) {
+        t += '<tr>' + week.map(d => {
+          if (!d) return '<td></td>';
+          const k = C.dateKey(d), kind = set.get(k), cls = [];
+          if (kind) cls.push('pl-' + kind);
+          if (kind && !leaveCounts(k, days)) cls.push('pl-free');
+          if (C.holidayName(k)) cls.push('pl-hol');
+          return `<td class="${cls.join(' ')}">${d.d}</td>`;
+        }).join('') + '</tr>';
+      }
+      months += t + '</table></div>';
+    }
+    $('printArea').innerHTML = `<section class="pr-page pr-leave"><header class="pr-head"><h1>Mes congés ${y}</h1>` +
+      `<p>${me ? esc(nameText(me)) : ''}</p></header>` +
+      `<p class="pl-count"><strong>${used}</strong> / ${LEAVE_MAX} jours posés · ${used <= LEAVE_MAX ? `${LEAVE_MAX - used} restant${LEAVE_MAX - used > 1 ? 's' : ''}` : `${used - LEAVE_MAX} de trop`}</p>` +
+      (rows ? `<table class="pl-list"><thead><tr><th>Période</th><th>Jours</th><th>Remarques</th></tr></thead><tbody>${rows}</tbody></table>` : '<p>Aucun congé posé.</p>') +
+      `<div class="pl-year">${months}</div>` +
+      '<p class="pr-legend"><span><i class="pl-key pl-pose"></i> posé</span><span><i class="pl-key pl-tn"></i> tombée de nuit incluse</span>' +
+      '<span><i class="pl-key pl-plan"></i> congé au planning</span><span><i class="pl-key pl-pose pl-free"></i> repos (non décompté)</span><span class="pl-holk">12</span> férié</p>' +
+      `<footer class="pr-foot">Prévisionnel gardé sur le téléphone (non envoyé à l'équipe) · ${esc(printedOn())}</footer></section>`;
+    document.body.classList.add('printing');
+    setTimeout(() => window.print(), 60);
+  }
+  $('leavePrint').addEventListener('click', printLeave);
 
   function setTab(t) {
     if (!['planning', 'equipe', 'conges', 'reglages'].includes(t)) t = 'planning';
