@@ -291,8 +291,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   base disparu du planning (renommé), sinon COA. `swapOptions(..., { canSwap })` (core.js, testé) ne propose que le même
   groupe (« Entre ROA seulement » sous les permutations).
   **Effectif dépassé** (17 nov. 2026, demandé) : `C.staffAlerts(plan, groupOf, keys)` (core.js, testé), limites `STAFF_LIMITS`
-  COA 3 matins / 2 soirs / 1 nuit, ROA 1 / 1 / 1, groupe « jour » ignoré ; alerte seulement au-delà (pas en dessous : non
-  demandé). Affichée : ligne du bandeau `#teamWarn` (31 prochains jours, toucher → onglet Équipe + détail du 1er jour),
+  COA 3 matins / 2 soirs / 1 nuit (2 soirs confirmé), ROA 1 / 1 / 1, groupe « jour » ignoré ; « trop » et aussi « manque »
+  (demandé le 17 nov., option `missing`) — manque seulement si le jour est couvert par le planning (≥ 60 % des agents du mois
+  y ont un code) et si le groupe y est présent. Libellé « Effectif à vérifier » ; bandeau : une entrée par jour, « +1 matin COA,
+  −1 nuit COA ». Affichée : ligne du bandeau `#teamWarn` (31 prochains jours, toucher → onglet Équipe + détail du 1er jour),
   colonne de date soulignée en rouge dans la vue Équipe (`th.staff`, détail au survol), encadré rouge dans le détail du jour
   (`.day-staff`). Dépend des groupes réglés par le responsable (sinon les ROA comptent comme COA).
   Menus de noms toujours alphabétiques (sur le nom affiché). Retirés à la demande de l'utilisateur : carte « Rôles des

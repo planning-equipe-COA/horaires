@@ -326,12 +326,14 @@
   const STAFF_WORD = { M: ['matin', 'matins'], S: ['soir', 'soirs'], N: ['nuit', 'nuits'] };
   function staffAlertsFor(keys) {
     const gmap = groupMap();
-    return C.staffAlerts(planView(), n => agentGroup(n, gmap), keys);
+    return C.staffAlerts(planView(), n => agentGroup(n, gmap), keys, null, { missing: true });
   }
   function staffText(a, withDay) {
     const w = STAFF_WORD[a.code] || [a.code, a.code];
     const day = withDay ? utc(keyToDate(a.key)).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }) + ' : ' : '';
-    return `${day}${a.count} ${w[1]} ${GROUPS[a.group]} (${a.max} prévu${a.max > 1 ? 's' : ''})`;
+    const what = a.count ? `${a.count} ${a.count > 1 ? w[1] : w[0]} ${GROUPS[a.group]}` : `aucun ${w[0]} ${GROUPS[a.group]}`.replace('aucun nuit', 'aucune nuit');
+    const diff = Math.abs(a.count - a.max);
+    return `${day}${what} au lieu de ${a.max} (${a.kind === 'trop' ? diff + ' de trop' : 'il en manque ' + diff})`;
   }
   function newestRoles(a, b) { if (!a) return b || null; if (!b) return a; return (a.at || '') >= (b.at || '') ? a : b; }
   // menus de noms : ordre alphabétique simple (les rôles ne regroupent que le tableau Équipe)
@@ -598,7 +600,16 @@
       const al = staffAlertsFor(keys);
       if (al.length) {
         staffKey = al[0].key;
-        lines.push({ ic: 'users', text: 'Effectif dépassé : ' + al.slice(0, 4).map(a => staffText(a, true)).join(' · ') + (al.length > 4 ? ` · et ${al.length - 4} autre${al.length > 5 ? 's' : ''}` : '') + '. Touche ici pour voir.' });
+        // une entrée par jour, en bref : « ven. 20 nov. : +1 matin COA, −1 nuit COA »
+        const byDay = {};
+        al.forEach(a => {
+          const w = STAFF_WORD[a.code] || [a.code], d = Math.abs(a.count - a.max);
+          (byDay[a.key] = byDay[a.key] || []).push(`${a.kind === 'trop' ? '+' : '−'}${d} ${d > 1 ? w[1] : w[0]} ${GROUPS[a.group]}`);
+        });
+        const days = Object.keys(byDay).sort();
+        const label = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+        lines.push({ ic: 'users', text: 'Effectif à vérifier (+ = de trop, − = manquant) : ' + days.slice(0, 4).map(k => label(k) + ' : ' + byDay[k].join(', ')).join(' · ') +
+          (days.length > 4 ? ` · et ${days.length - 4} autre${days.length > 5 ? 's' : ''} jour${days.length > 5 ? 's' : ''}` : '') + '. Touche ici pour voir.' });
       }
     }
     $('teamWarn').hidden = !lines.length;
@@ -1240,7 +1251,7 @@
         (code ? ` ${chip(code)} <span>${esc(codeLabel(code))}</span>` : ' <span class="muted">pas de planning</span>') + '</div>';
     }
     const over = staffAlertsFor([k]);
-    if (over.length) html += `<p class="day-staff"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> Effectif dépassé : ${esc(over.map(a => staffText(a)).join(', '))}</p>`;
+    if (over.length) html += `<p class="day-staff"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> Effectif à vérifier : ${esc(over.map(a => staffText(a)).join(', '))}</p>`;
     const holiday = C.holidayName(k);
     if (holiday) html += `<p class="day-holiday"><svg class="ic" aria-hidden="true"><use href="#i-flag"/></svg> Férié : ${esc(holiday)}</p>`;
     const remark = ((plan.remarks || {})[name] || {})[k];
@@ -1574,7 +1585,7 @@
     for (const d of dates) {
       const k = C.dateKey(d), wd = utc(d).getUTCDay();
       const cls = [wd === 0 || wd === 6 ? 'we' : '', k === todayKey ? 'today' : '', k === state.cal.selected ? 'sel' : '', C.holidayName(k) ? 'hol' : '', staff[k] ? 'staff' : ''].filter(Boolean).join(' ');
-      head += `<th class="${cls}" data-key="${k}"${staff[k] ? ` title="Effectif dépassé : ${esc(staff[k].join(', '))}"` : ''}><span>${WEEKDAYS[(wd + 6) % 7].slice(0, 1).toUpperCase()}</span>${d.d}</th>`;
+      head += `<th class="${cls}" data-key="${k}"${staff[k] ? ` title="Effectif à vérifier : ${esc(staff[k].join(', '))}"` : ''}><span>${WEEKDAYS[(wd + 6) % 7].slice(0, 1).toUpperCase()}</span>${d.d}</th>`;
     }
     head += '</tr></thead></table>';
     let html = `<table class="team-table${hl ? ' hl-on' : ''}" ${width}>${cols}<tbody>`;

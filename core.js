@@ -49,22 +49,36 @@
   // Effectif prévu par vacation et par groupe (demandé, nov. 2026) : COA 3 matins, 2 soirs, 1 nuit ; ROA 1 de chaque.
   // Au-delà = alerte (agent en trop sur la vacation). Le groupe « jour » n'est pas compté.
   const STAFF_LIMITS = { coa: { M: 3, S: 2, N: 1 }, roa: { M: 1, S: 1, N: 1 } };
-  // [{ key, group, code, count, max }] pour les jours demandés
-  function staffAlerts(plan, groupOf, keys, limits) {
+  // [{ key, group, code, count, max, kind: 'trop' | 'manque' }] pour les jours demandés.
+  // « manque » seulement si opts.missing, et seulement pour un jour que le planning couvre vraiment (au moins 60 % des
+  // agents du mois y ont un code : un jour hors du tableau importé n'est pas « vide ») et pour un groupe présent ce jour-là.
+  function staffAlerts(plan, groupOf, keys, limits, opts) {
     limits = limits || STAFF_LIMITS;
-    const agents = (plan && plan.agents) || {}, out = [];
+    opts = opts || {};
+    const agents = (plan && plan.agents) || {}, names = Object.keys(agents), out = [], monthRef = {};
+    const refFor = k => {
+      const m = k.slice(0, 6);
+      if (monthRef[m] == null) monthRef[m] = names.filter(n => Object.keys(agents[n]).some(d => d.slice(0, 6) === m)).length;
+      return monthRef[m];
+    };
     for (const k of keys) {
-      const count = {};
-      for (const n of Object.keys(agents)) {
-        const code = normCode(agents[n][k] || '');
-        const g = groupOf ? groupOf(n) : 'coa';
+      const count = {}, groupsHere = new Set();
+      let active = 0;
+      for (const n of names) {
+        const raw = agents[n][k];
+        if (!raw) continue;
+        active++;
+        const code = normCode(raw), g = groupOf ? groupOf(n) : 'coa';
+        groupsHere.add(g);
         if (!limits[g] || limits[g][code] == null) continue;
         const id = g + '|' + code;
         count[id] = (count[id] || 0) + 1;
       }
-      for (const id of Object.keys(count)) {
-        const [g, code] = id.split('|'), max = limits[g][code];
-        if (count[id] > max) out.push({ key: k, group: g, code, count: count[id], max });
+      for (const g of Object.keys(limits)) for (const code of Object.keys(limits[g])) {
+        const n = count[g + '|' + code] || 0, max = limits[g][code];
+        if (n > max) out.push({ key: k, group: g, code, count: n, max, kind: 'trop' });
+        else if (n < max && opts.missing && groupsHere.has(g) && active >= Math.max(1, Math.ceil(refFor(k) * 0.6)))
+          out.push({ key: k, group: g, code, count: n, max, kind: 'manque' });
       }
     }
     return out;

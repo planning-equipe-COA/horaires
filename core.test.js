@@ -494,4 +494,9 @@ test('staffAlerts : COA 3 M / 2 S / 1 N, ROA 1 de chaque, « jour » ignoré', (
   const grp = n => n.startsWith('r') ? 'roa' : n.startsWith('j') ? 'jour' : 'coa';
   const res = C.staffAlerts({ agents }, grp, [k]).map(a => `${a.group} ${a.code} ${a.count}/${a.max}`).sort();
   assert.deepEqual(res, ['coa M 4/3', 'coa N 2/1', 'roa M 2/1']);
+  // avec les manques : ROA sans soir ni nuit ce jour-là
+  const all = C.staffAlerts({ agents }, grp, [k], null, { missing: true }).map(a => `${a.kind} ${a.group} ${a.code} ${a.count}/${a.max}`).sort();
+  assert.deepEqual(all, ['manque roa N 0/1', 'manque roa S 0/1', 'trop coa M 4/3', 'trop coa N 2/1', 'trop roa M 2/1']);
+  // jour hors du tableau (personne n'a de code) : aucun manque
+  assert.deepEqual(C.staffAlerts({ agents }, grp, ['20261130'], null, { missing: true }), []);
 });
