@@ -43,6 +43,7 @@
     orange: { emoji: '🟠', css: 'orange' },
     rouge: { emoji: '🔴', css: 'red' },
     violet: { emoji: '🟣', css: 'purple' },
+    rose: { emoji: '🩷', css: 'hotpink' }, // pas de rond rose dans les emoji : cœur rose (agenda du téléphone)
   };
 
   function eventTitle(def) {

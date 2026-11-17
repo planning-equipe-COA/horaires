@@ -135,7 +135,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   l'utilisateur : l'interface n'expose plus ni horaires ni réglage début/fin. Les horaires restent
   dans `DEFAULT_CODES` (core.js, option `withHours` de `buildEvents`) mais l'appli ne s'en sert pas.
 - Couleurs (`color` de chaque code, `COLORS` dans core.js) : marron Matin, jaune Soir, bleu Nuit,
-  blanc pour tous les repos, vert pour les congés (CA, C). Apple et Google ignorent la couleur d'un
+  blanc pour tous les repos, vert pour les congés (CA, C). Couleurs au choix : marron, jaune, bleu, blanc, vert, orange, rouge, violet,
+  rose (ajoutée le 17 nov. 2026, demandée ; pas de rond rose dans les emoji → 🩷 dans l'agenda du téléphone). Apple et Google ignorent la couleur d'un
   événement importé : elle est donc rendue par une pastille emoji en tête du titre (« 🟤 Matin »),
   plus la propriété COLOR. Réglable par code dans « Codes et couleurs ».
   Pastilles sans couleur (J, JS, EM, X, ABJ…) : gris `--chip` éclairci en mode sombre (#4a5a6f) pour rester lisibles.

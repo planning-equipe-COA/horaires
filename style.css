@@ -151,6 +151,7 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .chip[data-color="orange"] { background: #f0891f; color: #2b1600; }
 .chip[data-color="rouge"] { background: #d2382d; color: #fff; }
 .chip[data-color="violet"] { background: #7c3bb4; color: #fff; }
+.chip[data-color="rose"] { background: #e0569d; color: #fff; }
 .cal-day { margin-top: 12px; padding: 12px; border-radius: 12px; background: var(--bg); font-size: .95rem; }
 .cal-day-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .cal-day-head strong { display: inline-block; margin-right: 2px; }
@@ -456,6 +457,7 @@ body.tint-cells .cal-grid .cal-cell:has(> .chip[data-color="jaune"]) { backgroun
 body.tint-cells .cal-grid .cal-cell:has(> .chip[data-color="bleu"]) { background: color-mix(in srgb, #2f62d6 32%, var(--bg)); }
 body.tint-cells .cal-grid .cal-cell:has(> .chip[data-color="vert"]) { background: color-mix(in srgb, #2e8b47 28%, var(--bg)); }
 body.tint-cells .cal-grid .cal-cell:has(> .chip[data-color="violet"]) { background: color-mix(in srgb, #7c3bb4 28%, var(--bg)); }
+body.tint-cells .cal-grid .cal-cell:has(> .chip[data-color="rose"]) { background: color-mix(in srgb, #e0569d 28%, var(--bg)); }
 body.tint-cells .cal-grid .cal-cell:has(> .chip[data-color="orange"]) { background: color-mix(in srgb, #f0891f 26%, var(--bg)); }
 body.tint-cells .cal-grid .cal-cell:has(> .chip[data-color="rouge"]) { background: color-mix(in srgb, #d2382d 26%, var(--bg)); }
 body.tint-cells .cal-grid .cal-cell:has(> .chip[data-color="blanc"]) { background: transparent; border-color: var(--line); }
