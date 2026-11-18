@@ -2352,21 +2352,25 @@
   // Par défaut : toi en premier, puis ordre alphabétique (les anciens « fin de liste » restent à la fin).
   // Ordre personnalisé : mh_roles.order (noms complets), envoyé chiffré avec le planning d'équipe ;
   // les nouveaux agents s'ajoutent à la fin, par ordre alphabétique.
-  function teamOrder(names, me) {
+  // L'ordre personnalisé est partagé avec l'équipe ; à l'affichage, l'utilisateur du téléphone passe toujours en tête
+  // (signalé : celui qui avait réglé l'ordre apparaissait premier sur tous les téléphones). « Réorganiser » (raw)
+  // montre et enregistre l'ordre partagé tel quel.
+  function teamOrder(names, me, raw) {
     const roles = loadRoles() || {};
     if (Array.isArray(roles.order) && roles.order.length) {
       const known = roles.order.filter(n => names.includes(n));
-      return known.concat(orderNames(names.filter(n => !known.includes(n))));
+      const list = known.concat(orderNames(names.filter(n => !known.includes(n))));
+      return !raw && me && list.includes(me) ? [me].concat(list.filter(n => n !== me)) : list;
     }
     const isEnd = n => C.groupOf(n, { np: roles.np }) === 'np';
     const main = orderNames(names.filter(n => !isEnd(n))), end = orderNames(names.filter(isEnd));
     return (main.includes(me) ? [me].concat(main.filter(n => n !== me)) : main).concat(end);
   }
   function renderReorder(names, me) {
-    if (!state.reorderList) state.reorderList = teamOrder(names, me);
+    if (!state.reorderList) state.reorderList = teamOrder(names, me, true);
     const list = state.reorderList, admin = load('mh_admin') === '1';
     if (!state.groupDraft) { const m = groupMap(); state.groupDraft = {}; list.forEach(n => { state.groupDraft[n] = agentGroup(n, m); }); }
-    $('calTeam').innerHTML = '<p class="hint">Maintiens la poignée ☰ et fais glisser le nom à sa place. <svg class="ic" aria-hidden="true"><use href="#i-edit"/></svg> change le nom affiché ' +
+    $('calTeam').innerHTML = '<p class="hint">Ordre commun à toute l\'équipe ; sur chaque téléphone, son utilisateur reste toujours en premier. Maintiens la poignée ☰ et fais glisser le nom à sa place. <svg class="ic" aria-hidden="true"><use href="#i-edit"/></svg> change le nom affiché ' +
       '(par exemple pour distinguer deux homonymes). Puis touche « Terminé ».</p>' +
       (admin ? '<p class="hint">Groupe pour les permutations : touche la pastille COA / ROA / Journée pour la changer (ROA avec ROA, COA avec COA).</p>'
         : '<div class="ro-unlock"><p class="hint">Groupes COA / ROA / Journée : réglés par le responsable. Responsable sur ce téléphone ? Code responsable :</p>' +

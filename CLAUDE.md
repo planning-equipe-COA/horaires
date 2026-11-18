@@ -283,6 +283,9 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   `renderReorder`, `saveOrder`. **Ne jamais écrire de vrais noms dans ce code public** : l'ordre vit
   dans `mh_roles.order` (noms complets) et part chiffré avec le planning d'équipe (`roles`, le plus
   récent l'emporte ; commit « Ordre mis à jour »). Nouveaux agents ajoutés à la fin (alphabétique).
+  **À l'affichage, l'utilisateur du téléphone (`mh_name`) passe toujours en tête**, l'ordre partagé ensuite (signalé le 18 nov.
+  2026 : celui qui avait réglé l'ordre apparaissait premier chez tout le monde) ; « Réorganiser » montre et enregistre l'ordre
+  partagé brut (`teamOrder(names, me, true)`).
   **Noms affichés** : sans surnom, la mention de contrat quitte le nom et devient un badge (`C.splitName` :
   « NOEL 1/2 T (1) » → NOEL ½, « TESSIER 32 80% » → TESSIER 32h ; `nameTable`, `shown`, `nameHTML`, `tagsHTML`,
   `nameText` pour les menus) ; si deux agents ont alors le même nom (ex. « ANDRIEU 32 » / « ANDRIEU 1/2 T (1) »),
