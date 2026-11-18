@@ -286,6 +286,10 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   **À l'affichage, l'utilisateur du téléphone (`mh_name`) passe toujours en tête**, l'ordre partagé ensuite (signalé le 18 nov.
   2026 : celui qui avait réglé l'ordre apparaissait premier chez tout le monde) ; « Réorganiser » montre et enregistre l'ordre
   partagé brut (`teamOrder(names, me, true)`).
+  **Lignes masquées** (18 nov. 2026, demandé : supprimer deux lignes en double / obsolètes) : bouton « Masquer » sur chaque nom
+  de « Réorganiser les noms », **responsable seulement** (`mh_admin`), section « Lignes masquées … Réafficher » ; `roles.hidden`
+  { nom du tableau: 1 }, envoyé chiffré avec `roles` (jamais de vrais noms dans le code). `planView()` les retire de tout
+  l'affichage (vue Équipe, menus, effectif, permutations, congés, impression ; jamais `mh_name`) ; `state.plan` les garde.
   **Noms affichés** : sans surnom, la mention de contrat quitte le nom et devient un badge (`C.splitName` :
   « NOEL 1/2 T (1) » → NOEL ½, « TESSIER 32 80% » → TESSIER 32h ; `nameTable`, `shown`, `nameHTML`, `tagsHTML`,
   `nameText` pour les menus) ; si deux agents ont alors le même nom (ex. « ANDRIEU 32 » / « ANDRIEU 1/2 T (1) »),

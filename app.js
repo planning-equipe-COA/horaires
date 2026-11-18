@@ -1024,7 +1024,25 @@
   const WEEKDAYS = ['lu', 'ma', 'me', 'je', 've', 'sa', 'di'];
   // Sans planning sur le téléphone, le calendrier s'affiche quand même, vide (même organisation)
   const EMPTY_PLAN = { agents: {}, changes: {}, changesSeen: true, at: 'vide' };
-  function planView() { return state.plan || EMPTY_PLAN; }
+  // Lignes masquées par le responsable (demandé le 18 nov. 2026 : supprimer des lignes en double ou obsolètes) :
+  // `roles.hidden` { nom du tableau: 1 }, partagé chiffré avec `roles`. Elles disparaissent de tout l'affichage (vue
+  // Équipe, menus, effectif, permutations, congés, impression) ; le planning stocké, lui, les garde (réversible).
+  let planViewCache = null;
+  function hiddenMap() { return (loadRoles() || {}).hidden || {}; }
+  function planView() {
+    if (!state.plan) return EMPTY_PLAN;
+    const hidden = hiddenMap(), me = load(STORAGE_NAME_KEY);
+    const hide = Object.keys(hidden).filter(n => n !== me && state.plan.agents[n]);
+    if (!hide.length) return state.plan;
+    const sig = hide.join('|');
+    if (planViewCache && planViewCache.src === state.plan && planViewCache.agentsRef === state.plan.agents && planViewCache.sig === sig) return planViewCache.view;
+    const agents = {}, remarks = {};
+    Object.keys(state.plan.agents).forEach(n => { if (!hide.includes(n)) agents[n] = state.plan.agents[n]; });
+    Object.keys(state.plan.remarks || {}).forEach(n => { if (!hide.includes(n)) remarks[n] = state.plan.remarks[n]; });
+    const view = Object.assign({}, state.plan, { agents, remarks });
+    planViewCache = { src: state.plan, agentsRef: state.plan.agents, sig, view };
+    return view;
+  }
   function renderCalendar() {
     try { if (state.tab === 'conges') renderLeave(); } catch (e) { /* congés : jamais bloquant */ }
     try { if (state.plan) renderTeamAlerts(); } catch (e) { /* alertes : jamais bloquant */ }
@@ -1952,6 +1970,13 @@
       renderCalendar(); // pastilles modifiables, liste en cours conservée
       return;
     }
+    const hb = e.target.closest('[data-hide]'), ub = e.target.closest('[data-unhide]');
+    if (hb || ub) {
+      if (hb) { state.hiddenDraft[hb.dataset.hide] = 1; state.reorderList = state.reorderList.filter(n => n !== hb.dataset.hide); }
+      else { delete state.hiddenDraft[ub.dataset.unhide]; if (!state.reorderList.includes(ub.dataset.unhide)) state.reorderList.push(ub.dataset.unhide); }
+      renderCalendar();
+      return;
+    }
     const gb = e.target.closest('.ro-group');
     if (gb && !gb.disabled) {
       const order = ['coa', 'roa', 'jour'], n = gb.dataset.group;
@@ -1963,7 +1988,7 @@
     }
     if (id === 'roDone') { saveOrder(state.reorderList.slice()); return; }
     if (id === 'roReset') { saveOrder(null); return; }
-    if (id === 'roCancel') { state.reorder = false; state.reorderList = null; state.groupDraft = null; renderCalendar(); return; }
+    if (id === 'roCancel') { state.reorder = false; state.reorderList = null; state.groupDraft = null; state.hiddenDraft = null; renderCalendar(); return; }
     const cell = e.target.closest('[data-key]');
     if (!cell) return;
     state.cal.selected = cell.dataset.key;
@@ -2369,6 +2394,7 @@
   function renderReorder(names, me) {
     if (!state.reorderList) state.reorderList = teamOrder(names, me, true);
     const list = state.reorderList, admin = load('mh_admin') === '1';
+    if (!state.hiddenDraft) state.hiddenDraft = Object.assign({}, hiddenMap());
     if (!state.groupDraft) { const m = groupMap(); state.groupDraft = {}; list.forEach(n => { state.groupDraft[n] = agentGroup(n, m); }); }
     $('calTeam').innerHTML = '<p class="hint">Ordre commun à toute l\'équipe ; sur chaque téléphone, son utilisateur reste toujours en premier. Maintiens la poignée ☰ et fais glisser le nom à sa place. <svg class="ic" aria-hidden="true"><use href="#i-edit"/></svg> change le nom affiché ' +
       '(par exemple pour distinguer deux homonymes). Puis touche « Terminé ».</p>' +
@@ -2382,9 +2408,18 @@
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>' +
         `<span class="ro-name">${nameHTML(n)}</span>` +
         `<button class="ro-group g-${state.groupDraft[n] || 'coa'}" type="button" data-group="${esc(n)}"${admin ? '' : ' disabled'} aria-label="Groupe de ${esc(shown(n))} : ${GROUPS[state.groupDraft[n] || 'coa']}">${GROUPS[state.groupDraft[n] || 'coa']}</button>` +
-        `<button class="ro-edit link" type="button" aria-label="Renommer ${esc(shown(n))}"><svg class="ic" aria-hidden="true"><use href="#i-edit"/></svg></button></li>`).join('') +
-      '</ol><div class="actions"><button id="roDone" class="primary" type="button">Terminé</button>' +
+        `<button class="ro-edit link" type="button" aria-label="Renommer ${esc(shown(n))}"><svg class="ic" aria-hidden="true"><use href="#i-edit"/></svg></button>` +
+        (admin && n !== me ? `<button class="ro-hide link" type="button" data-hide="${esc(n)}" aria-label="Masquer la ligne de ${esc(shown(n))}">Masquer</button>` : '') + '</li>').join('') +
+      '</ol>' + hiddenSection(admin) + '<div class="actions"><button id="roDone" class="primary" type="button">Terminé</button>' +
       '<button id="roReset" type="button">Par défaut</button><button id="roCancel" class="link" type="button">Annuler</button></div>';
+  }
+  function hiddenSection(admin) {
+    const all = (state.plan && state.plan.agents) || {};
+    const list = orderNames(Object.keys(state.hiddenDraft || {}).filter(n => all[n]));
+    if (!list.length) return admin ? '<p class="hint">« Masquer » retire une ligne (doublon, agent parti) pour toute l\'équipe ; réversible ici.</p>' : '';
+    if (!admin) return `<p class="hint">${list.length} ligne${list.length > 1 ? 's' : ''} masquée${list.length > 1 ? 's' : ''} par le responsable.</p>`;
+    return '<div class="ro-hidden"><p class="hint"><strong>Lignes masquées pour toute l\'équipe</strong> (le planning les garde, réversible) :</p><ul>' +
+      list.map(n => `<li><span>${esc(n)}</span><button type="button" class="link" data-unhide="${esc(n)}">Réafficher</button></li>`).join('') + '</ul></div>';
   }
   // noms affichés : ceux déjà choisis + les champs ✏️ ouverts (vide ou nom du tableau = on retire)
   function aliasDraft() {
@@ -2405,9 +2440,10 @@
     if (state.groupDraft && load('mh_admin') === '1') {
       Object.keys(state.groupDraft).forEach(n => { if (state.groupDraft[n] === 'coa') delete group[n]; else group[n] = state.groupDraft[n]; });
     }
-    const updated = { np: order ? '' : prev.np || '', order: order || [], alias, group, at: new Date().toISOString() };
+    const hidden = state.hiddenDraft && load('mh_admin') === '1' ? Object.assign({}, state.hiddenDraft) : Object.assign({}, prev.hidden || {});
+    const updated = { np: order ? '' : prev.np || '', order: order || [], alias, group, hidden, at: new Date().toISOString() };
     saveRoles(updated);
-    state.reorder = false; state.reorderList = null; state.groupDraft = null;
+    state.reorder = false; state.reorderList = null; state.groupDraft = null; state.hiddenDraft = null;
     state.orderMsg = order ? '✓ Ordre enregistré.' : '✓ Ordre par défaut rétabli.';
     renderCalendar();
     if (!teamCode()) return;
