@@ -213,7 +213,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   qu'horizontalement ; l'en-tête des dates est un tableau à part (`.tt-head`, `position: sticky` en haut de l'écran),
   colonnes identiques (`<colgroup>` 8,6 em + 2,3 em par jour, `table-layout: fixed`), défilement horizontal
   synchronisé dans les deux sens. (Avant : cadre à défilement vertical propre → deux « ascenseurs », signalé.)
-  **Jours travaillés encadrés** (19 nov. 2026, demandé) : vue Mois = cadre de 2 px, vue Liste = trait à gauche, couleur du
+  **Jours travaillés encadrés** (19 nov. 2026, demandé) : vue Mois = cadre de 2 px, vue Liste = cadre arrondi aussi (demandé), couleur du
   service (`workAttr` → `data-work` + `--wc` d'après `COLORS`, accent pour J/JS/TTV sans couleur) ; pas en mode « Comparer ».
   Option « Cases colorées » (Réglages → carte « Affichage du calendrier », séparée de « Codes et couleurs » à la demande de l'utilisateur, `mh_cal_style` = 'tint', classe `body.tint-cells`) :
   case du jour teintée par service, repos sans couleur ; « Pastilles » reste l'affichage par défaut (choix de l'utilisateur :
@@ -381,5 +381,11 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   (`leaveCounts`), comptées à part (« + N RC posées »), dans les périodes (« 2 jours CA + 3 RC »), la demande et l'impression.
   Les propositions posent des CA.
   Hypothèses à confirmer : année civile, repos non décomptés.
+- **Bouton « Importer » en haut** (19 nov. 2026, demandé : récupérer le tableau plus vite ; automatisation par le Mac écartée,
+  « je ne souhaite pas laisser mon Mac allumé ») : `#quickImport` à côté de l'imprimante (onglets Planning et Équipe) →
+  `quickImport()` ouvre directement le choix du fichier (« Récents » sur iPhone) puis `goTo('import')` (aperçu + « Envoyer à
+  l'équipe »). Mis en évidence (plein + pulsation, `.due`) quand le rappel du 20 est affiché ; le rappel `#calRemind` ouvre aussi
+  le choix du fichier. Icône seule si les trois boutons du haut sont là (≤ 430 px), sinon le titre passait sur deux lignes.
+  Lecture automatique d'un dossier impossible sur iPhone (le navigateur l'interdit).
 - Écarté par l'utilisateur : « Partager → Planning COA » sur Android.
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.

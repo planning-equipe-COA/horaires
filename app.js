@@ -1255,6 +1255,7 @@
     const prefix = String(next.y) + String(next.m).padStart(2, '0');
     const days = (state.plan && state.plan.agents[meName()]) || {};
     box.hidden = t.d < 20 || Object.keys(days).some(k => k.slice(0, 6) === prefix);
+    $('quickImport').classList.toggle('due', !box.hidden); // planning suivant attendu : bouton mis en évidence
     if (box.hidden) return;
     const month = new Date(Date.UTC(next.y, next.m - 1, 1)).toLocaleDateString('fr-FR', { month: 'long', timeZone: 'UTC' });
     box.innerHTML = ICON('cal') + esc(` Le planning de ${month} n'est pas encore là. Dès qu'il sort, touche ici pour l'importer` +
@@ -1863,7 +1864,19 @@
   }
 
   // ── Événements UI ─────────────────────────────────────────────────────────
-  $('file').addEventListener('change', e => { readFiles(e.target.files); e.target.value = ''; });
+  // Bouton « Importer » en haut (19 nov. 2026, demandé : récupérer le tableau plus vite, sans passer par Réglages) :
+  // ouvre tout de suite le choix du fichier (« Récents » sur iPhone), puis montre l'aperçu dans la carte d'import.
+  function quickImport() {
+    ensureXLSX().catch(() => {});
+    state.quickImport = true;
+    $('file').click();
+  }
+  $('quickImport').addEventListener('click', quickImport);
+  $('file').addEventListener('change', e => {
+    if (state.quickImport && e.target.files && e.target.files.length) goTo('import');
+    state.quickImport = false;
+    readFiles(e.target.files); e.target.value = '';
+  });
   const drop = $('drop');
   ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => {
     e.preventDefault(); drop.classList.add('over');
@@ -2259,7 +2272,7 @@
     renderTeam();
   });
   // le rappel de fin de mois mène directement à l'import
-  $('calRemind').addEventListener('click', () => goTo('import'));
+  $('calRemind').addEventListener('click', quickImport);
   $('wImport').addEventListener('click', () => goTo('import'));
   $('calEmptyGo').addEventListener('click', () => goTo('import'));
   $('wName').addEventListener('change', e => {
