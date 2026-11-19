@@ -131,6 +131,14 @@
     return def ? C.eventTitle(def) : code;
   }
   function codeLabel(code) { const def = defOf(code); return def ? (def.label || def.code) : code; }
+  // Encadré des jours travaillés (demandé le 19 nov. 2026) : couleur du service (Matin marron, Soir jaune, Nuit bleu…),
+  // couleur d'accent pour un service sans couleur (J, JS, TTV…). Rien pour les repos, congés et autres.
+  function workAttr(code) {
+    const def = defOf(code);
+    if (!def || C.dayKind(def) !== 'travail') return '';
+    const col = C.COLORS && C.COLORS[def.color], css = col && def.color !== 'blanc' ? col.css : '';
+    return ` data-work="1"${css ? ` style="--wc:${css}"` : ''}`;
+  }
   function chip(code) {
     const def = defOf(code);
     const text = def ? (def.abbr || def.code) : code;
@@ -1107,7 +1115,7 @@
         if (C.holidayName(k)) cls.push('holiday');
         if (swapDay(k)) cls.push('swap');
         if (remarks[k]) cls.push('remark');
-        html += `<button class="${cls.join(' ')}" data-key="${k}" aria-label="${d.d}${code ? ' : ' + esc(codeLabel(code)) : ''}">` +
+        html += `<button class="${cls.join(' ')}" data-key="${k}"${code ? workAttr(code) : ''} aria-label="${d.d}${code ? ' : ' + esc(codeLabel(code)) : ''}">` +
           `<span class="n">${d.d}</span>${code ? chip(code) : ''}` +
           (cmp ? `<span class="cmp-chip">${cmp[k] ? chip(cmp[k]) : '<span class="chip cmp-none">·</span>'}</span>` : '') +
           `${notes[k] ? '<span class="note-dot" aria-label="note"><svg class="ic" aria-hidden="true"><use href="#i-note"/></svg></span>' : ''}</button>`;
@@ -1690,7 +1698,7 @@
       const dayName = utc(d).toLocaleDateString('fr-FR', { weekday: 'short', timeZone: 'UTC' }).replace('.', '');
       if (C.holidayName(k)) cls.push('holiday');
       if (swapDay(k)) cls.push('swap');
-      html += `<button class="${cls.join(' ')}" data-key="${k}" aria-expanded="${k === state.cal.selected}">` +
+      html += `<button class="${cls.join(' ')}" data-key="${k}"${code ? workAttr(code) : ''} aria-expanded="${k === state.cal.selected}">` +
         `<span class="cal-row-date"><span class="wd">${esc(dayName)}</span><span class="n">${d.d}</span></span>` +
         `<span class="cal-row-code">${code ? chip(code) + ' ' + esc(codeLabel(code)) : '<span class="muted">—</span>'}` +
         (ch ? ` <span class="was">avant : ${esc(codeTitle(ch.before))}</span>` : '') +

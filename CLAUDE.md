@@ -213,6 +213,8 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   qu'horizontalement ; l'en-tête des dates est un tableau à part (`.tt-head`, `position: sticky` en haut de l'écran),
   colonnes identiques (`<colgroup>` 8,6 em + 2,3 em par jour, `table-layout: fixed`), défilement horizontal
   synchronisé dans les deux sens. (Avant : cadre à défilement vertical propre → deux « ascenseurs », signalé.)
+  **Jours travaillés encadrés** (19 nov. 2026, demandé) : vue Mois = cadre de 2 px, vue Liste = trait à gauche, couleur du
+  service (`workAttr` → `data-work` + `--wc` d'après `COLORS`, accent pour J/JS/TTV sans couleur) ; pas en mode « Comparer ».
   Option « Cases colorées » (Réglages → carte « Affichage du calendrier », séparée de « Codes et couleurs » à la demande de l'utilisateur, `mh_cal_style` = 'tint', classe `body.tint-cells`) :
   case du jour teintée par service, repos sans couleur ; « Pastilles » reste l'affichage par défaut (choix de l'utilisateur :
   plus parlant en mode clair, proposé au choix de chacun).

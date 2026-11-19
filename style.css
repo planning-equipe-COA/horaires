@@ -861,3 +861,8 @@ button.sug-go { flex: none; width: auto; padding: 7px 14px; margin: 0; }
 .ro-hidden { margin: 10px 0; padding: 8px 12px; border: 1px dashed var(--line); border-radius: 10px; }
 .ro-hidden ul { list-style: none; margin: 4px 0 0; padding: 0; }
 .ro-hidden li { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; color: var(--muted); }
+/* Jours travaillés encadrés (Mois et Liste), couleur du service ; le jour sélectionné et « Comparer » gardent leur cadre */
+#calGrid .cal-cell[data-work] { box-shadow: inset 0 0 0 2px var(--wc, var(--accent)); }
+#calGrid .cal-cell[data-work].selected { box-shadow: inset 0 0 0 2px var(--wc, var(--accent)), 0 0 0 2px var(--accent); }
+#calGrid.comparing .cal-cell[data-work] { box-shadow: none; }
+#calList .cal-row[data-work] { box-shadow: inset 4px 0 0 var(--wc, var(--accent)); }
