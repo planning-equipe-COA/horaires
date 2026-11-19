@@ -865,8 +865,9 @@ button.sug-go { flex: none; width: auto; padding: 7px 14px; margin: 0; }
 #calGrid .cal-cell[data-work] { box-shadow: inset 0 0 0 2px var(--wc, var(--accent)); }
 #calGrid .cal-cell[data-work].selected { box-shadow: inset 0 0 0 2px var(--wc, var(--accent)), 0 0 0 2px var(--accent); }
 #calGrid.comparing .cal-cell[data-work] { box-shadow: none; }
-#calList .cal-row[data-work] { box-shadow: inset 0 0 0 2px var(--wc, var(--accent)); border-radius: 10px; border-bottom-color: transparent; margin: 2px 0; }
-#calList .cal-row.monday[data-work] { border-top-color: transparent; margin-top: 6px; }
+/* Vue Liste : trait à gauche pour les jours travaillés, cadre complet seulement pour aujourd'hui s'il est travaillé (demandé) */
+#calList .cal-row[data-work] { box-shadow: inset 4px 0 0 var(--wc, var(--accent)); }
+#calList .cal-row.today[data-work] { box-shadow: inset 0 0 0 2px var(--wc, var(--accent)), inset 6px 0 0 var(--wc, var(--accent)); border-radius: 10px; border-bottom-color: transparent; margin: 3px 0; }
 /* Bouton « Importer » (haut de Planning et Équipe) */
 .hdr-btn.hdr-import { width: auto; padding: 0 14px 0 11px; border-radius: 22px; display: inline-flex; align-items: center; gap: 6px; font-size: .9rem; font-weight: 700; color: var(--accent); }
 body[data-tab="reglages"] #quickImport, body[data-tab="conges"] #quickImport { display: none; }
