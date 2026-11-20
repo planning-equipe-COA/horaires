@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boîte à outils COA</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-512.png">
+<link rel="icon" href="icon-512.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Outils COA">
+<meta name="theme-color" content="#5b3fa8">
+<style>
+:root{--bg:#f4f3f8;--card:#fff;--ink:#1d1b2e;--mute:#6b6880;--line:#e2e0ec;--acc:#5b3fa8;--acc2:#ece6fb;--ok:#1f8a4c;--warn:#b26a00}
+@media (prefers-color-scheme:dark){:root{--bg:#121019;--card:#1c1a27;--ink:#ecebf3;--mute:#9a97ad;--line:#2d2a3d;--acc:#a58cf0;--acc2:#2a2442}}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 14px 0}
+h1{font-size:17px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+h1 span{font-weight:400;color:var(--mute);font-size:13px}
+#q{width:100%;padding:11px 12px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+#q:focus{outline:2px solid var(--acc);border-color:transparent}
+nav{display:flex;gap:4px;overflow-x:auto;padding:8px 0;scrollbar-width:none}
+nav button{flex:none;border:0;background:transparent;color:var(--mute);padding:7px 11px;border-radius:999px;font-size:14px;cursor:pointer;white-space:nowrap}
+nav button.on{background:var(--acc2);color:var(--acc);font-weight:600}
+main{max-width:1000px;margin:0 auto;padding:12px}
+.info{color:var(--mute);font-size:13px;margin:4px 2px 10px}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);background:var(--bg)}
+tr:last-child td{border-bottom:0}
+td.code{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;white-space:nowrap}
+.tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:6px;background:var(--acc2);color:var(--acc);margin-left:4px}
+.tag.off{background:transparent;border:1px solid var(--line);color:var(--mute)}
+.sub{color:var(--mute);font-size:13px}
+h2{font-size:14px;margin:18px 2px 8px;color:var(--acc);text-transform:uppercase;letter-spacing:.05em}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 12px;border-radius:8px;cursor:pointer;font-size:14px}
+.btn.p{background:var(--acc);color:#fff;border-color:var(--acc)}
+input.e{width:100%;border:1px solid transparent;background:transparent;color:var(--ink);padding:4px;font:inherit;border-radius:6px}
+input.e:focus{border-color:var(--acc);background:var(--bg);outline:0}
+textarea{width:100%;min-height:90px;font-family:ui-monospace,monospace;font-size:12px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px}
+.hide{display:none}
+mark{background:#ffe58a;color:#000;border-radius:2px}
+@media (max-width:640px){.hm{display:none}th,td{padding:7px 8px}}
+#set.hide{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <h1>Boîte à outils COA <span>MRS · LFML</span><a class="btn" href="../" style="margin-left:auto;padding:4px 10px;text-decoration:none;font-size:13px">Planning</a><button id="gear" class="btn" style="padding:4px 8px;display:flex" title="Réglages" aria-label="Réglages"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></h1>
+  <input id="q" type="search" placeholder="Rechercher : MRS, LFML, Air France, AFR, A320, 93, WCHR…" autocomplete="off" autofocus>
+  <nav id="tabs"></nav>
+</header>
+<main id="out"></main>
+<div id="set" class="hide" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:flex;align-items:flex-start;justify-content:center;padding:40px 12px">
+ <div class="card" style="max-width:420px;width:100%;margin:0">
+  <div style="display:flex;align-items:center"><b style="font-size:16px">Réglages</b><button class="btn" id="setX" style="margin-left:auto">✕</button></div>
+  <h2>Partager l'application</h2>
+  <p class="sub">Fais scanner ce QR code avec l'appareil photo du téléphone.</p>
+  <div style="background:#fff;padding:14px;border-radius:12px;width:min(220px,100%);margin:10px auto"><svg viewBox="0 0 33 33" role="img" aria-label="QR code vers la Boîte à outils COA" shape-rendering="crispEdges" style="display:block;width:100%;height:auto;fill:#000"><path d="M0 0h1v1h-1zM1 0h1v1h-1zM2 0h1v1h-1zM3 0h1v1h-1zM4 0h1v1h-1zM5 0h1v1h-1zM6 0h1v1h-1zM8 0h1v1h-1zM11 0h1v1h-1zM16 0h1v1h-1zM19 0h1v1h-1zM20 0h1v1h-1zM21 0h1v1h-1zM23 0h1v1h-1zM26 0h1v1h-1zM27 0h1v1h-1zM28 0h1v1h-1zM29 0h1v1h-1zM30 0h1v1h-1zM31 0h1v1h-1zM32 0h1v1h-1zM0 1h1v1h-1zM6 1h1v1h-1zM8 1h1v1h-1zM9 1h1v1h-1zM10 1h1v1h-1zM14 1h1v1h-1zM16 1h1v1h-1zM22 1h1v1h-1zM23 1h1v1h-1zM26 1h1v1h-1zM32 1h1v1h-1zM0 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM6 2h1v1h-1zM9 2h1v1h-1zM11 2h1v1h-1zM13 2h1v1h-1zM14 2h1v1h-1zM15 2h1v1h-1zM18 2h1v1h-1zM19 2h1v1h-1zM23 2h1v1h-1zM24 2h1v1h-1zM26 2h1v1h-1zM28 2h1v1h-1zM29 2h1v1h-1zM30 2h1v1h-1zM32 2h1v1h-1zM0 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM6 3h1v1h-1zM8 3h1v1h-1zM10 3h1v1h-1zM11 3h1v1h-1zM12 3h1v1h-1zM15 3h1v1h-1zM17 3h1v1h-1zM18 3h1v1h-1zM19 3h1v1h-1zM20 3h1v1h-1zM22 3h1v1h-1zM23 3h1v1h-1zM24 3h1v1h-1zM26 3h1v1h-1zM28 3h1v1h-1zM29 3h1v1h-1zM30 3h1v1h-1zM32 3h1v1h-1zM0 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM6 4h1v1h-1zM9 4h1v1h-1zM11 4h1v1h-1zM13 4h1v1h-1zM16 4h1v1h-1zM17 4h1v1h-1zM19 4h1v1h-1zM21 4h1v1h-1zM22 4h1v1h-1zM24 4h1v1h-1zM26 4h1v1h-1zM28 4h1v1h-1zM29 4h1v1h-1zM30 4h1v1h-1zM32 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM10 5h1v1h-1zM13 5h1v1h-1zM15 5h1v1h-1zM16 5h1v1h-1zM19 5h1v1h-1zM22 5h1v1h-1zM26 5h1v1h-1zM32 5h1v1h-1zM0 6h1v1h-1zM1 6h1v1h-1zM2 6h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM6 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h1v1h-1zM20 6h1v1h-1zM22 6h1v1h-1zM24 6h1v1h-1zM26 6h1v1h-1zM27 6h1v1h-1zM28 6h1v1h-1zM29 6h1v1h-1zM30 6h1v1h-1zM31 6h1v1h-1zM32 6h1v1h-1zM8 7h1v1h-1zM9 7h1v1h-1zM10 7h1v1h-1zM11 7h1v1h-1zM12 7h1v1h-1zM15 7h1v1h-1zM16 7h1v1h-1zM17 7h1v1h-1zM22 7h1v1h-1zM0 8h1v1h-1zM2 8h1v1h-1zM3 8h1v1h-1zM5 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM9 8h1v1h-1zM10 8h1v1h-1zM11 8h1v1h-1zM14 8h1v1h-1zM15 8h1v1h-1zM16 8h1v1h-1zM17 8h1v1h-1zM18 8h1v1h-1zM21 8h1v1h-1zM26 8h1v1h-1zM29 8h1v1h-1zM31 8h1v1h-1zM32 8h1v1h-1zM2 9h1v1h-1zM4 9h1v1h-1zM9 9h1v1h-1zM12 9h1v1h-1zM13 9h1v1h-1zM14 9h1v1h-1zM16 9h1v1h-1zM17 9h1v1h-1zM18 9h1v1h-1zM19 9h1v1h-1zM20 9h1v1h-1zM21 9h1v1h-1zM23 9h1v1h-1zM26 9h1v1h-1zM27 9h1v1h-1zM29 9h1v1h-1zM30 9h1v1h-1zM32 9h1v1h-1zM0 10h1v1h-1zM3 10h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM10 10h1v1h-1zM11 10h1v1h-1zM12 10h1v1h-1zM13 10h1v1h-1zM18 10h1v1h-1zM21 10h1v1h-1zM23 10h1v1h-1zM27 10h1v1h-1zM28 10h1v1h-1zM29 10h1v1h-1zM31 10h1v1h-1zM32 10h1v1h-1zM0 11h1v1h-1zM1 11h1v1h-1zM4 11h1v1h-1zM7 11h1v1h-1zM8 11h1v1h-1zM12 11h1v1h-1zM15 11h1v1h-1zM18 11h1v1h-1zM19 11h1v1h-1zM20 11h1v1h-1zM23 11h1v1h-1zM24 11h1v1h-1zM25 11h1v1h-1zM27 11h1v1h-1zM29 11h1v1h-1zM0 12h1v1h-1zM2 12h1v1h-1zM3 12h1v1h-1zM4 12h1v1h-1zM5 12h1v1h-1zM6 12h1v1h-1zM7 12h1v1h-1zM10 12h1v1h-1zM12 12h1v1h-1zM14 12h1v1h-1zM16 12h1v1h-1zM18 12h1v1h-1zM23 12h1v1h-1zM25 12h1v1h-1zM27 12h1v1h-1zM28 12h1v1h-1zM29 12h1v1h-1zM31 12h1v1h-1zM0 13h1v1h-1zM2 13h1v1h-1zM3 13h1v1h-1zM4 13h1v1h-1zM7 13h1v1h-1zM10 13h1v1h-1zM13 13h1v1h-1zM14 13h1v1h-1zM17 13h1v1h-1zM19 13h1v1h-1zM21 13h1v1h-1zM24 13h1v1h-1zM27 13h1v1h-1zM29 13h1v1h-1zM31 13h1v1h-1zM1 14h1v1h-1zM5 14h1v1h-1zM6 14h1v1h-1zM10 14h1v1h-1zM11 14h1v1h-1zM18 14h1v1h-1zM19 14h1v1h-1zM20 14h1v1h-1zM21 14h1v1h-1zM24 14h1v1h-1zM26 14h1v1h-1zM27 14h1v1h-1zM30 14h1v1h-1zM1 15h1v1h-1zM5 15h1v1h-1zM7 15h1v1h-1zM10 15h1v1h-1zM11 15h1v1h-1zM13 15h1v1h-1zM15 15h1v1h-1zM21 15h1v1h-1zM24 15h1v1h-1zM25 15h1v1h-1zM26 15h1v1h-1zM28 15h1v1h-1zM30 15h1v1h-1zM3 16h1v1h-1zM5 16h1v1h-1zM6 16h1v1h-1zM9 16h1v1h-1zM11 16h1v1h-1zM12 16h1v1h-1zM14 16h1v1h-1zM19 16h1v1h-1zM21 16h1v1h-1zM22 16h1v1h-1zM25 16h1v1h-1zM26 16h1v1h-1zM28 16h1v1h-1zM29 16h1v1h-1zM30 16h1v1h-1zM0 17h1v1h-1zM1 17h1v1h-1zM2 17h1v1h-1zM4 17h1v1h-1zM5 17h1v1h-1zM8 17h1v1h-1zM9 17h1v1h-1zM11 17h1v1h-1zM13 17h1v1h-1zM15 17h1v1h-1zM16 17h1v1h-1zM20 17h1v1h-1zM21 17h1v1h-1zM22 17h1v1h-1zM23 17h1v1h-1zM24 17h1v1h-1zM26 17h1v1h-1zM28 17h1v1h-1zM29 17h1v1h-1zM32 17h1v1h-1zM0 18h1v1h-1zM1 18h1v1h-1zM3 18h1v1h-1zM4 18h1v1h-1zM5 18h1v1h-1zM6 18h1v1h-1zM9 18h1v1h-1zM10 18h1v1h-1zM15 18h1v1h-1zM16 18h1v1h-1zM18 18h1v1h-1zM20 18h1v1h-1zM22 18h1v1h-1zM25 18h1v1h-1zM26 18h1v1h-1zM27 18h1v1h-1zM28 18h1v1h-1zM30 18h1v1h-1zM31 18h1v1h-1zM5 19h1v1h-1zM7 19h1v1h-1zM10 19h1v1h-1zM11 19h1v1h-1zM13 19h1v1h-1zM17 19h1v1h-1zM20 19h1v1h-1zM22 19h1v1h-1zM23 19h1v1h-1zM25 19h1v1h-1zM28 19h1v1h-1zM32 19h1v1h-1zM0 20h1v1h-1zM2 20h1v1h-1zM4 20h1v1h-1zM6 20h1v1h-1zM7 20h1v1h-1zM8 20h1v1h-1zM12 20h1v1h-1zM14 20h1v1h-1zM16 20h1v1h-1zM19 20h1v1h-1zM21 20h1v1h-1zM29 20h1v1h-1zM30 20h1v1h-1zM31 20h1v1h-1zM32 20h1v1h-1zM0 21h1v1h-1zM1 21h1v1h-1zM2 21h1v1h-1zM3 21h1v1h-1zM5 21h1v1h-1zM8 21h1v1h-1zM10 21h1v1h-1zM11 21h1v1h-1zM15 21h1v1h-1zM16 21h1v1h-1zM17 21h1v1h-1zM18 21h1v1h-1zM19 21h1v1h-1zM20 21h1v1h-1zM21 21h1v1h-1zM23 21h1v1h-1zM25 21h1v1h-1zM26 21h1v1h-1zM27 21h1v1h-1zM29 21h1v1h-1zM32 21h1v1h-1zM2 22h1v1h-1zM3 22h1v1h-1zM4 22h1v1h-1zM6 22h1v1h-1zM7 22h1v1h-1zM8 22h1v1h-1zM9 22h1v1h-1zM10 22h1v1h-1zM11 22h1v1h-1zM13 22h1v1h-1zM14 22h1v1h-1zM15 22h1v1h-1zM17 22h1v1h-1zM18 22h1v1h-1zM20 22h1v1h-1zM21 22h1v1h-1zM22 22h1v1h-1zM23 22h1v1h-1zM24 22h1v1h-1zM26 22h1v1h-1zM27 22h1v1h-1zM28 22h1v1h-1zM29 22h1v1h-1zM30 22h1v1h-1zM31 22h1v1h-1zM32 22h1v1h-1zM1 23h1v1h-1zM2 23h1v1h-1zM4 23h1v1h-1zM5 23h1v1h-1zM9 23h1v1h-1zM13 23h1v1h-1zM15 23h1v1h-1zM18 23h1v1h-1zM19 23h1v1h-1zM20 23h1v1h-1zM25 23h1v1h-1zM27 23h1v1h-1zM29 23h1v1h-1zM31 23h1v1h-1zM32 23h1v1h-1zM0 24h1v1h-1zM4 24h1v1h-1zM5 24h1v1h-1zM6 24h1v1h-1zM11 24h1v1h-1zM13 24h1v1h-1zM14 24h1v1h-1zM17 24h1v1h-1zM20 24h1v1h-1zM24 24h1v1h-1zM25 24h1v1h-1zM26 24h1v1h-1zM27 24h1v1h-1zM28 24h1v1h-1zM31 24h1v1h-1zM8 25h1v1h-1zM9 25h1v1h-1zM10 25h1v1h-1zM12 25h1v1h-1zM13 25h1v1h-1zM15 25h1v1h-1zM16 25h1v1h-1zM19 25h1v1h-1zM21 25h1v1h-1zM23 25h1v1h-1zM24 25h1v1h-1zM28 25h1v1h-1zM29 25h1v1h-1zM0 26h1v1h-1zM1 26h1v1h-1zM2 26h1v1h-1zM3 26h1v1h-1zM4 26h1v1h-1zM5 26h1v1h-1zM6 26h1v1h-1zM8 26h1v1h-1zM12 26h1v1h-1zM14 26h1v1h-1zM17 26h1v1h-1zM18 26h1v1h-1zM19 26h1v1h-1zM20 26h1v1h-1zM21 26h1v1h-1zM23 26h1v1h-1zM24 26h1v1h-1zM26 26h1v1h-1zM28 26h1v1h-1zM0 27h1v1h-1zM6 27h1v1h-1zM8 27h1v1h-1zM9 27h1v1h-1zM10 27h1v1h-1zM12 27h1v1h-1zM14 27h1v1h-1zM16 27h1v1h-1zM17 27h1v1h-1zM18 27h1v1h-1zM20 27h1v1h-1zM21 27h1v1h-1zM22 27h1v1h-1zM23 27h1v1h-1zM24 27h1v1h-1zM28 27h1v1h-1zM29 27h1v1h-1zM30 27h1v1h-1zM0 28h1v1h-1zM2 28h1v1h-1zM3 28h1v1h-1zM4 28h1v1h-1zM6 28h1v1h-1zM9 28h1v1h-1zM10 28h1v1h-1zM11 28h1v1h-1zM13 28h1v1h-1zM15 28h1v1h-1zM16 28h1v1h-1zM17 28h1v1h-1zM18 28h1v1h-1zM21 28h1v1h-1zM22 28h1v1h-1zM23 28h1v1h-1zM24 28h1v1h-1zM25 28h1v1h-1zM26 28h1v1h-1zM27 28h1v1h-1zM28 28h1v1h-1zM30 28h1v1h-1zM31 28h1v1h-1zM32 28h1v1h-1zM0 29h1v1h-1zM2 29h1v1h-1zM3 29h1v1h-1zM4 29h1v1h-1zM6 29h1v1h-1zM8 29h1v1h-1zM9 29h1v1h-1zM10 29h1v1h-1zM12 29h1v1h-1zM14 29h1v1h-1zM16 29h1v1h-1zM20 29h1v1h-1zM21 29h1v1h-1zM27 29h1v1h-1zM30 29h1v1h-1zM32 29h1v1h-1zM0 30h1v1h-1zM2 30h1v1h-1zM3 30h1v1h-1zM4 30h1v1h-1zM6 30h1v1h-1zM8 30h1v1h-1zM10 30h1v1h-1zM15 30h1v1h-1zM16 30h1v1h-1zM17 30h1v1h-1zM18 30h1v1h-1zM20 30h1v1h-1zM21 30h1v1h-1zM22 30h1v1h-1zM23 30h1v1h-1zM26 30h1v1h-1zM27 30h1v1h-1zM29 30h1v1h-1zM30 30h1v1h-1zM0 31h1v1h-1zM6 31h1v1h-1zM10 31h1v1h-1zM12 31h1v1h-1zM14 31h1v1h-1zM17 31h1v1h-1zM18 31h1v1h-1zM22 31h1v1h-1zM23 31h1v1h-1zM24 31h1v1h-1zM26 31h1v1h-1zM27 31h1v1h-1zM28 31h1v1h-1zM32 31h1v1h-1zM0 32h1v1h-1zM1 32h1v1h-1zM2 32h1v1h-1zM3 32h1v1h-1zM4 32h1v1h-1zM5 32h1v1h-1zM6 32h1v1h-1zM8 32h1v1h-1zM9 32h1v1h-1zM10 32h1v1h-1zM11 32h1v1h-1zM13 32h1v1h-1zM14 32h1v1h-1zM16 32h1v1h-1zM17 32h1v1h-1zM18 32h1v1h-1zM19 32h1v1h-1zM21 32h1v1h-1zM23 32h1v1h-1zM25 32h1v1h-1zM26 32h1v1h-1zM28 32h1v1h-1zM30 32h1v1h-1z"/></svg></div>
+  <p style="text-align:center;font-weight:600;overflow-wrap:anywhere;margin:0 0 10px">planning-equipe-coa.github.io/horaires/outils</p>
+  <p style="text-align:center"><button class="btn p" id="shareCopy">Envoyer le lien</button></p>
+  <p class="sub"><strong>L'avoir comme une appli :</strong> sur iPhone, bouton Partager → « Sur l'écran d'accueil » ; sur Android, menu ⋮ → « Ajouter à l'écran d'accueil ». Elle fonctionne ensuite hors connexion.</p>
+  <h2>Sauvegarde des contacts</h2>
+  <p class="sub">Les contacts restent dans ce navigateur. Utilise l'onglet Contacts MRS → « Copier (sauvegarde) » pour les transférer.</p>
+ </div>
+</div>
+
+<script>
+/* ---------- Données intégrées ---------- */
+const DELAY=[
+["Compagnie interne","01–05","Codes réservés à l'usage interne de la compagnie"],
+["Compagnie interne","06","OA – Pas de porte/poste disponible du fait de l'activité propre de la compagnie"],
+["Compagnie interne","09","SG – Temps d'escale programmé inférieur au minimum déclaré"],
+["Passagers & bagages","11","PD – Enregistrement tardif, acceptation après l'heure limite"],
+["Passagers & bagages","12","PL – Enregistrement tardif, encombrement de la zone d'enregistrement"],
+["Passagers & bagages","13","PE – Erreur d'enregistrement passager ou bagage"],
+["Passagers & bagages","14","PO – Surréservation, erreurs de réservation"],
+["Passagers & bagages","15","PH – Embarquement : écarts, appels, passager enregistré manquant"],
+["Passagers & bagages","16","PS – Commercial / confort passager : VIP, presse, repas au sol, objets personnels oubliés"],
+["Passagers & bagages","17","PC – Commande catering tardive ou erronée"],
+["Passagers & bagages","18","PB – Traitement des bagages, tri, etc."],
+["Passagers & bagages","19","PW – Embarquement/débarquement des PMR (personnes à mobilité réduite)"],
+["Cargo & poste","21","CD – Documentation cargo, erreurs"],
+["Cargo & poste","22","CP – Mise en place tardive du cargo"],
+["Cargo & poste","23","CC – Acceptation tardive du cargo"],
+["Cargo & poste","24","CI – Emballage inadéquat"],
+["Cargo & poste","25","CO – Surréservation cargo, erreurs de réservation"],
+["Cargo & poste","26","CU – Préparation tardive en entrepôt"],
+["Cargo & poste","27","CE – Poste : documentation, emballage"],
+["Cargo & poste","28","CL – Poste : mise en place tardive"],
+["Cargo & poste","29","CA – Poste : acceptation tardive"],
+["Assistance avion & rampe","31","GD – Documents avion tardifs/erronés : devis de masse et centrage, déclaration générale, manifeste"],
+["Assistance avion & rampe","32","GL – Chargement/déchargement : encombrants, charge spéciale, manque de personnel de piste"],
+["Assistance avion & rampe","33","GE – Matériel de chargement : manque, panne, manque de personnel"],
+["Assistance avion & rampe","34","GS – Matériel de servitude (ex. escabeaux) : manque, panne, manque de personnel"],
+["Assistance avion & rampe","35","GC – Nettoyage avion"],
+["Assistance avion & rampe","36","GF – Avitaillement/désavitaillement, pétrolier"],
+["Assistance avion & rampe","37","GB – Catering : livraison ou chargement tardif"],
+["Assistance avion & rampe","38","GU – ULD : manque ou état"],
+["Assistance avion & rampe","39","GT – Matériel technique (ex. tracteur de repoussage) : manque, panne, manque de personnel"],
+["Technique","41","TD – Défaut avion"],
+["Technique","42","TM – Maintenance programmée, remise en service tardive"],
+["Technique","43","TN – Maintenance non programmée, visites spéciales, travaux supplémentaires"],
+["Technique","44","TS – Pièces et matériel de maintenance"],
+["Technique","45","TA – Pièces AOG à transporter vers une autre escale"],
+["Technique","46","TC – Changement d'avion pour raison technique"],
+["Technique","47","TL – Avion de réserve : absence d'avion de réserve prévu (technique)"],
+["Technique","48","TV – Ajustement programmé de la configuration/version cabine"],
+["Dommages avion","51","DF – Dommage en vol : impact d'oiseau, foudre, turbulence, atterrissage dur, collision au roulage"],
+["Dommages avion","52","DG – Dommage au sol : collision (hors roulage), chargement, contamination, tractage, météo extrême"],
+["Systèmes informatiques","55","ED – Contrôle départ (DCS)"],
+["Systèmes informatiques","56","EC – Préparation/documentation cargo"],
+["Systèmes informatiques","57","EF – Plans de vol"],
+["Systèmes informatiques","58","EO – Autres systèmes automatisés"],
+["Opérations & équipages","61","FP – Plan de vol : achèvement tardif ou modification, documentation de vol"],
+["Opérations & équipages","62","FF – Exigences opérationnelles : carburant, modification de charge"],
+["Opérations & équipages","63","FT – Embarquement tardif PNT ou procédures de départ (hors correspondance et réserve)"],
+["Opérations & équipages","64","FS – Manque de PNT : maladie, attente réserve, limitations de temps de vol, visas…"],
+["Opérations & équipages","65","FR – Demande particulière PNT hors exigences opérationnelles"],
+["Opérations & équipages","66","FL – Embarquement tardif PNC ou procédures de départ"],
+["Opérations & équipages","67","FC – Manque de PNC : maladie, attente réserve, limitations…"],
+["Opérations & équipages","68","FA – Erreur ou demande particulière PNC"],
+["Opérations & équipages","69","FB – Demande du commandant : contrôle de sûreté extraordinaire"],
+["Météo","71","WO – Météo à l'escale de départ"],
+["Météo","72","WT – Météo à destination"],
+["Météo","73","WR – Météo en route ou au dégagement"],
+["Météo","75","WI – Dégivrage/antigivrage avion (hors panne de matériel)"],
+["Météo","76","WS – Déneigement / dégagement glace, eau, sable de l'aéroport"],
+["Météo","77","WG – Assistance au sol gênée par les conditions météo"],
+["ATFM / Aéroport / Autorités","81","AT – ATFM : capacité/demande ATC en route"],
+["ATFM / Aéroport / Autorités","82","AX – ATFM : personnel/équipement ATC en route, grève, exercice militaire"],
+["ATFM / Aéroport / Autorités","83","AE – ATFM : restriction à l'aéroport de destination"],
+["ATFM / Aéroport / Autorités","84","AW – ATFM : météo à destination"],
+["ATFM / Aéroport / Autorités","85","AS – Sûreté obligatoire"],
+["ATFM / Aéroport / Autorités","86","AG – Immigration, douane, santé"],
+["ATFM / Aéroport / Autorités","87","AF – Installations aéroport : postes de stationnement, encombrement rampe, éclairage, portes"],
+["ATFM / Aéroport / Autorités","88","AD – Restrictions à destination : piste fermée, grève, couvre-feu, vols spéciaux"],
+["ATFM / Aéroport / Autorités","89","AM – Restrictions au départ (avec ou sans ATFM) : ATS, mise en route/repoussage, piste fermée"],
+["Réactionnaires & divers","91","RL – Correspondance : attente de charge d'un autre vol"],
+["Réactionnaires & divers","92","RT – Erreur d'enregistrement de bout en bout (passager/bagage)"],
+["Réactionnaires & divers","93","RA – Rotation avion : arrivée tardive du vol précédent"],
+["Réactionnaires & divers","94","RS – Rotation PNC"],
+["Réactionnaires & divers","95","RC – Rotation équipage : attente équipage d'un autre vol"],
+["Réactionnaires & divers","96","RO – Contrôle opérations : reroutage, déroutement, regroupement, changement d'avion non technique"],
+["Réactionnaires & divers","97","MI – Grève interne à la compagnie"],
+["Réactionnaires & divers","98","MO – Grève externe à la compagnie (hors ATS)"],
+["Réactionnaires & divers","99","MX – Autre raison non couverte par les codes ci-dessus"]];
+
+const NATO=[["A","Alfa"],["B","Bravo"],["C","Charlie"],["D","Delta"],["E","Echo"],["F","Foxtrot"],["G","Golf"],["H","Hotel"],["I","India"],["J","Juliett"],["K","Kilo"],["L","Lima"],["M","Mike"],["N","November"],["O","Oscar"],["P","Papa"],["Q","Quebec"],["R","Romeo"],["S","Sierra"],["T","Tango"],["U","Uniform"],["V","Victor"],["W","Whiskey"],["X","X-ray"],["Y","Yankee"],["Z","Zulu"],["0","Zero"],["1","One (Wun)"],["2","Two (Too)"],["3","Three (Tree)"],["4","Four (Fow-er)"],["5","Five (Fife)"],["6","Six"],["7","Seven"],["8","Eight (Ait)"],["9","Nine (Niner)"]];
+
+const ABBR=[
+["Horaires & A-CDM","SOBT / SIBT","Heure programmée de départ (calage) / d'arrivée au poste"],
+["Horaires & A-CDM","EOBT","Heure estimée de départ du poste (plan de vol)"],
+["Horaires & A-CDM","TOBT","Heure cible de fin d'escale, avion prêt (donnée par la compagnie/assistant)"],
+["Horaires & A-CDM","TSAT","Heure cible d'approbation de mise en route (donnée par l'ATC)"],
+["Horaires & A-CDM","CTOT","Créneau de décollage calculé (slot Eurocontrol)"],
+["Horaires & A-CDM","AOBT / AIBT","Heure réelle de départ du poste / d'arrivée au poste (calage)"],
+["Horaires & A-CDM","ALDT / ATOT","Heure réelle d'atterrissage / de décollage"],
+["Horaires & A-CDM","ETA / ETD","Heure estimée d'arrivée / de départ"],
+["Horaires & A-CDM","ATA / ATD","Heure réelle d'arrivée / de départ"],
+["Horaires & A-CDM","EXOT / EXIT","Temps de roulage estimé au départ / à l'arrivée"],
+["Horaires & A-CDM","MCT","Temps minimum de correspondance"],
+["Horaires & A-CDM","A-CDM","Airport Collaborative Decision Making : partage des heures entre aéroport, compagnies, assistants et ATC"],
+["Messages & documents","MVT","Message mouvement (AD départ, AA arrivée, EA/ED estimées, NI prochaine info)"],
+["Messages & documents","LDM","Message de charge (load message)"],
+["Messages & documents","CPM","Message de répartition des conteneurs/palettes (container pallet message)"],
+["Messages & documents","UCM","Message de contrôle des ULD"],
+["Messages & documents","PSM / PTM","Messages services passagers / transfert passagers"],
+["Messages & documents","PNL / ADL","Liste nominative passagers / liste d'ajouts et suppressions"],
+["Messages & documents","LIR","Instructions de chargement (loading instruction report)"],
+["Messages & documents","NOTOC","Notification au commandant des marchandises dangereuses et spéciales"],
+["Messages & documents","LMC","Changement de dernière minute sur le devis de masse"],
+["Messages & documents","DG / DGR","Marchandises dangereuses / réglementation des marchandises dangereuses"],
+["Masses","DOW / DOI","Masse de base opérationnelle / indice de base opérationnel (centrage)"],
+["Masses","ZFW / MZFW","Masse sans carburant / masse maximale sans carburant"],
+["Masses","TOW / MTOW","Masse au décollage / masse maximale au décollage"],
+["Masses","LW / MLW","Masse à l'atterrissage / masse maximale à l'atterrissage"],
+["Masses","MAC","Corde aérodynamique moyenne (référence du centrage, en %)"],
+["Rampe & matériel","GPU","Groupe de parc électrique (alimentation au sol 400 Hz)"],
+["Rampe & matériel","ASU / ACU","Groupe de démarrage pneumatique / groupe de climatisation au sol"],
+["Rampe & matériel","PCA / PCZ","Air préconditionné fourni par la passerelle"],
+["Rampe & matériel","APU","Groupe auxiliaire de puissance de l'avion"],
+["Rampe & matériel","ULD","Unité de chargement (conteneur ou palette)"],
+["Rampe & matériel","AKE / AKH","Conteneurs LD3 / LD3-45 (soute basse, AKH pour A320)"],
+["Rampe & matériel","PMC / PAG","Palettes 96×125 / 88×125 pouces"],
+["Rampe & matériel","FOD","Débris/objets étrangers sur l'aire de mouvement"],
+["Rampe & matériel","VDGS","Système de guidage visuel à l'accostage (poste avion)"],
+["Rampe & matériel","Push-back","Repoussage de l'avion par tracteur"],
+["PMR & services","WCHR","Fauteuil roulant jusqu'à l'avion, peut monter les marches et se déplacer en cabine"],
+["PMR & services","WCHS","Ne peut pas monter les marches, peut se déplacer en cabine"],
+["PMR & services","WCHC","Totalement immobile, besoin d'aide jusqu'au siège"],
+["PMR & services","WCHP","Paraplégique, autonome en dehors de la mobilité"],
+["PMR & services","BLND / DEAF","Passager aveugle ou malvoyant / sourd ou malentendant"],
+["PMR & services","DPNA","Handicap intellectuel ou de développement nécessitant assistance"],
+["PMR & services","MEDA","Cas médical (accord médical)"],
+["PMR & services","STCR","Passager sur civière"],
+["PMR & services","MAAS","Assistance requise (meet and assist)"],
+["PMR & services","UMNR","Mineur non accompagné"],
+["PMR & services","DEPA / DEPU","Expulsé accompagné / non accompagné"],
+["PMR & services","INAD","Passager non admissible"],
+["PMR & services","AVIH / PETC","Animal en soute / animal en cabine"],
+["Météo & info aéro","METAR","Observation météo d'aérodrome (régulière)"],
+["Météo & info aéro","SPECI","Observation météo spéciale (changement significatif)"],
+["Météo & info aéro","TAF","Prévision météo d'aérodrome"],
+["Météo & info aéro","CAVOK","Visibilité ≥ 10 km, pas de nuage significatif, pas de phénomène"],
+["Météo & info aéro","NOSIG","Pas de changement significatif prévu"],
+["Météo & info aéro","TEMPO / BECMG","Variations temporaires / évolution durable"],
+["Météo & info aéro","FG / BR / TS / RA / SN","Brouillard / brume / orage / pluie / neige"],
+["Météo & info aéro","CB / TCU","Cumulonimbus / cumulus bourgeonnant"],
+["Météo & info aéro","FEW / SCT / BKN / OVC","Nébulosité 1–2 / 3–4 / 5–7 / 8 octas"],
+["Météo & info aéro","NOTAM","Avis aux navigants (information aéronautique temporaire)"],
+["Météo & info aéro","ATIS","Diffusion automatique des informations de l'aérodrome"],
+["Météo & info aéro","QNH / QFE","Calage altimétrique niveau mer / niveau terrain"],
+["Urgences","7500","Transpondeur : intervention illicite"],
+["Urgences","7600","Transpondeur : panne radio"],
+["Urgences","7700","Transpondeur : détresse/urgence"],
+["Urgences","MAYDAY / PAN PAN","Message de détresse / message d'urgence"],
+["Urgences","AOG","Avion immobilisé au sol (aircraft on ground)"],
+["Divers","ETOPS","Exploitation biréacteur longue distance"],
+["Divers","Schengen / Non-Schengen","Détermine la zone d'embarquement/débarquement et les contrôles"],
+["Divers","PAX / INF / CHD","Passager / bébé (−2 ans) / enfant (2–11 ans)"],
+["Divers","NOSH / GOSH","Passager absent à l'embarquement / passager présent sans réservation"],
+["Divers","OFFL","Débarqué (passager ou bagage retiré)"]];
+
+/* Types courants : code OACI → [lettre de code OACI (envergure), catégorie de turbulence de sillage, envergure m] — valeurs indicatives */
+const ACX={A318:["C","M",34.1],A319:["C","M",35.8],A320:["C","M",35.8],A321:["C","M",35.8],A19N:["C","M",35.8],A20N:["C","M",35.8],A21N:["C","M",35.8],BCS1:["C","M",35.1],BCS3:["C","M",35.1],AT72:["C","M",27.1],AT76:["C","M",27.1],AT45:["C","M",24.6],DH8D:["C","M",28.4],E190:["C","M",28.7],E195:["C","M",28.7],E290:["C","M",33.7],E295:["C","M",35.1],CRJ9:["C","M",24.9],CRJX:["C","M",26.2],B737:["C","M",34.3],B738:["C","M",35.8],B739:["C","M",35.8],B38M:["C","M",35.9],B39M:["C","M",35.9],B752:["D","M",38.1],B763:["D","H",47.6],A332:["E","H",60.3],A333:["E","H",60.3],A339:["E","H",64.0],B788:["E","H",60.1],B789:["E","H",60.1],B77W:["E","H",64.8],A359:["E","H",64.8],A388:["F","J",79.8],B748:["F","H",68.4]};
+
+const HANDLERS=["Aviapartner","Alyzia","Air France Handling","Onet","WFS","Jetex","GH Team","France Handling","Marignane Assistance"];
+
+/* ---------- État ---------- */
+let AP=[],AL=[],PL=[],loaded=false;
+const TABS=[["mua","MUA"],["all","Tout"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["ct","Contacts MRS"]];
+let tab="all";let STRICT=false;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const norm=s=>String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+function hl(text,q){const t=esc(text);if(!q)return t;const n=norm(text);const i=n.indexOf(q);if(i<0)return t;const raw=String(text);return esc(raw.slice(0,i))+"<mark>"+esc(raw.slice(i,i+q.length))+"</mark>"+esc(raw.slice(i+q.length));}
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+
+$("#tabs").innerHTML=TABS.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join("");
+$("#tabs").onclick=e=>{const k=e.target.dataset.k;if(k){tab=k;location.hash=k;render()}};
+$("#q").oninput=()=>render();
+window.addEventListener("hashchange",()=>{const h=location.hash.slice(1);if(TABS.some(t=>t[0]===h)){tab=h;render()}});
+{const h=location.hash.slice(1);if(TABS.some(t=>t[0]===h))tab=h;}
+
+Promise.all(["airports.json","airlines.json","aircraft.json"].map(f=>fetch(f).then(r=>r.json())))
+ .then(([a,b,c])=>{AP=a;AL=b;PL=c;loaded=true;render()})
+ .catch(()=>{loaded="err";render()});
+
+/* ---------- Recherche ---------- */
+function score(codes,texts,q,Q){
+  for(const c of codes){if(c&&c.toUpperCase()===Q)return 3}
+  for(const c of codes){if(c&&c.toUpperCase().startsWith(Q))return 2}
+  for(const t of texts){if(t&&norm(t).includes(q))return 1}
+  return 0;
+}
+function search(list,codesF,textsF,q,limit){
+  const Q=q.toUpperCase();const res=[];
+  for(const r of list){const s=score(codesF(r),textsF(r),q,Q);if(s)res.push([s,r])}
+  res.sort((a,b)=>b[0]-a[0]);
+  const best=res.length?res[0][0]:0;
+  const kept=STRICT&&best>=2?res.filter(x=>x[0]>=2):res;
+  return {total:kept.length,best,rows:kept.slice(0,limit).map(x=>x[1])};
+}
+
+/* ---------- Rendus ---------- */
+function more(n,shown){return n>shown?`<div class="info">${shown} affichés sur ${n} — précise ta recherche.</div>`:""}
+function apTable(q,limit){
+  if(!q)return `<div class="info">Tape un code IATA (MRS), OACI (LFML), une ville ou un pays. ${AP.length.toLocaleString("fr")} aéroports.</div>`;
+  const {total,rows}=search(AP,r=>[r[0],r[1]],r=>[r[2],r[3],r[4]],q,limit);
+  if(!total)return `<div class="info">Aucun aéroport.</div>`;
+  const T={L:"Grand",M:"Moyen",S:"Petit"};
+  return `<table><tr><th>IATA</th><th>OACI</th><th>Aéroport</th><th class="hm">Pays</th></tr>${rows.map(r=>`<tr><td class="code">${hl(r[0]||"—",q)}</td><td class="code">${hl(r[1]||"—",q)}</td><td>${hl(r[2],q)}<div class="sub">${hl(r[3],q)}<span class="tag ${r[6]?"":"off"}">${T[r[5]]}${r[6]?"":" · pas de vols réguliers"}</span></div></td><td class="hm">${hl(r[4],q)}</td></tr>`).join("")}</table>${more(total,rows.length)}`;
+}
+function alTable(q,limit){
+  if(!q)return `<div class="info">Tape un code IATA (AF), OACI (AFR), un nom ou un indicatif radio. ${AL.length.toLocaleString("fr")} compagnies.</div>`;
+  const {total,rows}=search(AL,r=>[r[0],r[1]],r=>[r[2],r[3],r[4]],q,limit);
+  rows.sort((a,b)=>(b[5]-a[5]));
+  if(!total)return `<div class="info">Aucune compagnie.</div>`;
+  return `<table><tr><th>IATA</th><th>OACI</th><th>Compagnie</th><th class="hm">Indicatif</th></tr>${rows.map(r=>`<tr><td class="code">${hl(r[0]||"—",q)}</td><td class="code">${hl(r[1]||"—",q)}</td><td>${hl(r[2],q)}${r[5]?"":'<span class="tag off">inactive ?</span>'}<div class="sub">${hl(r[4],q)}</div></td><td class="hm code">${hl(r[3],q)}</td></tr>`).join("")}</table>${more(total,rows.length)}`;
+}
+function plTable(q,limit){
+  const {total,rows}=q?search(PL,r=>[r[0],r[1]],r=>[r[2]],q,limit):{total:PL.length,rows:PL.slice(0,limit)};
+  if(!total)return `<div class="info">Aucun type d'avion.</div>`;
+  return `<table><tr><th>IATA</th><th>OACI</th><th>Type</th><th>Code / Sillage</th></tr>${rows.map(r=>{const x=ACX[r[1]];return `<tr><td class="code">${hl(r[0]||"—",q)}</td><td class="code">${hl(r[1]||"—",q)}</td><td>${hl(r[2],q)}</td><td>${x?`<span class="tag">Code ${x[0]}</span><span class="tag">${x[1]}</span><div class="sub">${x[2]} m</div>`:'<span class="sub">—</span>'}</td></tr>`}).join("")}</table>${more(total,rows.length)}`;
+}
+function grouped(list,q,codeIdx,label){
+  const rows=q?list.filter(r=>norm(r.join(" ")).includes(q)):list;
+  if(!rows.length)return `<div class="info">Aucun résultat.</div>`;
+  let h="",g="";
+  for(const r of rows){
+    if(r[0]!==g){if(g)h+="</table>";g=r[0];h+=`<h2>${esc(g)}</h2><table>`}
+    h+=`<tr><td class="code" style="width:${label}">${hl(r[1],q)}</td><td>${hl(r[2],q)}</td></tr>`;
+  }
+  return h+"</table>";
+}
+function natoTable(q){
+  const rows=q?NATO.filter(r=>norm(r.join(" ")).includes(q)):NATO;
+  if(q&&!rows.length){/* épeler le texte */}
+  const spell=q&&q.length>1?`<div class="card"><b>Épellation :</b> ${[...q.toUpperCase()].map(c=>{const n=NATO.find(x=>x[0]===c);return n?esc(n[1].split(" ")[0]):c===" "?"·":esc(c)}).join(" ")}</div>`:"";
+  return spell+`<table>${rows.map(r=>`<tr><td class="code" style="width:60px">${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table>`;
+}
+
+/* Contacts éditables, gardés dans ce navigateur */
+function getContacts(){try{const s=store("coa-contacts");if(s)return JSON.parse(s)}catch(e){}return HANDLERS.map(n=>({n,r:"Assistant en escale",t:"",f:"",x:""}))}
+function saveContacts(c){store("coa-contacts",JSON.stringify(c))}
+function ctView(q){
+  const c=getContacts();
+  const rows=c.map((r,i)=>[r,i]).filter(([r])=>!q||norm(Object.values(r).join(" ")).includes(q));
+  return `<div class="info">Remplis directement les cases. Enregistré uniquement dans ce navigateur : utilise « Copier » pour sauvegarder ou transférer vers un autre appareil.</div>
+  <table><tr><th>Nom</th><th class="hm">Rôle</th><th>Téléphone</th><th class="hm">Fréquence</th><th class="hm">Note</th><th></th></tr>
+  ${rows.map(([r,i])=>`<tr data-i="${i}">${["n","r","t","f","x"].map(k=>`<td class="${k==="r"||k==="f"||k==="x"?"hm":""}"><input class="e" data-k="${k}" value="${esc(r[k])}"></td>`).join("")}<td><button class="btn" data-del="${i}" title="Supprimer">✕</button></td></tr>`).join("")}
+  </table>
+  <p><button class="btn p" id="ctAdd">+ Ajouter</button> <button class="btn" id="ctCopy">Copier (sauvegarde)</button> <button class="btn" id="ctImp">Coller une sauvegarde</button></p>
+  <div id="ctBox" class="hide"><textarea id="ctTxt" placeholder="Colle ici le texte copié depuis un autre appareil"></textarea><p><button class="btn p" id="ctOk">Importer</button> <span id="ctMsg" class="sub"></span></p></div>`;
+}
+function bindContacts(){
+  const out=$("#out");
+  out.querySelectorAll("input.e").forEach(inp=>inp.onchange=()=>{const c=getContacts();const i=+inp.closest("tr").dataset.i;c[i][inp.dataset.k]=inp.value;saveContacts(c)});
+  out.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const c=getContacts();c.splice(+b.dataset.del,1);saveContacts(c);render()});
+  $("#ctAdd").onclick=()=>{const c=getContacts();c.push({n:"",r:"",t:"",f:"",x:""});saveContacts(c);$("#q").value="";render()};
+  $("#ctCopy").onclick=async()=>{try{await navigator.clipboard.writeText(JSON.stringify(getContacts()));$("#ctCopy").textContent="Copié ✓"}catch(e){$("#ctBox").classList.remove("hide");$("#ctTxt").value=JSON.stringify(getContacts());$("#ctMsg").textContent="Copie auto refusée : sélectionne le texte ci-dessus."}};
+  $("#ctImp").onclick=()=>$("#ctBox").classList.toggle("hide");
+  $("#ctOk").onclick=()=>{try{const v=JSON.parse($("#ctTxt").value);if(!Array.isArray(v))throw 0;saveContacts(v);render()}catch(e){$("#ctMsg").textContent="Texte invalide."}};
+}
+
+function muaView(){
+  return `<div class="card"><b>Manuel (MUA) — en cours d'intégration</b><p class="sub">Le contenu du manuel sera ajouté ici, découpé par chapitres et consultable avec la barre de recherche du haut.</p></div>`;
+}
+
+function render(){
+  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.k===tab));
+  const q=norm($("#q").value.trim());
+  const out=$("#out");
+  const needData=["all","ap","al","pl"].includes(tab);
+  if(needData&&loaded!==true){out.innerHTML=`<div class="info">${loaded==="err"?"Impossible de charger les bases de codes.":"Chargement des bases…"}</div>`;if(tab!=="all")return}
+  let h="";
+  switch(tab){
+    case "ap":h=apTable(q,200);break;
+    case "al":h=alTable(q,200);break;
+    case "pl":h=plTable(q,300);break;
+    case "dl":h=`<div class="info">Codes retard IATA standard (AHM 730), traduction résumée. Ta compagnie peut utiliser des sous-codes propres.</div>`+grouped(DELAY,q,1,"60px");break;
+    case "ab":h=grouped(ABBR,q,1,"150px");break;
+    case "nato":h=natoTable(q);break;
+    case "ct":h=ctView(q);break;
+    case "mua":h=muaView();break;
+    default:{
+      if(!q){h=`<div class="card"><b>Recherche globale</b><p class="sub">Une seule barre pour tout : code aéroport, compagnie, type d'avion, code retard, abréviation ou contact. Les onglets filtrent par rubrique.</p></div>`;break}
+      const parts=[];STRICT=true;
+      const Q=q.toUpperCase();
+      if(loaded===true){
+        const a=search(AP,r=>[r[0],r[1]],r=>[r[2],r[3],r[4]],q,8);if(a.total)parts.push(["Aéroports","ap",apTable(q,8),a.best]);
+        const b=search(AL,r=>[r[0],r[1]],r=>[r[2],r[3],r[4]],q,8);if(b.total)parts.push(["Compagnies","al",alTable(q,8),b.best]);
+        const c=search(PL,r=>[r[0],r[1]],r=>[r[2]],q,8);if(c.total)parts.push(["Avions","pl",plTable(q,8),c.best]);
+      }
+      const dm=DELAY.filter(r=>norm(r.join(" ")).includes(q));if(dm.length)parts.push(["Codes retard","dl",grouped(DELAY,q,1,"60px"),dm.some(r=>r[1]===Q)?3:1]);
+      const am=ABBR.filter(r=>norm(r.join(" ")).includes(q));if(am.length)parts.push(["Abréviations","ab",grouped(ABBR,q,1,"150px"),am.some(r=>r[1].toUpperCase().split(/[ \/]+/).includes(Q))?3:1]);
+      if(getContacts().some(r=>norm(Object.values(r).join(" ")).includes(q)))parts.push(["Contacts MRS","ct","",1]);
+      STRICT=false;
+      parts.sort((x,y)=>y[3]-x[3]);
+      h=parts.length?parts.map(([t,k,x])=>`<h2>${t} <button class="btn" style="font-size:11px;padding:2px 8px" onclick="tab='${k}';render()">voir tout</button></h2>${x}`).join(""):`<div class="info">Aucun résultat.</div>`;
+    }
+  }
+  out.innerHTML=h;
+  if(tab==="ct")bindContacts();
+}
+render();
+if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{})}
+const SHARE_URL="https://planning-equipe-coa.github.io/horaires/outils/";
+$("#gear").onclick=()=>$("#set").classList.remove("hide");
+$("#setX").onclick=()=>$("#set").classList.add("hide");
+$("#set").onclick=e=>{if(e.target.id==="set")$("#set").classList.add("hide")};
+$("#shareCopy").onclick=async()=>{const b=$("#shareCopy");
+  if(navigator.share){try{await navigator.share({title:"Boîte à outils COA",url:SHARE_URL})}catch(e){}return}
+  try{await navigator.clipboard.writeText(SHARE_URL);b.textContent="Lien copié ✓"}catch(e){b.textContent=SHARE_URL}
+  setTimeout(()=>{b.textContent="Envoyer le lien"},2500)};
+</script>
+<footer style="max-width:1000px;margin:20px auto;padding:0 14px 30px" class="sub">Sources : aéroports OurAirports (domaine public) ; compagnies et types d'avions OpenFlights (ODbL) — la base compagnies n'est pas à jour pour les créations/disparitions récentes. Codes retard et abréviations : référence IATA, à vérifier avec le manuel de ta compagnie.</footer>
+</body>
+</html>

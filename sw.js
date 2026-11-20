@@ -4,7 +4,7 @@
 // changé, toute la copie est remplacée d'un coup (jamais de mélange d'anciens et de nouveaux fichiers) et la
 // page affiche « Nouvelle version de l'appli · Afficher ».
 // Aucune donnée de planning ne passe ici : elle reste dans le localStorage de la page.
-const CACHE = 'mh-app-v92';
+const CACHE = 'mh-app-v93';
 const FILES = [
   './', 'index.html', 'app.js', 'core.js', 'team.js', 'style.css', 'xlsx.full.min.js',
   'manifest.json?v=3', 'icon-192.png?v=2', 'icon-512.png?v=2', 'apple-touch-icon.png?v=2',
@@ -19,7 +19,7 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    .then(keys => Promise.all(keys.filter(k => k.startsWith('mh-') && k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 

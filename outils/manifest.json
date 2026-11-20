@@ -1,0 +1,11 @@
+{
+  "name": "Boîte à outils COA",
+  "short_name": "Outils COA",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#121019",
+  "theme_color": "#5b3fa8",
+  "icons": [{ "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }]
+}

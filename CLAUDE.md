@@ -265,7 +265,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   de l'utilisateur le 15 nov. 2026** (route POST /test = essai vers ce seul téléphone, bouton « Tester sur ce téléphone »).
   Titre des notifications « Planning d'équipe » (l'iPhone ajoute déjà « from Planning COA »). Le code du relais se recolle à
   la main (Cloudflare → planning-coa-notif → Modifier le code → Cmd+A/Cmd+V → Déployer) ; le collage ne marche pas sur iPhone.
-- Onglet Réglages, dans l'ordre : « 👤 Je suis », import, export, « 📲 Partager l'application », « 🔑 Code d'équipe »
+- Onglet Réglages, dans l'ordre : « 👤 Je suis », import, export, « 📲 Partager l'application », « Boîte à outils COA », « 🔑 Code d'équipe »
   (ordre voulu), « 📝 Mes notes », « 🎨 Codes et couleurs ». Cartes dépliantes `<details class="fold">` avec une
   flèche à droite (`summary::after`, marqueur natif masqué). Import ouvert tant qu'il n'y a aucun planning et dès
   qu'un fichier est lu (aperçu + « Envoyer à l'équipe » y sont) ; replié à l'ouverture sinon ; après l'import,
@@ -387,5 +387,13 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   l'équipe »). Mis en évidence (plein + pulsation, `.due`) quand le rappel du 20 est affiché ; le rappel `#calRemind` ouvre aussi
   le choix du fichier. Icône seule si les trois boutons du haut sont là (≤ 430 px), sinon le titre passait sur deux lignes.
   Lecture automatique d'un dossier impossible sur iPhone (le navigateur l'interdit).
+- **Boîte à outils COA** (20 nov. 2026, demandée) : appli séparée dans `outils/` → https://planning-equipe-coa.github.io/horaires/outils/
+  (même GitHub Pages). Un seul `outils/index.html` (onglets MUA, Tout, Aéroports, Compagnies, Avions, Codes retard, Abréviations,
+  Alphabet, Contacts MRS ; une barre de recherche ; codes exacts en premier), données dans `airports.json` (OurAirports, domaine public),
+  `airlines.json` et `aircraft.json` (OpenFlights, ODbL, pas à jour). Contacts dans localStorage `coa-contacts` (copier/coller pour
+  transférer). Réglages (roue) : QR code statique + « Envoyer le lien » comme le Planning. Son propre `outils/sw.js` (scope `outils/`,
+  caches `coa-outils-*`, réseau d'abord) et `outils/manifest.json`. **Le sw.js du Planning ne purge que les caches `mh-*`**
+  (sinon il effaçait la copie hors connexion de la boîte à outils). Planning → Réglages → carte « Boîte à outils COA » (`#toolsDetails`,
+  icône `i-tool`, après Partager) + ligne dans le mode d'emploi. MUA : en attente du PDF de l'utilisateur (texte à intégrer par chapitres).
 - Écarté par l'utilisateur : « Partager → Planning COA » sur Android.
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.
