@@ -387,13 +387,11 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   l'équipe »). Mis en évidence (plein + pulsation, `.due`) quand le rappel du 20 est affiché ; le rappel `#calRemind` ouvre aussi
   le choix du fichier. Icône seule si les trois boutons du haut sont là (≤ 430 px), sinon le titre passait sur deux lignes.
   Lecture automatique d'un dossier impossible sur iPhone (le navigateur l'interdit).
-- **Boîte à outils COA** (20 nov. 2026, demandée) : appli séparée dans `outils/` → https://planning-equipe-coa.github.io/horaires/outils/
-  (même GitHub Pages). Un seul `outils/index.html` (onglets MUA, Tout, Aéroports, Compagnies, Avions, Codes retard, Abréviations,
-  Alphabet, Contacts MRS ; une barre de recherche ; codes exacts en premier), données dans `airports.json` (OurAirports, domaine public),
-  `airlines.json` et `aircraft.json` (OpenFlights, ODbL, pas à jour). Contacts dans localStorage `coa-contacts` (copier/coller pour
-  transférer). Réglages (roue) : QR code statique + « Envoyer le lien » comme le Planning. Son propre `outils/sw.js` (scope `outils/`,
-  caches `coa-outils-*`, réseau d'abord) et `outils/manifest.json`. **Le sw.js du Planning ne purge que les caches `mh-*`**
-  (sinon il effaçait la copie hors connexion de la boîte à outils). Planning → Réglages → carte « Boîte à outils COA » (`#toolsDetails`,
-  icône `i-tool`, après Partager) + ligne dans le mode d'emploi. MUA : en attente du PDF de l'utilisateur (texte à intégrer par chapitres).
+- **Boîte à outils COA** (20 nov. 2026, demandée) : **appli distincte** (voulu par l'utilisateur), dépôt `planning-equipe-COA/Outil-COA`,
+  en ligne https://planning-equipe-coa.github.io/Outil-COA/. D'abord publiée dans `outils/` de ce dépôt : sur téléphone le lien
+  ouvrait le Planning (adresse dans la portée de l'appli installée), d'où le déplacement. `outils/` ne contient plus qu'une
+  redirection (`index.html`) et un `sw.js` qui se désinscrit. Ici : carte Réglages « Boîte à outils COA » (`#toolsDetails`,
+  icône `i-tool`, après Partager, lien externe `target=_blank`) + ligne dans le mode d'emploi.
+  **Le sw.js du Planning ne purge que les caches `mh-*`** (ne jamais effacer ceux d'une autre appli du même domaine).
 - Écarté par l'utilisateur : « Partager → Planning COA » sur Android.
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.
