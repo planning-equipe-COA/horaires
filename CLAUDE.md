@@ -265,7 +265,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   de l'utilisateur le 15 nov. 2026** (route POST /test = essai vers ce seul téléphone, bouton « Tester sur ce téléphone »).
   Titre des notifications « Planning d'équipe » (l'iPhone ajoute déjà « from Planning COA »). Le code du relais se recolle à
   la main (Cloudflare → planning-coa-notif → Modifier le code → Cmd+A/Cmd+V → Déployer) ; le collage ne marche pas sur iPhone.
-- Onglet Réglages, dans l'ordre : « 👤 Je suis », import, export, « 📲 Partager l'application », « Boîte à outils COA », « 🔑 Code d'équipe »
+- Onglet Réglages, dans l'ordre : « 👤 Je suis », import, export, « 📲 Partager l'application », « 🔑 Code d'équipe »
   (ordre voulu), « 📝 Mes notes », « 🎨 Codes et couleurs ». Cartes dépliantes `<details class="fold">` avec une
   flèche à droite (`summary::after`, marqueur natif masqué). Import ouvert tant qu'il n'y a aucun planning et dès
   qu'un fichier est lu (aperçu + « Envoyer à l'équipe » y sont) ; replié à l'ouverture sinon ; après l'import,
@@ -387,11 +387,9 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   l'équipe »). Mis en évidence (plein + pulsation, `.due`) quand le rappel du 20 est affiché ; le rappel `#calRemind` ouvre aussi
   le choix du fichier. Icône seule si les trois boutons du haut sont là (≤ 430 px), sinon le titre passait sur deux lignes.
   Lecture automatique d'un dossier impossible sur iPhone (le navigateur l'interdit).
-- **Boîte à outils COA** (20 nov. 2026, demandée) : **appli distincte** (voulu par l'utilisateur), dépôt `planning-equipe-COA/Outil-COA`,
-  en ligne https://planning-equipe-coa.github.io/Outil-COA/. D'abord publiée dans `outils/` de ce dépôt : sur téléphone le lien
-  ouvrait le Planning (adresse dans la portée de l'appli installée), d'où le déplacement. `outils/` ne contient plus qu'une
-  redirection (`index.html`) et un `sw.js` qui se désinscrit. Ici : carte Réglages « Boîte à outils COA » (`#toolsDetails`,
-  icône `i-tool`, après Partager, lien externe `target=_blank`) + ligne dans le mode d'emploi.
+- **Boîte à outils COA : totalement dissociée du Planning** (20 nov. 2026, demandé par l'utilisateur). Appli à part
+  (dépôt `Outil-COA`, organisation séparée). **Aucun lien, aucune mention, aucune carte vers elle dans le Planning** :
+  carte Réglages, ligne du mode d'emploi, icône `i-tool` et ancien dossier de redirection `outils/` supprimés. Ne pas les remettre.
   **Le sw.js du Planning ne purge que les caches `mh-*`** (ne jamais effacer ceux d'une autre appli du même domaine).
 - Écarté par l'utilisateur : « Partager → Planning COA » sur Android.
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.
