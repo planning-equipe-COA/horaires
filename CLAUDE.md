@@ -265,6 +265,12 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   de l'utilisateur le 15 nov. 2026** (route POST /test = essai vers ce seul téléphone, bouton « Tester sur ce téléphone »).
   Titre des notifications « Planning d'équipe » (l'iPhone ajoute déjà « from Planning COA »). Le code du relais se recolle à
   la main (Cloudflare → planning-coa-notif → Modifier le code → Cmd+A/Cmd+V → Déployer) ; le collage ne marche pas sur iPhone.
+- **Refonte légère** (22 nov. 2026, validée sur captures avant/après) : « Aujourd'hui » en grande carte teintée de la couleur du
+  service (`.nd-today`, `--wc`), « Demain » en ligne dessous (`.nd-next`) ; carte du calendrier sans fond (`.card.cal` transparent,
+  cases blanches ; Liste, tableau Équipe et résumé gardent leur carte) ; en-tête compact (titre 1,3 rem, boutons 40 px) ;
+  **Réglages en sections façon iPhone** (`.sgroup-title` + `.sgroup` : Moi / Mon planning [import, agenda, sauvegarde des notes] /
+  Équipe [partager, code d'équipe, notifications] / Apparence [affichage, codes et couleurs] / Aide), icônes dans un carré de
+  couleur par section ; une section sans carte visible est masquée (`:has`). L'ordre ci-dessous est l'ancien.
 - Onglet Réglages, dans l'ordre : « 👤 Je suis », import, export, « 📲 Partager l'application », « 🔑 Code d'équipe »
   (ordre voulu), « 📝 Mes notes », « 🎨 Codes et couleurs ». Cartes dépliantes `<details class="fold">` avec une
   flèche à droite (`summary::after`, marqueur natif masqué). Import ouvert tant qu'il n'y a aucun planning et dès
