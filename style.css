@@ -863,9 +863,17 @@ button.sug-go { flex: none; width: auto; padding: 7px 14px; margin: 0; }
 .ro-hidden ul { list-style: none; margin: 4px 0 0; padding: 0; }
 .ro-hidden li { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; color: var(--muted); }
 /* Jours travaillés encadrés (Mois et Liste), couleur du service ; le jour sélectionné et « Comparer » gardent leur cadre */
-#calGrid .cal-cell[data-work] { box-shadow: inset 0 0 0 2px var(--wc, var(--accent)); }
-#calGrid .cal-cell[data-work].selected { box-shadow: inset 0 0 0 2px var(--wc, var(--accent)), 0 0 0 2px var(--accent); }
-#calGrid.comparing .cal-cell[data-work] { box-shadow: none; }
+/* Vue Mois (22 nov. 2026, demandé : le jour actuel se perdait parmi les jours encadrés) : petit tiret de la couleur du
+   service en bas des jours travaillés ; cadre épais seulement sur aujourd'hui (couleur du service, sinon accent) */
+#calGrid .cal-cell[data-work] {
+  background-image: linear-gradient(var(--wc, var(--accent)), var(--wc, var(--accent)));
+  background-repeat: no-repeat; background-size: 42% 3.5px; background-position: center bottom 3px;
+  padding-bottom: 10px;
+}
+#calGrid .cal-cell { padding-bottom: 10px; } /* même hauteur pour toutes les cases */
+#calGrid .cal-cell.today { box-shadow: inset 0 0 0 3px var(--wc, var(--accent)); }
+#calGrid .cal-cell.today.selected { box-shadow: inset 0 0 0 3px var(--wc, var(--accent)), 0 0 0 2px var(--accent); }
+#calGrid.comparing .cal-cell[data-work] { background-image: none; }
 /* Vue Liste : trait à gauche pour les jours travaillés, cadre complet seulement pour aujourd'hui s'il est travaillé (demandé) */
 #calList .cal-row[data-work] { box-shadow: inset 4px 0 0 var(--wc, var(--accent)); }
 #calList .cal-row.today[data-work] { box-shadow: inset 0 0 0 2px var(--wc, var(--accent)), inset 6px 0 0 var(--wc, var(--accent)); border-radius: 10px; border-bottom-color: transparent; margin: 3px 0; }
