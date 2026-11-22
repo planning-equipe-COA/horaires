@@ -871,8 +871,8 @@ button.sug-go { flex: none; width: auto; padding: 7px 14px; margin: 0; }
   padding-bottom: 10px;
 }
 #calGrid .cal-cell { padding-bottom: 10px; } /* même hauteur pour toutes les cases */
-#calGrid .cal-cell.today { box-shadow: inset 0 0 0 3px var(--wc, var(--accent)); }
-#calGrid .cal-cell.today.selected { box-shadow: inset 0 0 0 3px var(--wc, var(--accent)), 0 0 0 2px var(--accent); }
+#calGrid .cal-cell.today { box-shadow: inset 0 0 0 1.5px var(--wc, var(--accent)); }
+#calGrid .cal-cell.today.selected { box-shadow: inset 0 0 0 1.5px var(--wc, var(--accent)); border-color: var(--wc, var(--accent)); }
 #calGrid.comparing .cal-cell[data-work] { background-image: none; }
 /* Vue Liste : trait à gauche pour les jours travaillés, cadre complet seulement pour aujourd'hui s'il est travaillé (demandé) */
 #calList .cal-row[data-work] { box-shadow: inset 4px 0 0 var(--wc, var(--accent)); }
