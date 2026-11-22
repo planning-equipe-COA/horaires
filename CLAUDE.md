@@ -285,7 +285,7 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   Ajouts du même soir (demandés) : **mot d'accueil** au-dessus d'Aujourd'hui (`helloHTML` : Bonjour / Bon après-midi / Bonsoir /
   Bonne nuit, « Bonne nuit de travail » pendant une nuit, prénom = mots en minuscules du nom), **« Prochains congés dans N jours »**
   (`nextLeaveHTML` : planning + jours posés dans Congés, 120 jours), **tirer vers le bas** en haut de Planning / Équipe = vérifier
-  le planning d'équipe (`#ptr`, seulement si l'agent a rejoint l'équipe, cercle qui se remplit puis tourne pendant `syncTeam`).
+  le planning d'équipe (`#ptr`, seulement si l'agent a rejoint l'équipe, cercle qui se remplit puis tourne pendant `syncTeam`) ; **testé en vrai sur l'iPhone de Raph le 22 nov. 2026 : OK**).
 - **Petits « i » d'explication** (22 nov. 2026, demandé : « on m'a déjà demandé ce que c'était [Comparer] ») : `infoBtn(clé)` /
   `<button class="info-btn" data-info="…">i</button>`, textes dans `INFO` (app.js), bulle unique `#infoPop` sous le bouton (au-dessus
   s'il n'y a pas la place), fermée au toucher ailleurs, au défilement, à Échap et au changement d'onglet. Placés : Comparer,
