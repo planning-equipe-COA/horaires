@@ -589,7 +589,7 @@ h2 .ic { color: var(--accent); width: 1.2em; height: 1.2em; }
 .pr-range input { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); }
 .hdr-btns { display: flex; gap: 8px; }
 body[data-tab="reglages"] #calPrint { display: none; }
-body[data-tab="conges"] #calPrint { display: inline-flex !important; }
+body[data-tab="conges"] #calPrint { display: inline-flex !important; align-items: center; justify-content: center; }
 #printSheet h2 { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
 #printArea { display: none; }
 @media print {
@@ -949,3 +949,27 @@ header.app-head { margin-bottom: 12px; }
 .seg button[aria-selected="true"] { box-shadow: 0 0 0 1px var(--line), 0 1px 3px rgba(0, 0, 0, .18); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .seg button[aria-selected="true"] { background: var(--line); } }
 :root[data-theme="dark"] .seg button[aria-selected="true"] { background: var(--line); }
+
+/* « i » d'explication et sa bulle (22 nov. 2026, demandé) */
+button.info-btn {
+  flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; min-height: 0; padding: 0; margin: 0 2px;
+  border-radius: 50%; border: 1.5px solid var(--accent); background: transparent; color: var(--accent);
+  font: italic 700 .78rem/1 Georgia, "Times New Roman", serif; vertical-align: middle; cursor: pointer;
+}
+button.info-btn[aria-expanded="true"] { background: var(--accent); color: var(--accent-text); }
+.cal-tools .info-btn { align-self: center; }
+.leave-mode .info-btn, .tt-tools .info-btn, .cal-tools .info-btn { flex: none; width: 22px; height: 22px; padding: 0; border-radius: 50%; font-weight: 700; }
+.info-pop {
+  position: fixed; z-index: 80; padding: 11px 14px; border-radius: 12px; font-size: .9rem; line-height: 1.4;
+  background: var(--text); color: var(--bg); box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+  opacity: 0; transform: translateY(-4px); transition: opacity .16s, transform .16s;
+}
+.info-pop.above { transform: translateY(4px); }
+.info-pop.show { opacity: 1; transform: none; }
+.info-pop::before {
+  content: ''; position: absolute; top: -6px; left: calc(var(--ax, 50%) - 6px); width: 12px; height: 12px;
+  background: inherit; transform: rotate(45deg); border-radius: 2px;
+}
+.info-pop.above::before { top: auto; bottom: -6px; }
+@media (prefers-reduced-motion: reduce) { .info-pop { transition: none; transform: none; } }
+@media print { .info-btn, .info-pop { display: none !important; } }

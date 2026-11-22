@@ -271,6 +271,11 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   **Réglages en sections façon iPhone** (`.sgroup-title` + `.sgroup` : Moi / Mon planning [import, agenda, sauvegarde des notes] /
   Équipe [partager, code d'équipe, notifications] / Apparence [affichage, codes et couleurs] / Aide), icônes dans un carré de
   couleur par section ; une section sans carte visible est masquée (`:has`). L'ordre ci-dessous est l'ancien.
+- **Petits « i » d'explication** (22 nov. 2026, demandé : « on m'a déjà demandé ce que c'était [Comparer] ») : `infoBtn(clé)` /
+  `<button class="info-btn" data-info="…">i</button>`, textes dans `INFO` (app.js), bulle unique `#infoPop` sous le bouton (au-dessus
+  s'il n'y a pas la place), fermée au toucher ailleurs, au défilement, à Échap et au changement d'onglet. Placés : Comparer,
+  Surligner, Réorganiser les noms, Permutations possibles, Travaillés en majoration, heures théoriques, Je pose CA/RC, options
+  d'export (à partir d'aujourd'hui, rappel la veille). À compléter pour toute nouvelle option pas évidente.
 - Onglet Réglages, dans l'ordre : « 👤 Je suis », import, export, « 📲 Partager l'application », « 🔑 Code d'équipe »
   (ordre voulu), « 📝 Mes notes », « 🎨 Codes et couleurs ». Cartes dépliantes `<details class="fold">` avec une
   flèche à droite (`summary::after`, marqueur natif masqué). Import ouvert tant qu'il n'y a aucun planning et dès

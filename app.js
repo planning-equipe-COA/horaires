@@ -1186,11 +1186,11 @@
     extra.push(`<span class="sum-item"><strong>${s.holidays.length}</strong> férié${s.holidays.length > 1 ? 's' : ''}` +
       (s.holidays.length && (!year || s.holidays.length <= 4) ? ` <span class="muted">(${s.holidays.map(h => esc(h.name)).join(', ')})</span>` : '') + '</span>');
     extra.push(`<span class="sum-item"><strong>${s.nights}</strong> nuit${s.nights > 1 ? 's' : ''}</span>`);
-    html += `<div class="sum-row sum-maj"><span class="sum-n"><svg class="ic" aria-hidden="true"><use href="#i-euro"/></svg></span><span class="sum-title">Travaillés en majoration</span>` +
+    html += `<div class="sum-row sum-maj"><span class="sum-n"><svg class="ic" aria-hidden="true"><use href="#i-euro"/></svg></span><span class="sum-title">Travaillés en majoration ${infoBtn('majoration', 'travaillés en majoration')}</span>` +
       `<span class="sum-detail">${extra.join('')}</span></div>`;
     const hours = C.monthHours(days, state.codes, state.cal.y, year ? null : state.cal.m);
     const fmtH = min => { const h = Math.floor(min / 60), r = min % 60; return h + ' h' + (r ? ' ' + String(r).padStart(2, '0') : ''); };
-    html += `<div class="sum-row sum-hours"><span class="sum-n"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg></span><span class="sum-title">${fmtH(hours.minutes)} <span class="muted">théoriques${year ? ' sur l\'année' : ' ce mois'}</span></span>` +
+    html += `<div class="sum-row sum-hours"><span class="sum-n"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg></span><span class="sum-title">${fmtH(hours.minutes)} <span class="muted">théoriques${year ? ' sur l\'année' : ' ce mois'}</span> ${infoBtn('heures', 'heures théoriques')}</span>` +
       `<span class="sum-detail">${year ? '' : hours.weeks.map(w =>
         `<span class="sum-item">S${w.w} : <strong>${fmtH(w.minutes)}</strong></span>`).join('')}</span></div>`;
     $('calTally').innerHTML = html;
@@ -1343,7 +1343,7 @@
         (tags.length ? ' ' + tags.join(' ') : '') +
         (isMe ? ` <button class="swap-ask" type="button" data-swap="${i}"><svg class="ic" aria-hidden="true"><use href="#i-mail"/></svg> Proposer</button>` : '') + '</li>';
     };
-    let html = `<details class="day-swap"><summary><svg class="ic" aria-hidden="true"><use href="#i-swap"/></svg> <strong>Permutations possibles</strong> ` +
+    let html = `<details class="day-swap"><summary><svg class="ic" aria-hidden="true"><use href="#i-swap"/></svg> <strong>Permutations possibles</strong> ${infoBtn('swap', 'permutations possibles')} ` +
       `<span class="muted">(${n ? n + ' solution' + (n > 1 ? 's' : '') : 'aucune'})</span></summary>`;
     if (n) {
       html += '<ol class="swap-list">' + r.options.map(item).join('') + '</ol>';
@@ -1671,10 +1671,10 @@
       }).join('') + '</tr></tfoot>';
     }
     html += '</table>';
-    const legendHTML = legend.length > 1 ? '<div class="tt-legend"><span>Surligner :</span>' + legend.map(c =>
+    const legendHTML = legend.length > 1 ? '<div class="tt-legend"><span>Surligner ' + infoBtn('hl', 'surligner') + ' :</span>' + legend.map(c =>
       `<button class="hl-btn" type="button" data-hl="${esc(c)}" aria-pressed="${c === hl}" aria-label="Surligner ${esc(codeLabel(c))}">${chip(c)}</button>`).join('') + '</div>' : '';
     $('calTeam').innerHTML = legendHTML + `<div class="tt-head"><div class="tt-head-in">${head}</div></div><div class="tt-wrap">${html}</div>` +
-      '<div class="tt-tools"><button id="ttReorder" type="button">↕︎ Réorganiser les noms</button></div>' +
+      '<div class="tt-tools"><button id="ttReorder" type="button">↕︎ Réorganiser les noms</button>' + infoBtn('reorder', 'réorganiser les noms') + '</div>' +
       `<p id="orderMsg" class="hint order-msg"${state.orderMsg ? '' : ' hidden'}>${esc(state.orderMsg || '')}</p>` +
       '<p class="hint">Touche un jour pour voir l\'équipe de ce jour-là, ou un code pour le surligner. Fais glisser le tableau pour voir tout le mois.</p>';
     const wrap = $('calTeam').querySelector('.tt-wrap'), headIn = $('calTeam').querySelector('.tt-head-in');
@@ -3149,7 +3149,59 @@
   }
   $('leavePrint').addEventListener('click', printLeave);
 
+  // ── Petits « i » d'explication (22 nov. 2026, demandé : « on m'a déjà demandé ce que c'était », les collègues ne lisent
+  // pas le mode d'emploi). Toucher le « i » ouvre une bulle sous le bouton ; toucher ailleurs, faire défiler ou Échap la ferme.
+  const INFO = {
+    compare: 'Choisis un collègue : son planning s\'affiche en petit sous le tien. Un cadre vert pointillé marque les jours où l\'un travaille pendant que l\'autre est en repos, pratique pour trouver un échange.',
+    hl: 'Touche un code (M, S, N…) : les autres cases s\'estompent et une ligne « Total » compte ce code jour par jour. Retouche-le pour tout réafficher.',
+    reorder: 'Change l\'ordre des noms du tableau. Cet ordre est commun à toute l\'équipe ; sur chaque téléphone, son utilisateur reste toujours en premier.',
+    swap: 'Échanges possibles avec un collègue du même groupe (COA ou ROA), en respectant les règles : 9 h de repos minimum, pas de soir suivi d\'un matin, 6 jours de suite au plus, 3 nuits au plus, 3 jours par semaine pour les temps partiels. Les meilleures solutions sont en premier.',
+    majoration: 'Dimanches, jours fériés et nuits que tu travailles ce mois-ci, comptés le jour où le service commence.',
+    heures: 'Durée des services prévus au planning (sans les pauses) : par semaine et au total. C\'est une estimation, pas ta fiche de paie.',
+    leaveMode: 'CA = congé annuel, décompté des 26 jours. RC = récupération, non décomptée. Choisis ce que tu poses, puis touche les jours (ou appui long et glisser pour plusieurs).',
+    fromToday: 'N\'ajoute pas à l\'agenda du téléphone les jours déjà passés.',
+    alarm: 'L\'agenda de l\'iPhone te prévient la veille à 20 h de chaque jour travaillé. Google Agenda ignore ce rappel.',
+    calStyle: '« Pastilles » : un petit badge par jour. « Cases colorées » : toute la case prend la couleur du service, les repos restent blancs.'
+  };
+  function infoBtn(key, label) {
+    return `<button type="button" class="info-btn" data-info="${key}" aria-label="Explication : ${esc(label || '')}" aria-expanded="false">i</button>`;
+  }
+  const infoPop = document.createElement('div');
+  infoPop.id = 'infoPop'; infoPop.className = 'info-pop'; infoPop.setAttribute('role', 'tooltip'); infoPop.hidden = true;
+  document.body.appendChild(infoPop);
+  let infoFrom = null;
+  function closeInfo() {
+    if (infoPop.hidden) return;
+    infoPop.hidden = true; infoPop.classList.remove('show');
+    if (infoFrom) infoFrom.setAttribute('aria-expanded', 'false');
+    infoFrom = null;
+  }
+  function openInfo(btn) {
+    const text = INFO[btn.dataset.info]; if (!text) return;
+    if (infoFrom === btn) { closeInfo(); return; }
+    closeInfo();
+    infoFrom = btn; btn.setAttribute('aria-expanded', 'true');
+    infoPop.textContent = text; infoPop.hidden = false;
+    const r = btn.getBoundingClientRect(), vw = document.documentElement.clientWidth, w = Math.min(320, vw - 32);
+    infoPop.style.width = w + 'px';
+    const left = Math.max(16, Math.min(vw - 16 - w, r.left + r.width / 2 - w / 2));
+    const below = r.bottom + 8 + infoPop.offsetHeight < window.innerHeight - 70;
+    infoPop.style.left = left + 'px';
+    infoPop.style.top = (below ? r.bottom + 8 : Math.max(8, r.top - 8 - infoPop.offsetHeight)) + 'px';
+    infoPop.style.setProperty('--ax', (r.left + r.width / 2 - left) + 'px');
+    infoPop.classList.toggle('above', !below);
+    requestAnimationFrame(() => infoPop.classList.add('show'));
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.info-btn');
+    if (b) { e.preventDefault(); e.stopPropagation(); openInfo(b); return; }
+    if (!infoPop.contains(e.target)) closeInfo();
+  }, true);
+  window.addEventListener('scroll', closeInfo, { passive: true, capture: true });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeInfo(); });
+
   function setTab(t) {
+    closeInfo();
     if (!['planning', 'equipe', 'conges', 'reglages'].includes(t)) t = 'planning';
     const changed = state.tab !== t;
     closeDay();
