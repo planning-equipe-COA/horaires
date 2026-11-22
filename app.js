@@ -1256,7 +1256,7 @@
     const items = [['Aujourd\'hui', t], ['Demain', { y: tomorrow.getUTCFullYear(), m: tomorrow.getUTCMonth() + 1, d: tomorrow.getUTCDate() }]];
     if (!items.some(([, d]) => days[C.dateKey(d)])) { $('nextDays').hidden = true; return; }
     $('nextDays').hidden = false;
-    $('nextDays').innerHTML = items.map(([label, d], i) => {
+    $('nextDays').innerHTML = helloHTML(days, t) + items.map(([label, d], i) => {
       const k = C.dateKey(d), code = days[k];
       // Refonte (22 nov. 2026) : « Aujourd'hui » en grande carte teintée de la couleur du service, « Demain » en ligne
       const def = code && defOf(code), col = def && def.color !== 'blanc' && C.COLORS[def.color];
@@ -1286,7 +1286,32 @@
     if (b <= a) b += 1440; // nuit : finit le lendemain
     return { a, b, def };
   }
+  // Mot d'accueil selon l'heure, avec le prénom (mots en minuscules du nom « NOM Prénom » ; rien s'il n'y en a pas)
+  function helloHTML(days, t) {
+    const h = new Date().getHours(), first = shown(meName() || '').split(/\s+/).filter(w => /[a-zà-ÿ]/.test(w)).join(' ');
+    const sp = shiftSpan(days[C.dateKey(t)]), nowMin = h * 60 + new Date().getMinutes();
+    const onNight = sp && sp.b > 1440 && nowMin >= sp.a;
+    const word = onNight ? 'Bonne nuit de travail' : h < 5 ? 'Bonne nuit' : h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : h < 22 ? 'Bonsoir' : 'Bonne nuit';
+    return `<p class="nd-hello">${word}${first ? ' <strong>' + esc(first) + '</strong>' : ''} ${h >= 5 && h < 18 ? '☀︎' : '☾'}</p>`;
+  }
+  // Prochain congé (planning ou jours posés dans l'onglet Congés), dans les 120 jours ; '' si aujourd'hui est déjà en congé
+  function nextLeaveHTML(days, t) {
+    let posed = {};
+    try { posed = leave.days || {}; } catch (e) { /* pas encore chargé au premier affichage */ }
+    for (let i = 1; i <= 120; i++) {
+      const d = utc(t); d.setUTCDate(d.getUTCDate() + i);
+      const k = C.dateKey({ y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate() });
+      if (posed[k] || (days[k] && C.dayKind(defOf(days[k])) === 'conge')) {
+        return `<span class="nd-streak">Prochains congés ${i === 1 ? '<strong>demain</strong>' : `dans <strong>${i} jours</strong>`} · ${esc(d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', timeZone: 'UTC' }))}</span>`;
+      }
+    }
+    return '';
+  }
   function liveHTML(days, t) {
+    const live = liveNowHTML(days, t), code = days[C.dateKey(t)];
+    return live + (code && C.dayKind(defOf(code)) === 'conge' ? '' : nextLeaveHTML(days, t));
+  }
+  function liveNowHTML(days, t) {
     const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes();
     const y = utc(t); y.setUTCDate(y.getUTCDate() - 1);
     const yKey = C.dateKey({ y: y.getUTCFullYear(), m: y.getUTCMonth() + 1, d: y.getUTCDate() });
@@ -1321,9 +1346,43 @@
     if (document.hidden) return;
     const el = document.querySelector('#nextDays [data-live]');
     if (!el || !state.plan) return;
-    const html = liveHTML((planView().agents[meName()]) || {}, todayDate());
+    const days = (planView().agents[meName()]) || {}, html = liveHTML(days, todayDate());
     if (el.innerHTML !== html) el.innerHTML = html;
+    const hello = document.querySelector('#nextDays .nd-hello'), hh = helloHTML(days, todayDate());
+    if (hello && hello.outerHTML !== hh) hello.outerHTML = hh;
   }, 30000);
+
+  // Tirer vers le bas en haut de l'onglet Planning ou Équipe = vérifier le planning d'équipe (cercle qui se remplit puis tourne)
+  (function pullToRefresh() {
+    const ind = document.createElement('div');
+    ind.id = 'ptr'; ind.setAttribute('aria-hidden', 'true');
+    ind.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>';
+    document.body.appendChild(ind);
+    const MAX = 80;
+    let y0 = null, dy = 0, busy = false;
+    const allowed = () => (state.tab === 'planning' || state.tab === 'equipe') && !!teamCode() && !document.querySelector('.sheet:not([hidden]), dialog[open]');
+    document.addEventListener('touchstart', e => {
+      if (busy || !allowed() || window.scrollY > 0 || e.touches.length !== 1) { y0 = null; return; }
+      y0 = e.touches[0].clientY; dy = 0;
+    }, { passive: true });
+    document.addEventListener('touchmove', e => {
+      if (y0 === null) return;
+      dy = Math.max(0, e.touches[0].clientY - y0);
+      if (window.scrollY > 0) dy = 0;
+      const p = Math.min(1, dy / MAX);
+      ind.style.setProperty('--p', p.toFixed(3));
+      ind.classList.toggle('show', dy > 8);
+      ind.classList.toggle('ready', p >= 1);
+    }, { passive: true });
+    document.addEventListener('touchend', async () => {
+      if (y0 === null) return;
+      y0 = null;
+      if (dy < MAX) { ind.classList.remove('show', 'ready'); return; }
+      busy = true; ind.classList.add('spin');
+      try { lastSync = 0; await syncTeam(true); renderTeam(); } catch (e) { /* réseau : le bandeau le dira */ }
+      setTimeout(() => { ind.classList.remove('show', 'ready', 'spin'); busy = false; }, 500);
+    });
+  })();
 
   // ── Rappel de fin de mois : le planning du mois prochain n'est pas encore là ──
   function renderRemind() {
