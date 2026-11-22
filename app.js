@@ -1234,11 +1234,14 @@
     const items = [['Aujourd\'hui', t], ['Demain', { y: tomorrow.getUTCFullYear(), m: tomorrow.getUTCMonth() + 1, d: tomorrow.getUTCDate() }]];
     if (!items.some(([, d]) => days[C.dateKey(d)])) { $('nextDays').hidden = true; return; }
     $('nextDays').hidden = false;
-    $('nextDays').innerHTML = items.map(([label, d]) => {
+    $('nextDays').innerHTML = items.map(([label, d], i) => {
       const k = C.dateKey(d), code = days[k];
+      // Refonte (22 nov. 2026) : « Aujourd'hui » en grande carte teintée de la couleur du service, « Demain » en ligne
+      const def = code && defOf(code), col = def && def.color !== 'blanc' && C.COLORS[def.color];
+      const tint = col ? ` style="--wc:${col.css}"` : '';
       const mates = code ? C.sameShift(plan, k, code, me) : [];
       const wd = utc(d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', timeZone: 'UTC' });
-      return `<button class="next-day" data-key="${k}"><span class="next-label">${label} <span class="muted">${esc(wd)}</span></span>` +
+      return `<button class="next-day${i ? ' nd-next' : ' nd-today'}" data-key="${k}"${tint}><span class="next-label">${label} <span class="muted">${esc(wd)}</span></span>` +
         `<span class="next-code">${code ? chip(code) + ' ' + esc(codeLabel(code)) : '<span class="muted">pas de planning</span>'}</span>` +
         (code && C.dayKind(defOf(code)) === 'travail'
           ? `<span class="next-mates">${mates.length ? 'avec ' + mates.slice(0, 3).map(n => esc(shown(n))).join(', ') + (mates.length > 3 ? ` +${mates.length - 3}` : '') : 'seul(e) en ' + esc(codeLabel(code))}</span>`

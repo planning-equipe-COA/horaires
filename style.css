@@ -889,3 +889,63 @@ body[data-tab="reglages"] #quickImport, body[data-tab="conges"] #quickImport { d
   .hdr-btns:has(#utilesBtn:not([hidden])) .hdr-import span { display: none; }
   .hdr-btns:has(#utilesBtn:not([hidden])) .hdr-btn.hdr-import { width: 44px; padding: 0; justify-content: center; }
 }
+
+/* ══ Refonte légère (22 nov. 2026, validée point par point par l'utilisateur) ══════════════════════════════════ */
+/* 4. En-tête plus compact */
+main { padding-top: 14px; }
+header.app-head { margin-bottom: 12px; }
+.app-head h1 { font-size: 1.3rem; letter-spacing: -.01em; }
+.hdr-btn { width: 40px; height: 40px; }
+.hdr-btn.hdr-import { height: 40px; }
+
+/* 1. « Aujourd'hui » en carte principale, « Demain » en ligne */
+.next-days { grid-template-columns: 1fr; gap: 8px; }
+.next-day.nd-today {
+  padding: 14px 16px 14px 18px; gap: 6px; border: 0;
+  background: color-mix(in srgb, var(--wc, var(--accent)) 13%, var(--card));
+  box-shadow: inset 5px 0 0 var(--wc, var(--accent)), 0 1px 2px rgba(0, 0, 0, .06);
+}
+.nd-today .next-label { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.nd-today .next-label .muted { text-transform: none; letter-spacing: 0; }
+.nd-today .next-code { font-size: 1.45rem; font-weight: 700; gap: 10px; }
+.nd-today .next-code .chip { font-size: 1rem; padding: 3px 9px; }
+.nd-today .next-mates, .nd-today .next-note { font-size: .85rem; }
+.next-day.nd-next {
+  flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 9px 14px;
+  background: var(--card); border: 1px solid var(--line);
+}
+.nd-next .next-code { font-size: .95rem; }
+.nd-next .next-mates, .nd-next .next-note { flex-basis: 100%; }
+
+/* 2. Moins de cadres : le calendrier repose sur la page, seules les cases et blocs utiles gardent un fond */
+.card.cal { background: transparent; border: 0; padding: 0; }
+.card.cal select { background: var(--card); }
+.seg { background: color-mix(in srgb, var(--line) 50%, var(--bg)); border-color: transparent; }
+#calGrid .cal-cell { background: var(--card); border-color: color-mix(in srgb, var(--line) 70%, transparent); }
+#calGrid .cal-cell.blank { background: transparent; border-color: transparent; }
+.cal-list, .cal-team, .cal-sum-box { background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+.cal-list { padding: 2px 10px; }
+.cal-list .cal-row:last-child { border-bottom: 0; }
+.cal-team { padding: 10px 8px; }
+.cal-sum-box { padding: 12px 14px; margin-top: 14px; }
+.cal-nav { background: var(--card); }
+
+/* 3. Réglages en sections, comme l'iPhone */
+.sgroup-title { margin: 20px 4px 6px; font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.sgroup-title:first-of-type { margin-top: 4px; }
+.sgroup { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; margin-bottom: 6px; }
+.sgroup > .card { background: transparent; border: 0; border-radius: 0; margin: 0; padding: 13px 16px; }
+.sgroup > .card + .card { border-top: 1px solid var(--line); }
+.sgroup .fold > summary h2 { font-size: 1rem; font-weight: 600; gap: 12px; }
+.sgroup .fold > summary h2 > .ic, .sgroup .me-label .ic {
+  flex: none; width: 30px; height: 30px; padding: 6px; border-radius: 8px;
+  background: var(--accent); color: var(--accent-text); stroke: currentColor;
+}
+#sgTeam .fold > summary h2 > .ic { background: #2e8b47; color: #fff; }
+#sgView .fold > summary h2 > .ic { background: #8a4fd6; color: #fff; }
+#sgHelp .fold > summary h2 > .ic { background: #6b7a8c; color: #fff; }
+.sgroup:not(:has(> .card:not([hidden]))), .sgroup-title:has(+ .sgroup:not(:has(> .card:not([hidden])))) { display: none; }
+.sgroup .me-label { display: inline-flex; align-items: center; gap: 12px; }
+.seg button[aria-selected="true"] { box-shadow: 0 0 0 1px var(--line), 0 1px 3px rgba(0, 0, 0, .18); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .seg button[aria-selected="true"] { background: var(--line); } }
+:root[data-theme="dark"] .seg button[aria-selected="true"] { background: var(--line); }

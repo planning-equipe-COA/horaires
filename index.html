@@ -125,16 +125,20 @@
     </div>
   </section>
 
+  <h3 class="sgroup-title" data-tab="reglages">Moi</h3>
+  <div class="sgroup" id="sgMe" data-tab="reglages">
   <section id="meCard" class="card me-card" data-tab="reglages" hidden>
     <label class="me-row" for="meName"><span class="me-label"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg> Je suis</span>
       <select id="meName" aria-label="Ton nom"></select></label>
     <p class="hint">Ton nom sert pour « Aujourd'hui / Demain », l'agenda du téléphone, ton numéro et les envois à l'équipe.
       Regarder le planning d'un collègue ne le change pas.</p>
   </section>
-
+  </div>
+  <h3 class="sgroup-title" data-tab="reglages">Mon planning</h3>
+  <div class="sgroup" id="sgPlan" data-tab="reglages">
   <section id="importCard" class="card" data-tab="reglages">
     <details id="importDetails" class="fold" open>
-      <summary><h2><span id="importTitle">Importer un nouveau planning</span></h2></summary>
+      <summary><h2><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg> <span id="importTitle">Importer un nouveau planning</span></h2></summary>
     <label id="drop" class="drop" for="file">
       <strong>Choisir le fichier Excel</strong>
       <span>ou le glisser ici (.xls, .xlsx, .xlsm) · tu peux en sélectionner plusieurs</span>
@@ -173,7 +177,6 @@
     <p id="error" class="error" hidden></p>
     </details>
   </section>
-
   <section id="previewCard" class="card" data-tab="reglages" hidden>
     <details id="exportDetails" class="fold">
       <summary><h2><svg class="ic" aria-hidden="true"><use href="#i-cal"/></svg> Ajouter à l'agenda du téléphone <span class="opt">facultatif</span></h2></summary>
@@ -206,7 +209,22 @@
     <div class="table-wrap"><table id="preview"></table></div>
     </details>
   </section>
-
+  <section class="card" data-tab="reglages">
+    <details id="notesDetails" class="fold">
+      <summary><h2><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg> Sauvegarde des notes</h2></summary>
+      <p class="hint"><strong>Les notes s'écrivent dans le calendrier</strong> : touche un jour, puis « Ajouter une note ».
+        Ici, tu peux seulement les sauvegarder dans un fichier ou les récupérer.</p>
+      <p id="notesInfo" class="hint"></p>
+      <p class="hint">Elles ne sont gardées que sur ce téléphone : sauvegarde-les avant de changer de téléphone ou d'installer
+        l'appli sur l'écran d'accueil (sur iPhone, l'icône repart de zéro).</p>
+      <div class="actions"><button id="notesSave" type="button"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg> Sauvegarder</button><button id="notesRestore" type="button"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg> Restaurer</button></div>
+      <input id="notesFile" type="file" accept=".json,application/json" hidden>
+      <p id="notesMsg" class="team-msg" hidden></p>
+    </details>
+  </section>
+  </div>
+  <h3 class="sgroup-title" data-tab="reglages">Équipe</h3>
+  <div class="sgroup" id="sgTeam" data-tab="reglages">
   <section class="card" data-tab="reglages">
     <details id="shareDetails" class="fold">
       <summary><h2><svg class="ic" aria-hidden="true"><use href="#i-share"/></svg> Partager l'application</h2></summary>
@@ -220,7 +238,6 @@
         sur Android, menu ⋮ → « Ajouter à l'écran d'accueil ».</p>
     </details>
   </section>
-
   <section class="card" data-tab="reglages">
     <details id="teamDetails" class="fold">
       <summary><h2><svg class="ic" aria-hidden="true"><use href="#i-key"/></svg> Code d'équipe</h2></summary>
@@ -287,7 +304,6 @@
       <p id="teamMsg" class="team-msg" hidden></p>
     </details>
   </section>
-
   <section id="notifCard" class="card" data-tab="reglages" hidden>
     <details id="notifDetails" class="fold">
       <summary><h2><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg> Notifications</h2></summary>
@@ -299,21 +315,9 @@
       <div class="actions"><button id="notifTest" type="button" class="link">Tester sur ce téléphone</button></div>
     </details>
   </section>
-
-  <section class="card" data-tab="reglages">
-    <details id="notesDetails" class="fold">
-      <summary><h2><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg> Sauvegarde des notes</h2></summary>
-      <p class="hint"><strong>Les notes s'écrivent dans le calendrier</strong> : touche un jour, puis « Ajouter une note ».
-        Ici, tu peux seulement les sauvegarder dans un fichier ou les récupérer.</p>
-      <p id="notesInfo" class="hint"></p>
-      <p class="hint">Elles ne sont gardées que sur ce téléphone : sauvegarde-les avant de changer de téléphone ou d'installer
-        l'appli sur l'écran d'accueil (sur iPhone, l'icône repart de zéro).</p>
-      <div class="actions"><button id="notesSave" type="button"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg> Sauvegarder</button><button id="notesRestore" type="button"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg> Restaurer</button></div>
-      <input id="notesFile" type="file" accept=".json,application/json" hidden>
-      <p id="notesMsg" class="team-msg" hidden></p>
-    </details>
-  </section>
-
+  </div>
+  <h3 class="sgroup-title" data-tab="reglages">Apparence</h3>
+  <div class="sgroup" id="sgView" data-tab="reglages">
   <section class="card" data-tab="reglages">
     <details id="styleDetails" class="fold">
       <summary><h2><svg class="ic" aria-hidden="true"><use href="#i-grid"/></svg> Affichage</h2></summary>
@@ -339,7 +343,6 @@
       <p class="hint">Agrandit toute l'appli (texte, pastilles, boutons) sur ce téléphone.</p>
     </details>
   </section>
-
   <section class="card" data-tab="reglages">
     <details id="codesDetails" class="fold">
       <summary><h2><svg class="ic" aria-hidden="true"><use href="#i-palette"/></svg> Codes et couleurs</h2></summary>
@@ -351,6 +354,9 @@
       </div>
     </details>
   </section>
+  </div>
+  <h3 class="sgroup-title" data-tab="reglages">Aide</h3>
+  <div class="sgroup" id="sgHelp" data-tab="reglages">
   <section class="card" data-tab="reglages">
     <details id="helpDetails" class="fold">
       <summary><h2><svg class="ic" aria-hidden="true"><use href="#i-help"/></svg> Mode d'emploi</h2></summary>
@@ -402,6 +408,27 @@
       </div>
     </details>
   </section>
+  </div>
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
 </main>
 
 <div id="updateBar" class="update-bar" role="status" hidden>
