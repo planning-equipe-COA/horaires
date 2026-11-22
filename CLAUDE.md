@@ -271,6 +271,17 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   **Réglages en sections façon iPhone** (`.sgroup-title` + `.sgroup` : Moi / Mon planning [import, agenda, sauvegarde des notes] /
   Équipe [partager, code d'équipe, notifications] / Apparence [affichage, codes et couleurs] / Aide), icônes dans un carré de
   couleur par section ; une section sans carte visible est masquée (`:has`). L'ordre ci-dessous est l'ancien.
+- **Passe design + « appli vivante »** (22 nov. 2026, validée par l'utilisateur, captures avant/après) :
+  **un seul bandeau** en haut du Planning (`#teamWarn`, `renderBanner` = `alertLines` + `remindLine`) : une phrase courte et
+  fixe à la fois (`text`, texte complet dans `long` → aria-label), plusieurs phrases se relaient toutes les 4,5 s (glissement,
+  points), toucher = action de la phrase affichée (`act` : key / sync / staff / import). `#calRemind` reste caché (son texte
+  passe dans le bandeau). Remplace le texte qui défilait en continu. « Importer » de l'en-tête = bouton rond (bleu pulsant si
+  le planning suivant est attendu). **Aujourd'hui vivant** (`liveHTML`, rafraîchi toutes les 30 s) : compte à rebours avant la
+  vacation, barre d'avancement + temps restant pendant (nuit d'hier encore en cours le matin comprise), « Reprise dans N jours »
+  un jour de repos/congé. Accueil : se replie tout seul quand planning + nom sont faits. Équipe : jours à effectif à vérifier =
+  petit point rouge (plus de colonne rouge), « Surligner » sur une ligne qui défile. Pastilles Tn (bleu clair) et RF (gris)
+  distinctes de R (seulement couleur « blanc »), `chip()` porte `data-code`. Congés : même calendrier que Planning. Mois qui
+  glisse au changement, entrée douce des cartes, léger enfoncement au toucher ; tout est immobile si « réduire les animations ».
 - **Petits « i » d'explication** (22 nov. 2026, demandé : « on m'a déjà demandé ce que c'était [Comparer] ») : `infoBtn(clé)` /
   `<button class="info-btn" data-info="…">i</button>`, textes dans `INFO` (app.js), bulle unique `#infoPop` sous le bouton (au-dessus
   s'il n'y a pas la place), fermée au toucher ailleurs, au défilement, à Échap et au changement d'onglet. Placés : Comparer,

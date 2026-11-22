@@ -671,19 +671,23 @@ html[data-text="xl"] body { zoom: 1.25; }
   .pr-help ul { padding-left: 6mm; margin: 1mm 0; }
 }
 
-/* ── Alertes d'équipe : bandeau d'une ligne, texte qui défile (#teamWarn) ── */
-#teamWarn { padding: 7px 12px; overflow: hidden; }
-#teamWarn .tk-view { overflow: hidden; white-space: nowrap; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 16px), transparent); mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 16px), transparent); }
-#teamWarn .tk-track { display: inline-flex; align-items: center; gap: 0; padding-left: 4px; }
-#teamWarn .tk-item { display: inline-flex; align-items: center; gap: 6px; margin-right: 28px; font-size: .88rem; }
-#teamWarn .tk-gap { display: inline-block; width: 1.5em; }
-#teamWarn .tk-track.run { animation: tk-scroll linear infinite; }
-#teamWarn:active .tk-track.run, #teamWarn:hover .tk-track.run { animation-play-state: paused; }
-@keyframes tk-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-@media (prefers-reduced-motion: reduce) {
-  #teamWarn .tk-track.run { animation: none; }
-  #teamWarn .tk-view { text-overflow: ellipsis; }
+/* ── Bandeau unique en haut du Planning (#teamWarn) : une phrase courte à la fois, qui se relaient ── */
+#teamWarn { display: flex; align-items: center; gap: 8px; padding: 9px 10px 9px 12px; overflow: hidden; cursor: pointer; }
+#teamWarn .tk-rot { position: relative; flex: 1; min-width: 0; height: 1.45em; overflow: hidden; }
+#teamWarn .tk-item {
+  position: absolute; inset: 0; display: flex; align-items: center; gap: 7px; font-size: .9rem; font-weight: 600;
+  opacity: 0; transform: translateY(105%); transition: transform .5s cubic-bezier(.2, .8, .2, 1), opacity .4s;
 }
+#teamWarn .tk-item.on { opacity: 1; transform: none; }
+#teamWarn .tk-item.out { transform: translateY(-105%); }
+#teamWarn .tk-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#teamWarn .tk-item .ic { flex: none; }
+#teamWarn:not(.warn-remind) .ic { color: var(--accent); }
+#teamWarn .tk-dots { display: flex; gap: 4px; flex: none; }
+#teamWarn .tk-dots i { width: 6px; height: 6px; border-radius: 3px; background: currentColor; opacity: .25; transition: width .3s, opacity .3s; }
+#teamWarn .tk-dots i.on { width: 14px; opacity: .7; }
+#teamWarn .tk-go { flex: none; font-size: 1.3rem; line-height: 1; opacity: .55; }
+@media (prefers-reduced-motion: reduce) { #teamWarn .tk-item, #teamWarn .tk-dots i { transition: none; } }
 
 /* ── Ligne « dernier planning » (#teamChangesBtn) : une ligne, texte qui défile tant que pas vu ── */
 .changes-link { padding: 7px 8px 7px 12px; gap: 8px; border-radius: 10px; }
@@ -723,7 +727,8 @@ html[data-text="xl"] body { zoom: 1.25; }
 .ro-unlock-row button { flex: none; width: auto; }
 
 /* ── Effectif dépassé (COA 3/2/1, ROA 1/1/1) ── */
-.team-table th.staff { box-shadow: inset 0 -3px 0 #e5484d; color: #e5484d; }
+.team-table th.staff { position: relative; } /* effectif à vérifier : petit point rouge sous la date (plus de colonne toute rouge) */
+.team-table th.staff::after { content: ''; position: absolute; left: 50%; bottom: 1px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: #e5484d; }
 .day-staff { margin: 4px 0 8px; padding: 6px 10px; border-radius: 8px; font-size: .9rem; background: color-mix(in srgb, #e5484d 14%, transparent); color: inherit; }
 .day-staff .ic { color: #e5484d; width: 15px; height: 15px; vertical-align: -2px; }
 .day-remarks { margin: 6px 0 10px; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 9%, transparent); }
@@ -973,3 +978,53 @@ button.info-btn[aria-expanded="true"] { background: var(--accent); color: var(--
 .info-pop.above::before { top: auto; bottom: -6px; }
 @media (prefers-reduced-motion: reduce) { .info-pop { transition: none; transform: none; } }
 @media print { .info-btn, .info-pop { display: none !important; } }
+
+/* ══ Passe design du 22 nov. 2026 (validée par l'utilisateur) ═══════════════════════════════════════════════ */
+/* En-tête : « Importer » devient un bouton rond discret ; bleu et pulsant seulement quand le planning suivant est attendu */
+.hdr-btn.hdr-import { width: 40px; padding: 0; justify-content: center; }
+.hdr-btn.hdr-import span { display: none; }
+/* Vue Équipe : pastilles « Surligner » sur une seule ligne qui défile */
+.tt-legend { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; margin-right: -8px; padding-right: 8px; }
+.tt-legend::-webkit-scrollbar { display: none; }
+.tt-legend > span { flex: none; }
+.tt-legend .hl-btn { flex: none; }
+.team-table thead th.we { color: color-mix(in srgb, var(--muted) 70%, var(--text)); }
+/* Repos : R, Tn et RF ne sont plus trois pastilles blanches identiques (seulement avec la couleur « blanc » par défaut) */
+.chip[data-color="blanc"][data-code="TN"] { background: #dfe6f6; color: #2a4a8a; box-shadow: inset 0 0 0 1px #9fb3dd; }
+.chip[data-color="blanc"][data-code="RF"] { background: #e6e9ee; color: #3a4655; box-shadow: inset 0 0 0 1px #aab4c0; }
+/* Aujourd'hui : avancement de la vacation en cours, compte à rebours */
+.nd-live { display: flex; flex-direction: column; gap: 5px; width: 100%; font-size: .85rem; color: var(--muted); }
+.nd-live strong { color: var(--text); font-variant-numeric: tabular-nums; }
+.nd-bar { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--wc, var(--accent)) 18%, transparent); overflow: hidden; }
+.nd-bar i { display: block; height: 100%; width: var(--p, 0%); border-radius: 3px; background: var(--wc, var(--accent)); transition: width .8s ease; position: relative; overflow: hidden; }
+.nd-bar i::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .45), transparent); transform: translateX(-100%); animation: ndShine 2.8s ease-in-out infinite; }
+@keyframes ndShine { to { transform: translateX(100%); } }
+.nd-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #2fbf5b; margin-right: 6px; vertical-align: 1px; animation: ndPulse 1.8s ease-in-out infinite; }
+@keyframes ndPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(47, 191, 91, .55); } 60% { box-shadow: 0 0 0 6px rgba(47, 191, 91, 0); } }
+.nd-streak { font-size: .82rem; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .nd-bar i, .nd-bar i::after, .nd-dot { animation: none; transition: none; } }
+/* Entrée douce des cartes et du mois affiché */
+@keyframes riseIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.nd-today, .nd-next { animation: riseIn .45s cubic-bezier(.2, .8, .2, 1) both; }
+.nd-next { animation-delay: .06s; }
+#calGrid.swap-l { animation: calInL .32s cubic-bezier(.2, .8, .2, 1); }
+#calGrid.swap-r { animation: calInR .32s cubic-bezier(.2, .8, .2, 1); }
+@keyframes calInL { from { opacity: .2; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+@keyframes calInR { from { opacity: .2; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+button:active:not(:disabled) { transform: scale(.97); }
+.cal-cell:active, .next-day:active { transform: scale(.97); transition: transform .08s; }
+@media (prefers-reduced-motion: reduce) { .nd-today, .nd-next, #calGrid.swap-l, #calGrid.swap-r { animation: none; } button:active, .cal-cell:active, .next-day:active { transform: none; } }
+@media print { .nd-live { display: none; } }
+/* Accueil terminé : se replie tout seul */
+.welcome.w-closing { animation: wFold 1.4s ease forwards; overflow: hidden; }
+@keyframes wFold { 0%, 55% { opacity: 1; max-height: 600px; } 100% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin: 0; border-width: 0; } }
+@media (prefers-reduced-motion: reduce) { .welcome.w-closing { animation: none; } }
+/* Congés : même calendrier que l'onglet Planning (page sans cadre, cases blanches/claires) */
+.card.leave { background: transparent; border: 0; padding: 0; }
+.leave-grid .cal-cell:not(.blank) { background: var(--card); border-color: color-mix(in srgb, var(--line) 70%, transparent); }
+.leave-grid .cal-cell.blank { background: transparent; border-color: transparent; }
+.leave-grid .lv-cell.lv-pose, .leave-grid .lv-cell.lv-tn { background: color-mix(in srgb, #2e8b47 20%, var(--card)); border-color: #2e8b47; }
+.leave-grid .lv-cell.lv-plan { background: color-mix(in srgb, #2e8b47 10%, var(--card)); }
+.leave-grid .lv-cell.lv-free { background: repeating-linear-gradient(135deg, color-mix(in srgb, #2e8b47 12%, var(--card)) 0 5px, var(--card) 5px 10px); }
+.leave-grid .lv-cell.lv-rc { background: color-mix(in srgb, #1f8a9e 20%, var(--card)); border-color: #1f8a9e; }
+.card.leave details.leave-range { background: var(--card); }

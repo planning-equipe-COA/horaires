@@ -142,7 +142,7 @@
   function chip(code) {
     const def = defOf(code);
     const text = def ? (def.abbr || def.code) : code;
-    return `<span class="chip${text.length > 3 ? ' long' : ''}" data-color="${esc(def && def.color || '')}">${esc(text)}</span>`;
+    return `<span class="chip${text.length > 3 ? ' long' : ''}" data-color="${esc(def && def.color || '')}" data-code="${esc(def ? C.normCode(def.code) : code)}">${esc(text)}</span>`;
   }
 
   const today = todayDate();
@@ -592,14 +592,16 @@
     const lines = [], admin = load('mh_admin') === '1';
     if (left !== null && left <= KEY_WARN_DAYS && (admin || left < 0)) {
       const when = left < 0 ? 'a expiré le ' + fmtLongDay(exp) : left === 0 ? 'expire aujourd\'hui' : left === 1 ? 'expire demain' : 'expire dans ' + left + ' jours';
-      lines.push({ ic: 'alert', text: admin
-        ? `Clé de publication : ${when}. Touche ici pour la renouveler.`
-        : `Envoi du planning impossible : la clé de publication ${when}. Le responsable doit la renouveler.` });
+      lines.push({ ic: 'alert', act: 'key', text: admin ? `Clé de publication : ${when}` : `Envoi impossible : la clé ${when}`,
+        long: admin ? `Clé de publication : ${when}. Touche ici pour la renouveler.`
+          : `Envoi du planning impossible : la clé de publication ${when}. Le responsable doit la renouveler.` });
     }
-    if (joined && !exp && admin) lines.push({ ic: 'key', text: 'Date d\'expiration de la clé de publication non indiquée. Touche ici pour l\'indiquer.' });
+    if (joined && !exp && admin) lines.push({ ic: 'key', act: 'key', text: 'Clé : date d\'expiration à indiquer',
+      long: 'Date d\'expiration de la clé de publication non indiquée. Touche ici pour l\'indiquer.' });
     const ok = +load(STORAGE_SYNC_OK_KEY) || 0;
     const stale = joined && ok && Date.now() - ok > STALE_DAYS * 864e5;
-    if (stale) lines.push({ ic: 'signal', text: `Planning pas vérifié depuis ${agoText(ok).replace('il y a ', '')} (pas de connexion ?). Touche ici pour vérifier.` });
+    if (stale) lines.push({ ic: 'signal', act: 'sync', text: `Pas vérifié depuis ${agoText(ok).replace('il y a ', '')} · Vérifier`,
+      long: `Planning pas vérifié depuis ${agoText(ok).replace('il y a ', '')} (pas de connexion ?). Touche ici pour vérifier.` });
     // effectif dépassé dans les 31 prochains jours (seulement si un planning est sur le téléphone)
     let staffKey = '';
     if (state.plan) {
@@ -616,28 +618,46 @@
         });
         const days = Object.keys(byDay).sort();
         const label = k => utc(keyToDate(k)).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
-        lines.push({ ic: 'users', text: 'Effectif à vérifier (+ = de trop, − = manquant) : ' + days.slice(0, 4).map(k => label(k) + ' : ' + byDay[k].join(', ')).join(' · ') +
+        lines.push({ ic: 'users', act: 'staff', key: staffKey,
+          text: `Effectif à vérifier · ${days.length} jour${days.length > 1 ? 's' : ''}`,
+          long: 'Effectif à vérifier (+ = de trop, − = manquant) : ' + days.slice(0, 4).map(k => label(k) + ' : ' + byDay[k].join(', ')).join(' · ') +
           (days.length > 4 ? ` · et ${days.length - 4} autre${days.length > 5 ? 's' : ''} jour${days.length > 5 ? 's' : ''}` : '') + '. Touche ici pour voir.' });
       }
     }
-    $('teamWarn').hidden = !lines.length;
-    $('teamWarn').dataset.act = stale ? 'sync' : lines.some(l => l.ic === 'alert' || l.ic === 'key') ? 'key' : staffKey ? 'staff' : 'key';
-    $('teamWarn').dataset.key = staffKey;
-    $('teamWarn').setAttribute('aria-label', lines.map(l => l.text).join(' '));
-    renderTicker(lines);
+    alertLines = lines;
+    renderBanner();
     return ok;
   }
 
-  // Bandeau d'une ligne : icône fixe + texte qui défile s'il est trop long (immobile si « réduire les animations »)
+  // Un seul bandeau en haut du Planning (design, 22 nov. 2026) : alertes d'équipe + rappel « planning du mois prochain ».
+  // Une phrase courte et fixe à la fois ; s'il y en a plusieurs, elles se relaient (glissement vers le haut toutes les
+  // 4,5 s, points en bas à droite). Toucher = action de la phrase affichée ; le texte complet est dans aria-label.
+  let alertLines = [], remindLine = null, tkItems = [], tkIdx = 0, tkTimer = 0;
+  function renderBanner() { renderTicker(alertLines.concat(remindLine ? [remindLine] : [])); }
   function renderTicker(lines) {
     const box = $('teamWarn');
     const sig = lines.map(l => l.text).join('|');
-    if (box.dataset.sig === sig && box.innerHTML) return; // inchangé : on ne relance pas le défilement
+    box.hidden = !lines.length;
+    if (box.dataset.sig === sig && box.innerHTML) return; // inchangé : on ne relance pas la rotation
     box.dataset.sig = sig;
+    clearInterval(tkTimer);
+    tkItems = lines; tkIdx = 0;
     if (!lines.length) { box.innerHTML = ''; return; }
-    const text = lines.map(l => `<span class="tk-item"><svg class="ic" aria-hidden="true"><use href="#i-${l.ic}"/></svg> ${esc(l.text)}</span>`).join('');
-    box.innerHTML = `<div class="tk-view"><div class="tk-track">${text}</div></div>`;
-    marquee(box.querySelector('.tk-view'), box.querySelector('.tk-track'), text);
+    box.innerHTML = `<span class="tk-rot">${lines.map(l => `<span class="tk-item">${ICON(l.ic)}<span class="tk-txt">${esc(l.text)}</span></span>`).join('')}</span>` +
+      (lines.length > 1 ? `<span class="tk-dots" aria-hidden="true">${lines.map(() => '<i></i>').join('')}</span>` : '') + '<span class="tk-go" aria-hidden="true">›</span>';
+    showTicker(0);
+    if (lines.length > 1) tkTimer = setInterval(() => { if (!document.hidden && !box.hidden) showTicker((tkIdx + 1) % tkItems.length); }, 4500);
+  }
+  function showTicker(i) {
+    const box = $('teamWarn'), items = box.querySelectorAll('.tk-item'), prev = tkIdx;
+    tkIdx = i;
+    items.forEach((el, j) => { el.classList.toggle('on', j === i); el.classList.toggle('out', j === prev && j !== i); });
+    box.querySelectorAll('.tk-dots i').forEach((el, j) => el.classList.toggle('on', j === i));
+    const l = tkItems[i] || {};
+    box.classList.toggle('warn-remind', l.tone !== 'info');
+    box.dataset.act = l.act || '';
+    box.dataset.key = l.key || '';
+    box.setAttribute('aria-label', l.long || l.text || '');
   }
 
   let syncing = false, lastSync = 0;
@@ -1219,6 +1239,8 @@
     }
     $('wNameDone').textContent = known ? shown(me) : '';
     $('wOk').hidden = !known;
+    // tout est fait : l'accueil laisse la place à « Aujourd'hui » (plus besoin de toucher « C'est prêt »)
+    if (known) { $('welcome').classList.add('w-closing'); setTimeout(closeWelcome, 1400); }
   }
   function closeWelcome() { store(STORAGE_WELCOME_KEY, 'done'); $('welcome').hidden = true; }
 
@@ -1247,9 +1269,61 @@
           ? `<span class="next-mates">${mates.length ? 'avec ' + mates.slice(0, 3).map(n => esc(shown(n))).join(', ') + (mates.length > 3 ? ` +${mates.length - 3}` : '') : 'seul(e) en ' + esc(codeLabel(code))}</span>`
           : '') +
         (((plan.remarks || {})[me] || {})[k] ? `<span class="next-note next-remark"><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg> ${esc(plan.remarks[me][k])}</span>` : '') +
-        (notes[k] ? `<span class="next-note"><svg class="ic" aria-hidden="true"><use href="#i-note"/></svg> ${esc(notes[k])}</span>` : '') + '</button>';
+        (notes[k] ? `<span class="next-note"><svg class="ic" aria-hidden="true"><use href="#i-note"/></svg> ${esc(notes[k])}</span>` : '') +
+        (i ? '' : `<span class="nd-live" data-live>${liveHTML(days, t)}</span>`) + '</button>';
     }).join('');
   }
+
+  // « Aujourd'hui » vivant (22 nov. 2026) : avant la vacation, compte à rebours ; pendant, barre d'avancement et temps
+  // restant (rafraîchis chaque minute) ; un jour de repos, date de reprise. Heures = celles des codes (Réglages).
+  const hm = v => { const m = /^(\d{1,2}):(\d{2})$/.exec(v || ''); return m ? +m[1] * 60 + +m[2] : null; };
+  const dur = min => min < 60 ? `${min} min` : `${Math.floor(min / 60)} h${min % 60 ? ' ' + String(min % 60).padStart(2, '0') : ''}`;
+  function shiftSpan(code) {
+    const def = code && defOf(code);
+    if (!def || def.allDay) return null;
+    const a = hm(def.start); let b = hm(def.end);
+    if (a === null || b === null) return null;
+    if (b <= a) b += 1440; // nuit : finit le lendemain
+    return { a, b, def };
+  }
+  function liveHTML(days, t) {
+    const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes();
+    const y = utc(t); y.setUTCDate(y.getUTCDate() - 1);
+    const yKey = C.dateKey({ y: y.getUTCFullYear(), m: y.getUTCMonth() + 1, d: y.getUTCDate() });
+    const bar = (p, txt) => `<span><span class="nd-dot"></span>${txt}</span><span class="nd-bar"><i style="--p:${Math.max(2, Math.min(100, p)).toFixed(1)}%"></i></span>`;
+    // nuit d'hier encore en cours ce matin
+    const ys = shiftSpan(days[yKey]);
+    if (ys && ys.b > 1440 && nowMin < ys.b - 1440) {
+      const left = ys.b - 1440 - nowMin;
+      return bar((nowMin + 1440 - ys.a) / (ys.b - ys.a) * 100, `${esc(codeLabel(days[yKey]))} en cours · encore <strong>${dur(left)}</strong>`);
+    }
+    const sp = shiftSpan(days[C.dateKey(t)]);
+    if (sp) {
+      if (nowMin < sp.a) return `<span>Commence dans <strong>${dur(sp.a - nowMin)}</strong> · ${esc(sp.def.start)} – ${esc(sp.def.end)}</span>`;
+      if (nowMin < sp.b) return bar((nowMin - sp.a) / (sp.b - sp.a) * 100, `En cours · encore <strong>${dur(sp.b - nowMin)}</strong>, fin à ${esc(sp.def.end)}`);
+      return '<span>Vacation terminée ✓</span>';
+    }
+    // jour sans vacation à heures : prochain jour travaillé
+    const code = days[C.dateKey(t)];
+    if (!code || C.dayKind(defOf(code)) === 'travail') return '';
+    for (let i = 1; i <= 31; i++) {
+      const d = utc(t); d.setUTCDate(d.getUTCDate() + i);
+      const k = C.dateKey({ y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate() });
+      if (!days[k]) return '';
+      if (C.dayKind(defOf(days[k])) === 'travail') {
+        const wd = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', timeZone: 'UTC' });
+        return `<span class="nd-streak">Reprise ${i === 1 ? 'demain' : `dans <strong>${i} jours</strong>`} · ${esc(wd)} ${chip(days[k])}</span>`;
+      }
+    }
+    return '';
+  }
+  setInterval(() => {
+    if (document.hidden) return;
+    const el = document.querySelector('#nextDays [data-live]');
+    if (!el || !state.plan) return;
+    const html = liveHTML((planView().agents[meName()]) || {}, todayDate());
+    if (el.innerHTML !== html) el.innerHTML = html;
+  }, 30000);
 
   // ── Rappel de fin de mois : le planning du mois prochain n'est pas encore là ──
   function renderRemind() {
@@ -1257,12 +1331,14 @@
     const next = t.m === 12 ? { y: t.y + 1, m: 1 } : { y: t.y, m: t.m + 1 };
     const prefix = String(next.y) + String(next.m).padStart(2, '0');
     const days = (state.plan && state.plan.agents[meName()]) || {};
-    box.hidden = t.d < 20 || Object.keys(days).some(k => k.slice(0, 6) === prefix);
-    $('quickImport').classList.toggle('due', !box.hidden); // planning suivant attendu : bouton mis en évidence
-    if (box.hidden) return;
+    const due = !(t.d < 20 || Object.keys(days).some(k => k.slice(0, 6) === prefix));
+    box.hidden = true; // affiché dans le bandeau unique (#teamWarn)
+    $('quickImport').classList.toggle('due', due); // planning suivant attendu : bouton mis en évidence
     const month = new Date(Date.UTC(next.y, next.m - 1, 1)).toLocaleDateString('fr-FR', { month: 'long', timeZone: 'UTC' });
-    box.innerHTML = ICON('cal') + esc(` Le planning de ${month} n'est pas encore là. Dès qu'il sort, touche ici pour l'importer` +
-      (teamCode() ? ' : l\'appli te proposera de l\'envoyer à toute l\'équipe.' : '.'));
+    remindLine = due ? { ic: 'cal', act: 'import', tone: 'info', text: `Planning de ${month} attendu`,
+      long: `Le planning de ${month} n'est pas encore là. Dès qu'il sort, touche ici pour l'importer` +
+        (teamCode() ? ' : l\'appli te proposera de l\'envoyer à toute l\'équipe.' : '.') } : null;
+    renderBanner();
   }
 
   // ── Détail d'un jour : férié, changement, équipe du jour, échanges, note perso ──
@@ -1766,6 +1842,8 @@
     if (m < 1) { m = 12; y--; } else if (m > 12) { m = 1; y++; }
     state.cal.y = y; state.cal.m = m;
     renderCalendar();
+    const g = $('calGrid'); // le nouveau mois arrive du côté où l'on va
+    g.classList.remove('swap-l', 'swap-r'); void g.offsetWidth; g.classList.add(delta > 0 ? 'swap-r' : 'swap-l');
   }
 
   // Toujours disponible dès qu'un planning est sur le téléphone (importé ou reçu de l'équipe), pas seulement
@@ -2236,6 +2314,7 @@
   });
   // alertes en haut du planning : vérifier maintenant, ou aller voir la clé
   const teamWarnGo = async () => {
+    if ($('teamWarn').dataset.act === 'import') { quickImport(); return; }
     if ($('teamWarn').dataset.act === 'staff' && $('teamWarn').dataset.key) { // premier jour en surnombre, onglet Équipe
       const k = $('teamWarn').dataset.key, d = keyToDate(k);
       state.cal.y = d.y; state.cal.m = d.m; state.cal.selected = k;
@@ -2244,11 +2323,11 @@
       return;
     }
     if ($('teamWarn').dataset.act === 'sync') {
-      renderTicker([{ ic: 'signal', text: 'Vérification…' }]);
+      renderTicker([{ ic: 'signal', act: 'sync', text: 'Vérification…' }]);
       lastSync = 0;
       await syncTeam(true);
       renderTeam();
-      if ($('teamWarn').dataset.act === 'sync') renderTicker([{ ic: 'signal', text: 'Pas de réponse : réessaie quand tu auras du réseau.' }]);
+      if ($('teamWarn').dataset.act === 'sync') renderTicker([{ ic: 'signal', act: 'sync', text: 'Pas de réponse : réessaie avec du réseau' }]);
       return;
     }
     setTab('reglages'); $('teamDetails').open = true;
