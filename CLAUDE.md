@@ -419,3 +419,9 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   **Le sw.js du Planning ne purge que les caches `mh-*`** (ne jamais effacer ceux d'une autre appli du même domaine).
 - Écarté par l'utilisateur : « Partager → Planning COA » sur Android.
 - UID `.ics` stable par jour et par agent : réimporter met à jour au lieu de dupliquer.
+- **Rééquilibrage des boutons (25 nov. 2026, demandé par l'utilisateur après la même passe sur la Boîte à outils COA)** :
+  audit automatique de chaque onglet à 390 et 320 px (rangées de boutons : largeurs, hauteurs, retours à la ligne, textes
+  tronqués, débordement). Corrigé : Congés → « Poser une période » (dates alignées `.lr-dates`, Poser / Retirer égaux
+  `.lr-btns`), « Envoyer ma demande » / « Imprimer / PDF » l'un sous l'autre pleine largeur (côte à côte, les deux passaient
+  sur 2 lignes) ; Réglages → « Ajouter un code » / « Réinitialiser » et « Sauvegarder » / « Restaurer » de même largeur, sur
+  une ligne même à 320 px (texte un peu réduit sous 350 px). Rien à corriger dans Planning, Liste, Équipe (aucun débordement).
