@@ -1837,6 +1837,8 @@
       const dayName = utc(d).toLocaleDateString('fr-FR', { weekday: 'short', timeZone: 'UTC' }).replace('.', '');
       if (C.holidayName(k)) cls.push('holiday');
       if (swapDay(k)) cls.push('swap');
+      // aujourd'hui : la ligne ET son détail déplié dans un même cadre (25 nov. 2026, demandé : « englobe le reste des infos du jour »)
+      if (k === todayKey) html += `<div class="today-box"${code ? workAttr(code) : ''}>`;
       html += `<button class="${cls.join(' ')}" data-key="${k}"${code ? workAttr(code) : ''} aria-expanded="${k === state.cal.selected}">` +
         `<span class="cal-row-date"><span class="wd">${esc(dayName)}</span><span class="n">${d.d}</span></span>` +
         `<span class="cal-row-code">${code ? chip(code) + ' ' + esc(codeLabel(code)) : '<span class="muted">—</span>'}` +
@@ -1846,6 +1848,7 @@
         '</span>' +
         (remarks[k] ? `<span class="row-remark"><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg> ${esc(remarks[k])}</span>` : '') + '</button>';
       if (k === state.cal.selected) html += `<div class="cal-row-detail">${dayDetailHTML(k, false, 'planning')}</div>`;
+      if (k === todayKey) html += '</div>';
     }
     $('calList').innerHTML = html;
   }
