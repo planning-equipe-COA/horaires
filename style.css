@@ -364,6 +364,7 @@ button.link { background: none; border: 0; color: var(--muted); text-decoration:
 .hist-detail { flex-basis: 100%; font-size: .88rem; }
 .hist-detail button { margin-top: 6px; }
 .hist-detail .ok, .hint.err { font-weight: 600; }
+.hint.err { color: var(--error); }
 .hist-detail .ok { color: var(--ok); }
 .hint.err { color: var(--error); }
 .badge { font-size: .72rem; border: 1px solid var(--line); border-radius: 999px; padding: 0 6px; color: var(--muted); }
@@ -562,8 +563,8 @@ button.note-add { padding: 8px 0 2px; text-decoration: none; color: var(--accent
 .team-table td.hl { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .team-table tfoot th, .team-table tfoot td { font-weight: 700; color: var(--accent); border-bottom: 0; padding-top: 5px; }
 
-#notesDetails .actions button, #addCode, #resetCodes { flex: 1 1 0; min-width: 0; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding-left: 8px; padding-right: 8px; }
-@media (max-width: 350px) { #notesDetails .actions button, #addCode, #resetCodes { font-size: .9rem; } }
+#notesDetails .actions button, #addCode, #resetCodes, #coaBody .actions button { flex: 1 1 0; min-width: 0; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding-left: 8px; padding-right: 8px; }
+@media (max-width: 350px) { #notesDetails .actions button, #addCode, #resetCodes, #coaBody .actions button { font-size: .9rem; } }
 /* pendant une saisie (note, code, numéro…) la barre d'onglets ne doit pas recouvrir le clavier */
 body:has(textarea:focus, input[type="text"]:focus, input[type="tel"]:focus, input[type="password"]:focus) .tabbar,
 body:has(textarea:focus, input[type="text"]:focus, input[type="tel"]:focus, input[type="password"]:focus) .update-bar { display: none; }

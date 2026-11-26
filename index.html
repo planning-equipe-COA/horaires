@@ -315,6 +315,17 @@
       <div class="actions"><button id="notifTest" type="button" class="link">Tester sur ce téléphone</button></div>
     </details>
   </section>
+  <section id="coaCard" class="card" data-tab="reglages">
+    <details id="coaDetails" class="fold">
+      <summary><h2><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg> Alertes de la Boîte à outils</h2></summary>
+      <p class="hint">Pour ne recevoir les alertes de la Boîte à outils COA (vols, NOTAM, météo) <strong>que pendant tes services</strong> :
+        dans la Boîte à outils → Réglages → Notifications → « Seulement en service » → « Planning COA », copie le code et colle-le ici.
+        Ensuite, tes horaires suivent tout seuls à chaque nouveau planning.</p>
+      <div id="coaBody"></div>
+      <p class="hint">Seuls tes horaires de service partent vers le relais de la Boîte à outils (début et fin de chaque service,
+        aucun nom ni code de service), rattachés à ce code. Les repos et congés n'envoient rien.</p>
+    </details>
+  </section>
   </div>
   <h3 class="sgroup-title" data-tab="reglages">Apparence</h3>
   <div class="sgroup" id="sgView" data-tab="reglages">
@@ -393,6 +404,7 @@
           <li><strong>Numéros utiles</strong> : bouton téléphone en haut à droite.</li>
           <li><strong>Mon numéro</strong> (facultatif) : Réglages → Code d'équipe, pour être joignable depuis l'équipe du jour.</li>
           <li><strong>Notifications</strong> : Réglages → Notifications, pour être prévenu de chaque nouveau planning (sur iPhone : depuis l'icône de l'écran d'accueil).</li>
+          <li><strong>Alertes de la Boîte à outils</strong> : Réglages → Alertes de la Boîte à outils, coller le code donné par la Boîte à outils COA pour recevoir ses alertes (vols, NOTAM, météo) seulement pendant tes services ; tes horaires suivent tout seuls.</li>
         </ul>
         <h3>8. Envoyer un nouveau planning</h3>
         <p>Pour celui qui reçoit le tableau Excel : Réglages → « Importer un nouveau planning » → choisir le fichier → vérifier « les cases qui changent » → indiquer la date de mise à jour (la date en rouge du tableau) → « Envoyer à l'équipe ». Une erreur ? « Annuler l'envoi » pendant 2 minutes, ou « Versions précédentes » dans Code d'équipe.</p>

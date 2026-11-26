@@ -425,3 +425,13 @@ L'utilisateur échange en français. En ligne : https://planning-equipe-coa.gith
   `.lr-btns`), « Envoyer ma demande » / « Imprimer / PDF » l'un sous l'autre pleine largeur (côte à côte, les deux passaient
   sur 2 lignes) ; Réglages → « Ajouter un code » / « Réinitialiser » et « Sauvegarder » / « Restaurer » de même largeur, sur
   une ligne même à 320 px (texte un peu réduit sous 350 px). Rien à corriger dans Planning, Liste, Équipe (aucun débordement).
+- **Alertes de la Boîte à outils (26 nov. 2026, voulu par l'utilisateur : lien volontaire avec la Boîte à outils COA,
+  dépôt planning-equipe-COA/Outil-COA)** : carte Réglages `#coaCard` (`renderCoaCard`). L'agent colle le code de liaison
+  (16 caractères A-H J-N P-Z 2-9, affiché XXXX-XXXX-XXXX-XXXX) donné par la Boîte à outils (Réglages → Notifications →
+  « Seulement en service » → « Planning COA »). `coaSync` (appelé après `renderPreview` dans le rendu du calendrier, donc à
+  chaque nouveau planning / changement de « Je suis » / de codes) calcule mes services à heures (`buildEvents` withHours,
+  codes non « journée entière » : M, S, N, J… selon `state.codes`), de l'avant-veille à +62 j, nuit = fin le lendemain, et les
+  envoie à `https://coa-notam.k8ggjsddnp.workers.dev/?push=shifts` { link, src: 'planning', win: [[début ms, fin ms]] } :
+  **aucun nom ni code de service**. Renvoi seulement si la liste change ou toutes les 12 h (`mh_coa_sent`). Clés `mh_coa_link`,
+  `mh_coa_sent`. Testé avec exemple-planning.xls (créneaux = planning affiché, aucun envoi au rechargement sans changement).
+

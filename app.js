@@ -1159,6 +1159,7 @@
     renderRemind();
     renderMeCard(names);
     renderPreview();
+    coaSync();
 
     renderChangesLink(plan);
     // changements apportés par le dernier tableau importé
@@ -1910,6 +1911,65 @@
 
   // Toujours disponible dès qu'un planning est sur le téléphone (importé ou reçu de l'équipe), pas seulement
   // juste après un import. Planning exporté : celui de l'utilisateur, sinon celui affiché.
+  // ---- Alertes de la Boîte à outils COA (26 nov. 2026, voulu par l'utilisateur) : mes horaires de service (début / fin,
+  // services à heures seulement : M, S, N, J… selon mes codes) envoyés au relais coa-notam sous un code de liaison donné
+  // par la Boîte à outils. Rien d'autre (ni nom ni code). Renvoyé seulement si ça change (ou toutes les 12 h).
+  const COA_URL = 'https://coa-notam.k8ggjsddnp.workers.dev';
+  const COA_LINK_KEY = 'mh_coa_link', COA_SENT_KEY = 'mh_coa_sent';
+  const coaNorm = x => String(x || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const coaOk = x => /^[A-HJ-NP-Z2-9]{16}$/.test(coaNorm(x));
+  const coaFmt = x => coaNorm(x).replace(/(.{4})(?=.)/g, '$1-');
+  let coaErr = '';
+  function coaWins() {
+    const plan = state.plan, me = load(STORAGE_NAME_KEY);
+    if (!plan || !me || !plan.agents[me]) return null;
+    const agent = planToAgents({ [me]: plan.agents[me] }, plan.remarks)[0];
+    const built = C.buildEvents(agent.entries, state.codes, { withHours: true });
+    const t0 = Date.now() - 2 * 864e5, t1 = Date.now() + 62 * 864e5, out = [];
+    for (const e of built.events) {
+      if (!e.timed) continue;
+      const [h1, m1] = e.def.start.split(':').map(Number), [h2, m2] = e.def.end.split(':').map(Number);
+      const a = new Date(e.date.y, e.date.m - 1, e.date.d, h1, m1).getTime();
+      let b = new Date(e.date.y, e.date.m - 1, e.date.d, h2, m2).getTime();
+      if (b <= a) b += 864e5; // nuit : fin le lendemain
+      if (b > t0 && a < t1) out.push([a, b]);
+    }
+    return out.sort((x, y) => x[0] - y[0]);
+  }
+  function coaSent() { try { return JSON.parse(load(COA_SENT_KEY)) || {}; } catch (e) { return {}; } }
+  async function coaSync(force) {
+    const link = load(COA_LINK_KEY); if (!coaOk(link)) return;
+    const win = coaWins(); if (!win) { coaErr = 'Choisis d\'abord ton nom (« Je suis ») pour envoyer tes horaires.'; renderCoaCard(); return; }
+    const sig = coaNorm(link) + '|' + JSON.stringify(win), prev = coaSent();
+    if (!force && prev.sig === sig && Date.now() - (prev.at || 0) < 12 * 3600e3) return;
+    try {
+      const r = await fetch(COA_URL + '?push=shifts', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ link: coaNorm(link), src: 'planning', win }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.error) throw new Error(j.error || r.status);
+      store(COA_SENT_KEY, JSON.stringify({ sig, at: Date.now(), n: win.filter(w => w[1] > Date.now()).length }));
+      coaErr = '';
+    } catch (e) { coaErr = /Failed to fetch|Load failed|NetworkError/i.test(String(e.message)) ? 'Pas de réseau : nouvel essai à la prochaine ouverture.' : 'Envoi refusé (' + (e.message || e) + ').'; }
+    renderCoaCard();
+  }
+  function renderCoaCard() {
+    const B = $('coaBody'); if (!B) return;
+    const link = load(COA_LINK_KEY);
+    if (!coaOk(link)) {
+      B.innerHTML = `<div class="row"><label for="coaLink">Code de liaison</label><input id="coaLink" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX"></div>
+        <div class="actions"><button id="coaPaste" type="button">${ICON('clip')} Coller</button><button id="coaOn" type="button" class="primary">Lier</button></div>${coaErr ? `<p class="hint err">${esc(coaErr)}</p>` : ''}`;
+      $('coaPaste').onclick = async () => { try { const t = await navigator.clipboard.readText(); if (t) $('coaLink').value = coaFmt(t); } catch (e) { $('coaLink').focus(); } };
+      $('coaOn').onclick = () => { const v = $('coaLink').value; if (!coaOk(v)) { coaErr = 'Code incomplet : 16 lettres et chiffres, comme affiché dans la Boîte à outils.'; renderCoaCard(); return; }
+        store(COA_LINK_KEY, coaNorm(v)); store(COA_SENT_KEY, ''); coaErr = ''; renderCoaCard(); coaSync(true); };
+      return;
+    }
+    const sent = coaSent(), when = sent.at ? new Date(sent.at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+    B.innerHTML = `<p class="hint"><strong>Liée</strong> au code ${esc(coaFmt(link))}.${sent.at ? ` Horaires envoyés le ${esc(when)} : ${sent.n} service${sent.n > 1 ? 's' : ''} à venir.` : ' Envoi des horaires…'}</p>
+      ${coaErr ? `<p class="hint err">${esc(coaErr)}</p>` : ''}<div class="actions"><button id="coaSend" type="button">${ICON('send')} Renvoyer</button><button id="coaOff" type="button">Délier</button></div>`;
+    $('coaSend').onclick = () => coaSync(true);
+    $('coaOff').onclick = () => { store(COA_LINK_KEY, ''); store(COA_SENT_KEY, ''); coaErr = ''; renderCoaCard(); };
+  }
+
   function renderPreview() {
     const plan = state.plan;
     const names = plan ? Object.keys(plan.agents) : [];
@@ -3352,6 +3412,7 @@
     if (t === 'conges') { store(STORAGE_TAB_KEY, t); state.leave.msg = null; renderLeave(); }
     else if (t === 'reglages') {
       renderNotesCard();
+      renderCoaCard();
       if ($('importDetails').open) ensureXLSX().catch(() => {});
     } else {
       store(STORAGE_TAB_KEY, t);
